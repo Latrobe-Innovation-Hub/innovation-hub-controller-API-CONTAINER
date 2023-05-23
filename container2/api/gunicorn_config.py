@@ -1,5 +1,11 @@
 # Gunicorn configuration file.
 
+# innovation-hub-api - container2 - api/gunicorn_config.py
+# written by: Andrew McDonald
+# initial: 23/05/23
+# current: 23/05/23
+# version: 0.9
+
 dash_app/gunicorn_config.py
 
 from multiprocessing import cpu_count
