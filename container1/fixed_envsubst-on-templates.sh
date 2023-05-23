@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# HiveKeepers - container1 - fixed_envsubst-on-template.sh.sh
-# edited by: Andrew McDonald
-# initial: 13/02/22
-# current: 26/02/22
+# innovation-hub-api-container - container1 - fixed_envsubst-on-template.sh.sh
+# written by: Andrew McDonald
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 set -e
