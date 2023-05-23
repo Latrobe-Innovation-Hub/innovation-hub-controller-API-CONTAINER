@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# HiveKeepers - container1 - healthycheck.sh
+# innovation-hub-api-container - container1 - healthycheck.sh
 # written by: Andrew McDonald
-# initial: 25/02/22
-# current: 17/03/22
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 # this script runs simple health checks on
