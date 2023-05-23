@@ -1,0 +1,70 @@
+# Innovation Hub - api - docker-compose.yaml
+# written by: Andrew McDonald
+# initial: 23/05/23
+# current: 23/05/23
+# version: 0.1
+
+version: '3.3'
+
+# build containers
+services:
+  container1:
+    build:
+      context: container1
+      dockerfile: Dockerfile
+    container_name: 'reverse-proxy'
+    volumes:
+      # nginx basic_auth cred file
+      # need to create with 'sudo htpasswd -c container1/nginx/auth/.htpasswd USERNAME
+      #- '${PWD}/htpasswd:/etc/nginx/auth/.htpasswd:ro'
+      #- '${PWD}/container-logs:/home/hivekeeper/logs'    # persistent host-side logs
+      - "container_data:/home/innovation-hub-api/persistent/"
+    environment:
+      - TZ=Australia/Melbourne
+      - APP_PORT=8050                 # port must match in both containers
+      - PROXY_LOG_LEVEL=detailed      # options: simple (no nginx access logging), detailed (with nginx access logging)
+      - NGINX_ERROR_LOG_LEVEL=warn    # options: info, notice, warn, error, crit, alert, emerg (case sensitive)
+    networks:
+      container_net:
+        ipv4_address: 172.75.0.2
+    cap_add:
+      - CAP_NET_ADMIN
+      - CAP_NET_RAW
+    ports:
+      - '80:80'                       # port binding - 'external:internal'
+    restart: 'unless-stopped'
+
+  container2:
+    build:
+      context: container2
+      dockerfile: Dockerfile
+    container_name: 'api'
+    volumes:
+      #- '${PWD}/container-logs:/home/hivekeeper/persistent/logs'    # persistent host-side logs
+      - "container_data:/home/innovation-hub-api/persistent/"
+    environment:
+      - TZ=Australia/Melbourne
+      - APP_WORKERS=4               # gunicorn workers - defaults to number of cores
+      - APP_THREADS=2               # gunicorn threads - defaults to number of cores - 1
+      - APP_PORT=8050               # port must match in both containers
+      - APP_LOG_LEVEL=info          # options: debug, info, warning, error, critical
+      - SQL_VERBOSE=no              # show SQL queries/responses. options: yes,no
+      #- START_TYPE=Warm_Start       # Cold_Start, Warm_Start, Init_only
+    networks:
+      container_net:
+        ipv4_address: 172.75.0.3
+    #mem_limit: 6000m
+    restart: 'unless-stopped'
+
+# build container network to control access to containers
+networks:
+  container_net:
+    #name: container_net
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.75.0.0/16
+
+volumes:
+  container_data:

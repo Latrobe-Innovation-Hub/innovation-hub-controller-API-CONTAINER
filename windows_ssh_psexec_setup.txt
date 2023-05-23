@@ -1,0 +1,8 @@
+1. install openssh via add features settings
+2. start authentication and ssh service via services
+3. open port 22 for ssh via firewall
+4. In regedit, create a new registry: HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system\LocalAccountTokenFilterPolicy and set it to 1
+5. In regedit, disable UAC: set HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLUA to 0 
+6. install pstools via microsoft: https://learn.microsoft.com/en-us/sysinternals/downloads/psexec
+7. unzip pstools and move contents to c:/Window/System32
+8. reboot
