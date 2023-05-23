@@ -1,9 +1,9 @@
 #!/bin/sh
 
-# HiveKeepers - scripts - password_script.sh
+# innovation-hub-api - scripts - password_script.sh
 # written by: Andrew McDonald
-# initial: 28/01/22
-# current: 15/03/22
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 ## ===================================================
