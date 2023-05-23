@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# HiveKeepers - container2 - dash_app/start_app.sh
+# innovation-hub-api - container2 - dash_app/start_app.sh
 # written by: Andrew McDonald
-# initial: 28/01/22
-# current: 19/03/22
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 # monit watchdog gunicorn start/stop script
