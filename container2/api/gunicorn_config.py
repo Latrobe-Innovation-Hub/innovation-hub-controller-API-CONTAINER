@@ -1,9 +1,6 @@
 # Gunicorn configuration file.
-# HiveKeepers - container2 - dash_app/gunicorn_config.py
-# written by: Andrew McDonald
-# initial: 28/01/22
-# current: 19/03/22
-# version: 0.9
+
+dash_app/gunicorn_config.py
 
 from multiprocessing import cpu_count
 from os import environ
