@@ -1,7 +1,7 @@
-# HiveKeepers - container2 - Dockerfile
+# innovation-hub-api - container2 - Dockerfile
 # written by: Andrew McDonald
-# initial: 28/01/22
-# current: 17/03/22
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 # get base image
