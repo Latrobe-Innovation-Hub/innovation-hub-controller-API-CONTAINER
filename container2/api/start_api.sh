@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# innovation-hub-api - container2 - dash_app/start_app.sh
+# innovation-hub-api - container2 - api/start_app.sh
 # written by: Andrew McDonald
 # initial: 23/05/23
 # current: 23/05/23
