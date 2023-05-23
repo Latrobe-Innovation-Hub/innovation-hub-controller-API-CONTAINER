@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# HiveKeepers - container1 - docker-entrypoint.sh
+# innovation-hub-api-container - container1 - docker-entrypoint.sh
 # written by: Andrew McDonald
-# initial: 26/01/22
-# current: 17/03/22
+# initial: 23/05/23
+# current: 23/05/23
 # version: 0.9
 
 set -e
