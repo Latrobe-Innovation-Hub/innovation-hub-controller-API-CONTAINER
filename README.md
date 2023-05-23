@@ -1,4 +1,4 @@
-# innovationHub_API
+# Innovation Hub Device Control API
 
 ---
 
