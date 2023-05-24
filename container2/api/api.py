@@ -732,7 +732,6 @@ def change_volume_api():
 ## CONTAINER health-check
 @app.route("/ping")
 def ping():
-    logger.debug('Running healtheck callback ping() via .../ping')
     return "{status: ok}"
 
 
