@@ -6,8 +6,6 @@
 # current: 23/05/23
 # version: 0.9
 
-dash_app/gunicorn_config.py
-
 from multiprocessing import cpu_count
 from os import environ
 
