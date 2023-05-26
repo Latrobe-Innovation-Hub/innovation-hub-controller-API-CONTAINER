@@ -24,6 +24,7 @@ log_level_lower=${log_level,,}
 # set log locations
 container_log=/home/innovation-hub-api/persistent/logs/container2/entrypoint.log
 gunicorn_log=/home/innovation-hub-api/persistent/logs/container2/gunicorn.log
+gunicorn_error_log=/home/innovation-hub-api/persistent/logs/container2/gunicorn-error.log
 gunicorn_access_log=/home/innovation-hub-api/persistent/logs/container2/gunicorn-access.log
 monit_log=/home/innovation-hub-api/persistent/logs/container2/monit.log
 
@@ -56,7 +57,7 @@ start_api() {
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
       cd /home/innovation-hub-api/api/
 
-      # start api via wsgi (gunicorn)
+      # start dash app via wsgi (gunicorn)
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
       # gunicorn3 hivekeepers_app:server \
       # --bind 0.0.0.0:$port \
@@ -109,10 +110,12 @@ tail_logs () {
   if [[ "$1" == "async" ]]
     then
       tail -f $gunicorn_log \
+              $gunicorn_error_log \
               $gunicorn_access_log \
               $monit_log &
     else
       tail -f $gunicorn_log \
+              $gunicorn_error_log \
               $gunicorn_access_log \
               $monit_log
   fi
@@ -121,6 +124,7 @@ tail_logs () {
 touch_logs () {
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] making sure log files exist" | tee -a $container_log
   touch $gunicorn_log
+  touch $gunicorn_error_log
   touch $gunicorn_access_log
   touch $monit_log
 }

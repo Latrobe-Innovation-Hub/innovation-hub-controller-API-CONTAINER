@@ -78,11 +78,11 @@ pidfile = '/var/run/gunicorn.pid'
 
 # set log locations
 #gunicorn_log = '/home/innovation-hub-api/persistent/logs/container2/gunicorn.log'
-gunicorn_log = '/home/innovation-hub-api/persistent/logs/container2/gunicorn.log'
+gunicorn_error_log = '/home/innovation-hub-api/persistent/logs/container2/gunicorn.log'
 gunicorn_access_log = '/home/innovation-hub-api/persistent/logs/container2/gunicorn-access.log'
 
 accesslog = gunicorn_access_log
-errorlog = gunicorn_log
+errorlog = gunicorn_error_log
 loglevel = environ.get('APP_LOG_LEVEL', 'info').lower()
 
 #access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"'

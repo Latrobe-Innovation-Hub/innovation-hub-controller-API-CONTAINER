@@ -17,8 +17,8 @@ services:
       # nginx basic_auth cred file
       # need to create with 'sudo htpasswd -c container1/nginx/auth/.htpasswd USERNAME
       #- '${PWD}/htpasswd:/etc/nginx/auth/.htpasswd:ro'
-      #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs (either)
-      - ${PWD}/logs:/home/innovation-hub-api/persistent/logs            # persistent host-side logs (or)
+      #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs
+      - ${PWD}/logs:/home/innovation-hub-api/persistent/logs            # persistent host-side logs
     environment:
       - TZ=Australia/Melbourne
       - APP_PORT=8050                 # port must match in both containers
@@ -42,8 +42,8 @@ services:
       dockerfile: Dockerfile
     container_name: 'innovation-hub-api'
     volumes:
-      #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs (either)
-      - ${PWD}/logs:/home/innovation-hub-api/persistent/logs            # persistent host-side logs (or)
+      #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs
+      - ${PWD}/logs:/home/innovation-hub-api/persistent/logs            # persistent host-side logs
     environment:
       - TZ=Australia/Melbourne
       - APP_WORKERS=4               # gunicorn workers - defaults to number of cores
