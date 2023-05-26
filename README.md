@@ -262,16 +262,15 @@ Using the -it option allows you to interact with the command running inside the 
 7. Enjoy the API!  
   
 With container images now built, to start/stop containers, use the following:  
-Stop containers: 
+Start containers (-d to demonize):  
+```bash
+'docker-compose up -d'
+```
+  
+Stop containers:
 ```bash
 'docker-compose down'
 ```
-  
-Start containers:  
-```bash
-'docker-compose up'
-```
-  
 OPTIONAL  
 8.  Browse to http://localhost/monit/ to access container1 watchdog status web portal
   - Enter username and password
