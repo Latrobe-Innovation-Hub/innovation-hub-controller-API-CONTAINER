@@ -140,7 +140,7 @@ The container log level can be set system-wide for nginx and fail2ban services. 
 There is also the choice to log all NGINX access requests or to turn this feature off.  Available options are simple (no nginx access logging), or detailed (with nginx access logging).  
   
 Container2:  
-The container log level can be set system-wide for the Plotly Dash application and Gunicorn service.  Available options are debug, info, warning, error, or critical.  
+The container log level can be set system-wide for the Gunicorn service.  Available options are debug, info, warning, error, or critical.  
 
 ---
 
@@ -169,7 +169,7 @@ Web-monitor portal: No
 Monit is set up to monitor the Guniicorn3 service every 2mins and reports the status and handles service restart duties if they are found to be inactive.  Gunicorn is monitored via PID file and /ping on port 80 - /ping located in api.py, which returns string: 'status: ok'  
   
 Monit config files are stored in project dir: container2/monit/  
-Gunicorn restart script is stored in project dir: container2/dash_app/start_api.sh  
+Gunicorn restart script is stored in project dir: container2/api/start_api.sh  
   
 **Command line access to watchdogs:**  
 It is also possible to access and control watchdog states and status via the command line using: 
