@@ -64,10 +64,12 @@ container2:
 
 **Environment Variables:**  
 container1:
-
 |                          |        |                                                                                             |
 | ------------------------ | ------ | ------------------------------------------------------------------------------------------- |
+| TZ                       | STRING | Sets timezone for container                                                                 |
 | APP_PORT                 | INT    | Port to proxy to on container2, must match in both containers (defaults to 8050 if not set) |
+| APP_IP                   | STRING | IP to proxy to on container2, must match IP set for container2				  |
+| NET_SUBNET               | STRING | Network subnet for both containers - nginx - must match container_net                       |
 | PROXY_LOG_LEVEL          | STRING | options: simple (no nginx access logging), detailed (with nginx access logging)             |
 | NGINX_ERROR_LOG_LEVEL    | STRING | options: info, notice, warn, error, crit, alert, emerg (case sensitive)                     |
   
@@ -79,9 +81,9 @@ cap_add:
 ```
   
 container2:
-
 |                          |        |                                                                                                   |
 | ------------------------ | ------ | ------------------------------------------------------------------------------------------------- |
+| TZ                       | STRING | Sets timezone for container                                                                 |
 | APP_WORKERS              | INT    | Gunicorn workers - defaults to number of cores                                                    |
 | APP_THREADS              | INT    | Gunicorn threads - defaults to number of cores – 1                                                |
 | APP_PORT                 | INT    | listening port for Gunicorn WSGI, must match in both containers (defaults to 8050 if not set)     |
