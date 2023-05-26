@@ -195,24 +195,80 @@ monit validate              			# Check all services and start if not running
 monit procmatch <pattern>   			# Test process matching pattern  
 ```
 
+
+**Command line access to fail2ban (container1):**
+The following commands can be used with the fail2ban-client tool to manage Fail2ban:  
+```bash
+fail2ban-client start                           # Start Fail2ban service
+fail2ban-client stop                            # Stop Fail2ban service
+fail2ban-client reload                          # Reload Fail2ban configuration
+fail2ban-client status                          # Show Fail2ban status and enabled jails
+fail2ban-client status <jail>                   # Show status of a specific jail
+fail2ban-client status <filter>                 # Show status of jails matching a filter
+fail2ban-client status <service>                # Show status of jails for a specific service
+fail2ban-client set <jail> enabled              # Enable a specific jail
+fail2ban-client set <jail> disabled             # Disable a specific jail
+fail2ban-client set <jail> banip <IP>           # Manually ban an IP address in a jail
+fail2ban-client set <jail> unbanip <IP>         # Unban an IP address from a jail
+fail2ban-client set <jail> banip <IP> [time]    # Ban an IP address in a jail for a specific duration
+fail2ban-client set <jail> unbanip <IP> [time]  # Unban an IP address from a jail for a specific duration
+fail2ban-client add <jail> <filter>             # Add a filter to a jail
+fail2ban-client remove <jail> <filter>          # Remove a filter from a jail
+fail2ban-client ping                            # Check if Fail2ban is running
+fail2ban-client version                         # Show Fail2ban version information
+fail2ban-client status [service]                # Show full status information for all or a specific service
+fail2ban-client status [<jail>...]              # Show status information for one or multiple jails
+fail2ban-client get <jail> logpath              # Get the log path for a specific jail
+fail2ban-client get <jail> loglevel             # Get the log level for a specific jail
+fail2ban-client get <jail> maxretry             # Get the maximum number of retries for a specific jail
+```
+
+**How to send commands to containers:**
+To interact with running containers, you can use the 'docker exec' command:  
+```bash
+docker exec [OPTIONS] CONTAINER COMMAND [ARG...]
+```
+For instance, if you have a container named my-container and you want to run the ls command inside it, the command would be:  
+```bash
+docker exec my-container ls
+```
+This would execute the ls command inside the my-container container and display the output of the ls command in your terminal.  
+
+You can also use additional options with docker exec to modify its behavior, such as -it to allocate a pseudo-TTY and keep STDIN open.  
+This can be useful when running interactive commands inside the container.  
+```bash
+docker exec -it container_name command
+```
+Using the -it option allows you to interact with the command running inside the container, as if you were working directly in a terminal session within the container.  
+
 ---
 
 ### Getting started
-1.	Clone the innovation-hub-api-container project repo to your local host  
-2.	Install Docker and Docker-Compose
-3.	Create the user:password file using your preferred method – see below for options.  
-4.	Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
- - or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
-5.	Start build and start process with:  
-  - To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
-  - To run daemonised: ‘docker-compose up  -d --build --remove-orphans’  
-6.	Browse to http://localhost/api/ to access the innovation hub API.  
-  -	Enter username and password  
-  -	**default user**  
-    - username: admin  
-    - password: admin  
-
-7.	Enjoy the API!  
+1. Clone the innovation-hub-api-container project repo to your local host  
+2. Install Docker and Docker-Compose
+3. Create the user:password file using your preferred method – see below for options.  
+4. Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
+	- or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
+5. Start build and start process with:  
+	- To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
+	- To run daemonised: ‘docker-compose up  -d --build --remove-orphans’  
+6. Browse to http://localhost/api/ to access the innovation hub API.  
+	- Enter username and password  
+	- **default user**  
+		- username: admin  
+		- password: admin  
+7. Enjoy the API!  
+  
+With container images now built, to start/stop containers, use the following:  
+Stop containers: 
+```bash
+'docker-compose down'
+```
+  
+Start containers:  
+```bash
+'docker-compose up'
+```
   
 OPTIONAL  
 8.  Browse to http://localhost/monit/ to access container1 watchdog status web portal
