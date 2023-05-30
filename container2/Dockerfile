@@ -29,7 +29,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
 # set working directory
 WORKDIR /
 
-# copy script and make executable
+# copy script and then make executable
 COPY docker-entrypoint.sh entrypoint.sh
 RUN chmod +x entrypoint.sh
 

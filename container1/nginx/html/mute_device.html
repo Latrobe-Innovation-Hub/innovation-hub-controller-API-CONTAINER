@@ -84,12 +84,14 @@
         var username = $('#username').val();
         var password = $('#password').val();
         var mute = $('#mute').prop('checked');
+		var platformInput = $('#platformInput').val();
 
         var payload = {
           'hostname': hostname,
           'username': username,
           'password': password,
-          'mute': mute
+          'mute': mute,
+		  'platformInput':platformInput,
         };
 
         $.ajax({
@@ -127,12 +129,15 @@
     <label for="mute">Mute:</label>
     <input type="checkbox" id="mute"><br>
 
+	<label for="platformInput">Platform:</label>
+    <input type="platformInput" id="platformInput" required><br>
+
     <button type="submit">Send Request</button>
   </form>
 
   <h2>Response:</h2>
   <pre id="response"></pre>
   
-  <button id="returnButton">Return to main menu</button>
+  <button id="returnButton">Return to Main Menu</button>
 </body>
 </html>

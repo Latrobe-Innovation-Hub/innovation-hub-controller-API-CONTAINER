@@ -24,7 +24,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# copy nginx configurations
+# copy nginx configuration files
 WORKDIR /etc/nginx
 COPY ./nginx/nginx.conf .
 COPY ./nginx/templates templates/

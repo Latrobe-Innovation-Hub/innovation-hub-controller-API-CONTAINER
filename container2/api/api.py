@@ -99,7 +99,7 @@ def run_get_session_id(hostname, username, password, target_username):
             return {'error': str(e)}
 
 # mute/unmute windows pc using nircmd
-def run_mute_device(hostname, username, password, mute):
+def run_mute_device(hostname, username, password, mute, platformInput=None):
     # Create a new SSH client object
     client = paramiko.SSHClient()
 
@@ -116,14 +116,13 @@ def run_mute_device(hostname, username, password, mute):
             mute = 1 if str(mute).lower() == "true" else 0
 
             # Determine the operating system of the remote computer
-            system = platform.system()
-            if system == 'Windows':
+            if platformInput.lower().strip() == 'windows' or platformInput.lower().strip() == 'win':
                 # Use the nircmd command to mute/unmute the system volume on Windows
                 command = f'nircmd mutesysvolume {mute}'
-            elif system == 'Darwin':
+            elif platformInput.lower().strip() == 'mac':
                 # Use the osascript command to mute/unmute the system volume on macOS
                 command = f"osascript -e 'set volume {1 - mute}'"
-            else:
+            else: # wing it!
                 # Use the amixer command to mute/unmute the system volume on Linux/Unix
                 command = f"amixer -D pulse sset Master 'mute' {mute}"
 
@@ -145,7 +144,7 @@ def run_mute_device(hostname, username, password, mute):
 
 
 # reboot pc using via ssh
-def run_reboot_device(hostname, username, password):
+def run_reboot_device(hostname, username, password, platformInput=None):
     # Create a new SSH client object
     client = paramiko.SSHClient()
 
@@ -157,14 +156,13 @@ def run_reboot_device(hostname, username, password):
         try:
             # Connect to the remote host
             client.connect(hostname, username=username, password=password)
-
+            
             # Determine the operating system of the remote computer
-            system = platform.system()
-            if system == 'Windows':
-                command = 'shutdown /r /t 0' # Use the shutdown command to reboot Windows
-            else:
-                command = 'sudo reboot' # Use the reboot command to reboot Linux/Unix
-
+            if platformInput.lower().strip() == 'windows' or platformInput.lower().strip() == 'win':
+                command = 'shutdown /r /t 0'
+            elif platformInput.lower().strip() == 'mac' or platformInput.lower().strip() == 'unix':
+                command = 'sudo reboot now'
+                
             # Send the reboot command
             _, stdout, stderr = client.exec_command(command)
 
@@ -468,11 +466,12 @@ def mute_device():
     username = data.get('username')
     password = data.get('password')
     mute = data.get('mute')
+    platformInput = data.get('platformInput')
 
     print("\n", hostname, username, password, mute, "\n")
 
     # Reboot the remote computer
-    result = run_mute_device(hostname, username, password, mute)
+    result = run_mute_device(hostname, username, password, mute, platformInput)
 
     if result is None:
         return jsonify({'error': 'backend function failed'}), 500
@@ -491,11 +490,12 @@ def reboot_windows():
     hostname = data.get('hostname')
     username = data.get('username')
     password = data.get('password')
+    platformInput = data.get('platformInput')
 
     print("\n", hostname, username, password, "\n")
 
     # Reboot the remote computer
-    result = run_reboot_device(hostname, username, password)
+    result = run_reboot_device(hostname, username, password, platformInput)
 
     if result is None:
         return jsonify({'error': 'backend function failed'}), 500

@@ -472,3 +472,12 @@ user3:password3
 ```
 
 ---
+	
+### API Proxy Web Menu Screenshots
+main menu page:  
+![main menu](screenshots/main-menu.jpg)
+  
+open powerpoint page:  
+![open powerpoint](screenshots/open-powerpoint.jpg)
+	
+---
