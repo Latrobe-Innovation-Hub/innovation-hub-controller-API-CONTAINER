@@ -295,40 +295,20 @@ def run_application(hostname, username, password, application=None, arguments=No
             # Execute the qwinsta command to retrieve session information for the target user
             session_id = get_session_id(client, username)
             
-            if session_id:
-            
-                # Create the command to open the specified application with the given arguments
-                command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{application}\""
+            # Create the command to open the specified application with the given arguments
+            command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{application}\""
 
-                if arguments is not None:
-                    command += f' \"{arguments}\"'
-                    
-                _, stdout, stderr = client.exec_command(command)
-
-                # Retrieve the output of the command
-                output = stdout.read().decode('utf-8')
-                error = stderr.read().decode('utf-8')
-
-                # Extract the PID from the error output
-                pid_match = re.search(r"process ID (\d+)", error)
-                
-                if pid_match:
-                    pid = pid_match.group(1)
-                    return pid
-                else:
-                    return f"{output}, {error}"
-            
-            else:
-                return f"No active session found for {username}."
+            if arguments is not None:
+                command += f' \"{arguments}\"'
 
             # send command
-            #stdin, stdout, stderr = client.exec_command(command)
-            #print(stdin, stdout, stderr)
+            stdin, stdout, stderr = client.exec_command(command)
+            print(stdin, stdout, stderr)
 
             # capture exit status
-            #exit_status = stdout.channel.recv_exit_status()
+            exit_status = stdout.channel.recv_exit_status()
             #if exit_status == 0:
-            #return f"{exit_status}"
+            return f"{exit_status}"
             #else:
             #    return f"command failed with exit status {exit_status}."
 

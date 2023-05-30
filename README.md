@@ -9,6 +9,60 @@ git clone --single-branch --branch master https://github.com/Hololens-Latrobe-Ci
 
 ---
 
+**directory structure**  
+```bash
+project
+├── container1
+│   ├── docker-entrypoint.sh
+│   ├── Dockerfile
+│   ├── fail2ban			<- fail2ban config dir
+│   │   ├── action.d
+│   │   │   └── docker-iptables-multiport.conf
+│   │   ├── fail2ban.local
+│   │   ├── filter.d
+│   │   │   └── nginx-http-auth.conf
+│   │   ├── jail.d
+│   │   │   └── nginx.conf
+│   │   └── jail.local
+│   ├── fixed_envsubst-on-templates.sh
+│   ├── healthcheck.sh
+│   ├── monit				<- monit watchdog config dir
+│   │   ├── fail2ban.conf
+│   │   ├── monitrc
+│   │   └── nginx.conf
+│   ├── nginx				<- nginx proxy config dir
+│   │   ├── default.old
+│   │   ├── html
+│   │   │   ├── background.jpg
+│   │   │   └── index.html
+│   │   ├── nginx.conf
+│   │   └── templates
+│   │       └── default.conf.template
+│   └── password_script.sh
+├── container2
+│   ├── api				<- Python Flask API config dir
+│   │   ├── gunicorn_config.py
+│   │   ├── api.py
+│   │   ├── api_config.py
+│   │   ├── requirements.txt
+│   │   ├── start_api.sh
+│   ├── docker-entrypoint.sh
+│   ├── Dockerfile
+│   ├── healthcheck.sh
+│   └── monit				<- monit watchdog config dir
+│       ├── gunicorn3.conf
+│       └── monitrc
+├── epson_projector			<- Epson projector Python remote control 
+├──  scripts
+    ├── password_script.sh		<- encrypted password script
+    └── user_credentials.txt		<- example user:password file for script
+├── README.md
+├── docker-compose.yml
+└── windows_ssh_psexec_setup.txt	<- guide for windows ssh/api access/control
+```
+
+---
+
 ### System Info
 **names:**  
 container1: reverse-proxy  
@@ -33,6 +87,9 @@ logs: /home/innovation-hub-api/persistent/logs/container1
   
 **container2 persistent storage:**  
 logs: /home/innovation-hub-api/persistent/logs/container2
+
+**container1 fail2ban nginx jail name:**  
+nginx-http-auth
   
 **Default API Access (through proxy; can be changed/removed):**  
 Username: admin  
@@ -107,20 +164,20 @@ healthcheck.sh - for docker healtcheck status request response
 
 ### Container Roles
 **Container1**  
-Container1 handles all incoming network requests to the container network, and proxies any permissible requests destined for container2 to its respective static IP address.  
+Container1 serves as the primary handler for all incoming network requests within the container network. It acts as a proxy, directing permissible requests to container2 using its respective static IP address.  
   
-To handle incoming requests, container1 runs the NGINX service on port 80.  To control access to the container network, NGINX has basic-auth turned on and references a user:password file (.htpasswd) to determine relevant access privileges.  I Have made it so the password file can be created outside of the container and either passed in via the Dockerfile, or shared via a --volume -v in docker-compose.yaml
+To facilitate incoming requests, container1 employs the NGINX service, running on port 80. Access control for the container network is managed through NGINX's basic-auth feature, which relies on a user:password file (.htpasswd) to determine the appropriate access privileges. Notably, I have designed the system to allow the password file to be generated externally to the container. It can be passed in via the Dockerfile or shared using the --volume (-v) option in the docker-compose.yaml file.  
   
-To handle requests that fail NGINX basic-auth 5 times, container1 also runs the service Fail2ban.  Fail2ban monitors the NGINX error log and records the IP address of failed access attempts to its log for future reference.  Once an IP address has reached 5 failed attempts within a given time span (10 mins) the IP address is banned from future access for 10 minutes – the number of attempts. the time frame for attempts, and the ban time can all be configured within Fail2bans configuration file before container1 build time if desired.  See authentification section for further explanation.  
+To address failed attempts at NGINX basic authentication, container1 integrates the Fail2ban service. Fail2ban continuously monitors the NGINX error log and records the IP addresses of unsuccessful access attempts for future reference. Should an IP address exceed five failed attempts within a specified time span (currently set at 10 minutes), it is automatically banned from accessing the network for a duration of 10 minutes. The number of attempts, the timeframe for attempts, and the ban duration can all be customized within Fail2ban's configuration file before building container1. Please refer to the authentication section for more detailed explanations.  
   
-Nginx only using port 80 currently - atm don't see any need for SSL, but that might change...  
+As of now, NGINX solely operates on port 80, and there is no immediate need for SSL. However, it is worth noting that this requirement might evolve in the future.
   
-Monit is used as the watchdog handler for monitoring the NGINX and Fail2ban services and restarts if either are found to be down/unresponsive.  
+To ensure uninterrupted service, Monit serves as the watchdog handler, continuously monitoring the NGINX and Fail2ban services. If either of these services is found to be inactive or unresponsive, Monit takes necessary measures to restart them, guaranteeing the system's reliability.
   
 **Container2**  
-Container2 runs the Innovation Hub API service whichi is written in Python.  The Web Server Gateway Interface (WSGI) Gunicorn is used to handle all web requests to and from the application.  
+Container2 hosts the Innovation Hub API service, developed in Python. All web requests to and from the application are processed by the Web Server Gateway Interface (WSGI) Gunicorn.  
   
-Contiainer2 has no exposed ports and is only accessible from outside the container network via the container1 reverse proxy.  
+Container2 intentionally does not expose any ports externally. It is solely accessible from outside the container network via the container1 reverse proxy.  
 
 ---
 
@@ -147,101 +204,193 @@ The container log level can be set system-wide for the Gunicorn service.  Availa
 ### Watchdog Services:
 **Container1:**  
 Software: Monit  
-Monitoring: NGINX, Fail2ban  
-Web-monitor portal: Yes  
+Monitored Services: NGINX, Fail2ban  
+Web Monitoring Portal: Yes  
   
-Monit is set up to monitor NGINX and Fail2ban services every 2mins and reports the status of each and handles service restart duties if they are found to be inactive.  Nginx is monitored via PID file and /healthcheck on port 80 Nginx that returns http code 200 on success; Fail2ban is monitored via PID file and socket.
+Monit is configured to monitor the NGINX and Fail2ban services every 2 minutes. It provides status reports for each service and takes responsibility for restarting them if they are found to be inactive. NGINX is monitored using a PID file and the /healthcheck endpoint on port 80, which returns an HTTP code of 200 upon success. Fail2ban is monitored using a PID file and a socket.  
   
-Monit also provides a web port to both monitor and control system services.  This portal is located on port 2812 of container1, and access is provided via NGINX reverse proxy features.  
+In addition, Monit offers a web portal for monitoring and controlling system services. This portal can be accessed through the NGINX reverse proxy feature on port 2812 of container1.  
   
-  To access Monit’s web portal, visit http://localhost/monit/
-      **credentials:**  
-          username: admin  
-          password: admin  
+To access Monit's web portal, visit http://localhost/monit/ and use the following credentials:  
+Username: admin  
+Password: admin  
   
-Monit config files are stored in project dir: container1/monit/  
+Monit's configuration files are stored in the project directory: container1/monit/   
   
 **Container2:**  
 Software: Monit  
-Monitoring: Gunicorn3  
-Web-monitor portal: No  
+Monitored Service: Gunicorn3  
+Web Monitoring Portal: No  
   
-Monit is set up to monitor the Guniicorn3 service every 2mins and reports the status and handles service restart duties if they are found to be inactive.  Gunicorn is monitored via PID file and /ping on port 80 - /ping located in api.py, which returns string: 'status: ok'  
+Monit is configured to monitor the Gunicorn3 service every 2 minutes. It provides status reports and handles the task of restarting the service if it is found to be inactive. Gunicorn is monitored using a PID file and the /ping endpoint on port 80. The /ping endpoint is located in the api.py file and returns the string "status: ok".  
   
-Monit config files are stored in project dir: container2/monit/  
-Gunicorn restart script is stored in project dir: container2/api/start_api.sh  
-  
-**Command line access to watchdogs:**  
-It is also possible to access and control watchdog states and status via the command line using: 
+Monit's configuration files are stored in the project directory: container2/monit/  
+The Gunicorn restart script is stored in the project directory: container2/api/start_api.sh  
+
+---
+
+### Available service commands  
+Monit commands (both containers):  
 ```bash
-docker exec CONTAINER-NAME COMMAND ARGS
+monit start all             				# Start all services  
+monit start <name>          				# Only start the named service  
+monit stop all              				# Stop all services  
+monit stop <name>           				# Stop the named service  
+monit restart all           				# Stop and start all services  
+monit restart <name>        				# Only restart the named service  
+monit monitor all           				# Enable monitoring of all services  
+monit monitor <name>        				# Only enable monitoring of the named service  
+monit unmonitor all         				# Disable monitoring of all services  
+monit unmonitor <name>      				# Only disable monitoring of the named service  
+monit reload                				# Reinitialize monit  
+monit status [name]         				# Print full status information for service(s)  
+monit summary [name]        				# Print short status information for service(s)  
+monit report [up|down|..]   				# Report state of services. See manual for options  
+monit quit                  				# Kill the monit daemon process  
+monit validate              				# Check all services and start if not running  
+monit procmatch <pattern>   				# Test process matching pattern  
 ```
-Available monit commands:
+  
+Fail2ban commands (container1:  
 ```bash
-monit start all             			# Start all services  
-monit start <name>          			# Only start the named service  
-monit stop all              			# Stop all services  
-monit stop <name>           			# Stop the named service  
-monit restart all           			# Stop and start all services  
-monit restart <name>        			# Only restart the named service  
-monit monitor all           			# Enable monitoring of all services  
-monit monitor <name>        			# Only enable monitoring of the named service  
-monit unmonitor all         			# Disable monitoring of all services  
-monit unmonitor <name>      			# Only disable monitoring of the named service  
-monit reload                			# Reinitialize monit  
-monit status [name]         			# Print full status information for service(s)  
-monit summary [name]        			# Print short status information for service(s)  
-monit report [up|down|..]   			# Report state of services. See manual for options  
-monit quit                  			# Kill the monit daemon process  
-monit validate              			# Check all services and start if not running  
-monit procmatch <pattern>   			# Test process matching pattern  
+fail2ban-client start                           	# Start Fail2ban service
+fail2ban-client stop                           		# Stop Fail2ban service
+fail2ban-client reload                          	# Reload Fail2ban configuration
+fail2ban-client status                         	 	# Show Fail2ban status and enabled jails
+fail2ban-client status <jail>                   	# Show status of a specific jail
+fail2ban-client status <filter>                 	# Show status of jails matching a filter
+fail2ban-client status <service>               	 	# Show status of jails for a specific service
+fail2ban-client set <jail> enabled              	# Enable a specific jail
+fail2ban-client set <jail> disabled             	# Disable a specific jail
+fail2ban-client set <jail> banip <IP>           	# Manually ban an IP address in a jail
+fail2ban-client set <jail> unbanip <IP>         	# Unban an IP address from a jail
+fail2ban-client set <jail> banip <IP> [time]    	# Ban an IP address in a jail for a specific duration
+fail2ban-client set <jail> unbanip <IP> [time]  	# Unban an IP address from a jail for a specific duration
+fail2ban-client add <jail> <filter>             	# Add a filter to a jail
+fail2ban-client remove <jail> <filter>          	# Remove a filter from a jail
+fail2ban-client ping                            	# Check if Fail2ban is running
+fail2ban-client version                         	# Show Fail2ban version information
+fail2ban-client status [service]                	# Show full status information for all or a specific service
+fail2ban-client status [<jail>...]              	# Show status information for one or multiple jails
+fail2ban-client get <jail> logpath              	# Get the log path for a specific jail
+fail2ban-client get <jail> loglevel             	# Get the log level for a specific jail
+fail2ban-client get <jail> maxretry             	# Get the maximum number of retries for a specific jail
+```
+  
+Nginx commands (container1):  
+```bash
+nginx -t                     				# Test the configuration file for syntax errors
+nginx                        				# Start the Nginx service
+nginx -s stop                				# Stop the Nginx service
+nginx -s quit               				# Gracefully stop the Nginx service
+nginx -s reload              				# Reload the Nginx configuration
+nginx -s reopen              				# Reopen the log files
+nginx -s upgrade             				# Upgrade Nginx executable on the fly
+nginx -s quit                				# Shutdown the Nginx service immediately
+```
+  
+Htpasswd commands (container1):  
+```bash
+htpasswd -c <password_file> <username>                	# Create a new user or add a user to the password file
+htpasswd <password_file> <username>                   	# Add or update a user in the existing password file
+htpasswd -D <password_file> <username>                	# Remove a user from the password file
+htpasswd -v <password_file>                           	# Verify the password file's syntax and integrity
+htpasswd -n <username>                                	# Generate encrypted password without updating the password file
+htpasswd -B <password_file> <username>                	# Specify the encryption algorithm to use (e.g., bcrypt)
+htpasswd -s <password_file> <username>                	# Specify the encryption algorithm to use (e.g., SHA)
+htpasswd -p <password_file> <username>                	# Specify a custom encryption algorithm
 ```
 
-
-**Command line access to fail2ban (container1):**
-The following commands can be used with the fail2ban-client tool to manage Fail2ban:  
-```bash
-fail2ban-client start                           # Start Fail2ban service
-fail2ban-client stop                            # Stop Fail2ban service
-fail2ban-client reload                          # Reload Fail2ban configuration
-fail2ban-client status                          # Show Fail2ban status and enabled jails
-fail2ban-client status <jail>                   # Show status of a specific jail
-fail2ban-client status <filter>                 # Show status of jails matching a filter
-fail2ban-client status <service>                # Show status of jails for a specific service
-fail2ban-client set <jail> enabled              # Enable a specific jail
-fail2ban-client set <jail> disabled             # Disable a specific jail
-fail2ban-client set <jail> banip <IP>           # Manually ban an IP address in a jail
-fail2ban-client set <jail> unbanip <IP>         # Unban an IP address from a jail
-fail2ban-client set <jail> banip <IP> [time]    # Ban an IP address in a jail for a specific duration
-fail2ban-client set <jail> unbanip <IP> [time]  # Unban an IP address from a jail for a specific duration
-fail2ban-client add <jail> <filter>             # Add a filter to a jail
-fail2ban-client remove <jail> <filter>          # Remove a filter from a jail
-fail2ban-client ping                            # Check if Fail2ban is running
-fail2ban-client version                         # Show Fail2ban version information
-fail2ban-client status [service]                # Show full status information for all or a specific service
-fail2ban-client status [<jail>...]              # Show status information for one or multiple jails
-fail2ban-client get <jail> logpath              # Get the log path for a specific jail
-fail2ban-client get <jail> loglevel             # Get the log level for a specific jail
-fail2ban-client get <jail> maxretry             # Get the maximum number of retries for a specific jail
-```
-
-**How to send commands to containers:**
+### How to send commands to containers  
 To interact with running containers, you can use the 'docker exec' command:  
 ```bash
 docker exec [OPTIONS] CONTAINER COMMAND [ARG...]
 ```
-For instance, if you have a container named my-container and you want to run the ls command inside it, the command would be:  
-```bash
-docker exec my-container ls
-```
-This would execute the ls command inside the my-container container and display the output of the ls command in your terminal.  
-
 You can also use additional options with docker exec to modify its behavior, such as -it to allocate a pseudo-TTY and keep STDIN open.  
 This can be useful when running interactive commands inside the container.  
 ```bash
 docker exec -it container_name command
 ```
 Using the -it option allows you to interact with the command running inside the container, as if you were working directly in a terminal session within the container.  
+  
+### Example  
+For instance, if you want to add a access credentials for a new user, the command would be:  
+```bash
+# docker exec -it <container1_name> htpasswd <password_file> /etc/nginx/auth/.htpasswd <username>
+docker exec -it innovation-hub-reverse-proxy htpasswd /etc/nginx/auth/.htpasswd new_user
+```
+This would execute the htpasswd create new user command inside the innovation-hub-reverse-proxy container and display the output in your terminal.
+  
+Then, to initialise the updated .htpasswd file with nginx, reload nginx with:
+```bash
+# docker exec <container1_name> nginx -s reload
+docker exec innovation-hub-reverse-proxy nginx -s reload
+```
+
+---
+
+### API Requests
+```bash  
+url: /mute_device  
+    method: POST  
+    description: Mute or unmute the volume on a remote computer.  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password',  
+        'mute': True  
+    }  
+  
+url: /reboot_device,  
+    method: POST,  
+    description: Reboot a remote computer.,  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password'  
+    }  
+  
+url: /open_powerpoint,  
+    method: POST,  
+    description: Open a PowerPoint presentation on a remote computer.,  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password',  
+        'url': 'presentation-url'  
+    }  
+   
+ url: /close_process,  
+    method: POST,  
+    description: Close a process running on a remote computer.,  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password',  
+        'pid': 'process-id'  
+    }  
+  
+url: /open_application,  
+    method: POST,  
+    description: Run an application on a remote computer.,  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password',  
+        "application": "C:\\Program Files\\MyApp\\MyApp.exe",  
+        "arguments": "--arg1 value1 --arg2 value2"  
+    }  
+  
+url: /send_nircmd,  
+    method: POST,  
+    description: Run system tool nircmd commands on remote windows computer.,  
+    example json payload: {  
+        'hostname': 'remote-hostname.com',  
+        'username': 'remote-username',  
+        'password': 'remote-password',  
+        "command": "screensaver",  
+    }  
+```
 
 ---
 
@@ -271,13 +420,21 @@ Stop containers:
 ```bash
 'docker-compose down'
 ```
-OPTIONAL  
-8.  Browse to http://localhost/monit/ to access container1 watchdog status web portal
-  - Enter username and password
-  - **default user**  
-    - username: admin  
-    - password: admin
-
+   
+### OPTIONAL: Browse to Monit Watchdog Status Web Portal
+  
+container1:  
+URL: http://<host-server-IP>/monit-proxy/  
+If asked, enter username and password. Default user (can be set/changed in container1/monit/monitrc):  
+- Username: admin  
+- Password: admin  
+  
+container2:  
+URL: http://<host-server-IP>/monit-api/  
+If asked, enter username and password. Default user (can be set/changed in container2/monit/monitrc):  
+- Username: admin  
+- Password: admin  
+  
 ---
 
 ### User Authentication

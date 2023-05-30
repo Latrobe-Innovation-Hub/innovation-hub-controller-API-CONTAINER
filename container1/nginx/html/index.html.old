@@ -1,0 +1,44 @@
+<!--
+# innovation-hub-api-container - container1 - nginx/html - index.html
+# written by: Andrew McDonald
+# initial: 23/05/23
+# current: 23/05/23
+# version: 0.9
+-->
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Innovation Hub API Proxy</title>
+<style>
+
+body {
+  background-image: url('background.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
+}
+
+.a {
+  border: none;
+  padding: 50px 25px;
+  text-align: center;
+}
+
+@media only screen and (max-width:1200px) {
+  /* For mobile phones: */
+  .a {
+    padding: 350px 25px;
+  }
+}
+
+</style>
+
+</head>
+<body>
+
+<h1 style="color:White;">Innovation Hub API</h1>
+<h2 style="color:White;">This is the NGINX reverse-proxy (container1)</h2>
+
+</body>
+</html>

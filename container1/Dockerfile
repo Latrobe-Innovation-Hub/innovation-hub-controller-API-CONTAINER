@@ -39,8 +39,9 @@ RUN mkdir -p auth && \
 
 # add basic hivekeeper root web page
 WORKDIR /var/www/html
-COPY ./nginx/html/index.html .
-COPY ./nginx/html/background.jpg .
+#COPY ./nginx/html/index.html .
+#COPY ./nginx/html/background.jpg .
+COPY ./nginx/html .
 
 # copy fail2ban local/docker configurations
 WORKDIR /etc/fail2ban
