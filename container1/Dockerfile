@@ -8,7 +8,7 @@
 FROM nginx:1.20.2
 
 # set container maintainer
-LABEL maintainer="andrew mcdonald <17961040@students.ltu.edu.au>"
+LABEL maintainer="andrew mcdonald <andrew.mcdonald@latrobe.edu.au>"
 
 # installations and clean up
 RUN export DEBIAN_FRONTEND=noninteractive && \
