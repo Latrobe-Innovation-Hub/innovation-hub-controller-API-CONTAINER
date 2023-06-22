@@ -5,7 +5,7 @@
 # version: 0.9
 
 # get base image
-FROM debian:stable-slim
+FROM debian:buster-slim
 
 # set container maintainer
 LABEL maintainer="andrew mcdonald <andrew.mcdonald@latrobe.edu.au>"
@@ -60,8 +60,8 @@ RUN chmod -R 664 /home/innovation-hub-api && \
 WORKDIR /home/innovation-hub-api/api
 
 # update pip,etc and install python app requirements
-RUN python3 -m pip install --upgrade pip setuptools wheel --no-warn-script-location && \
-    pip3 install -r requirements.txt --no-warn-script-location
+#RUN python3 -m pip install --upgrade pip setuptools wheel --no-warn-script-location && \
+#    pip3 install -r requirements.txt --no-warn-script-location
 
 # set app healthcheck
 HEALTHCHECK --interval=120s --timeout=10s --start-period=60s \  
