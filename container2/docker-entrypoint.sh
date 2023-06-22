@@ -56,6 +56,14 @@ start_api() {
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
       cd /home/innovation-hub-api/api/
 
+      # update pip
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] updating python setuptools, wheels..." | tee -a $container_log
+      python3 -m pip install --upgrade pip setuptools wheel --no-warn-script-location
+
+      # install app requirements
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
+      pip3 install -r requirements.txt --no-warn-script-location --break-system-packages
+
       # start api via wsgi (gunicorn)
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
       # gunicorn3 hivekeepers_app:server \
