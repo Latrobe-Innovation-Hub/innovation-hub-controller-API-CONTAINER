@@ -8,7 +8,7 @@
 FROM debian:stable-slim
 
 # set container maintainer
-LABEL maintainer="andrew mcdonald <andrewm.mcdonald@latrobe.edu.au>"
+LABEL maintainer="andrew mcdonald <andrew.mcdonald@latrobe.edu.au>"
 
 # installations and clean up 
 RUN export DEBIAN_FRONTEND=noninteractive && \
