@@ -10,17 +10,29 @@ FROM debian:buster-slim
 # set container maintainer
 LABEL maintainer="andrew mcdonald <andrew.mcdonald@latrobe.edu.au>"
 
-# installations and clean up 
+# add nuster backports repository
+RUN printf "%s\n" "deb http://ftp.de.debian.org/debian buster-backports main" | \
+    tee /etc/apt/sources.list.d/buster-backports.list
+
+# install monit from buster backport repo
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get update -y && \
+    apt-get install -y -t buster-backports monit
+
+# installations and clean up 
+RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y \
     python3 \
+    rustc \
+    python3-venv \
     python3-pip \
-    sqlite3 \
+    build-essential \
+    libssl-dev \
+    python-dev \
+    libffi-dev \
     python3-pymysql \
     gunicorn3 \
     procps \
-    monit \
     curl \
     lsof \
     tzdata \
