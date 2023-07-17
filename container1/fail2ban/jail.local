@@ -1,8 +1,8 @@
 # innovation-hub-api - container1 - fail2ban/jail.local
 # written by: Andrew McDonald
 # initial: 23/05/23
-# current: 23/05/23
-# version: 0.9
+# current: 17/07/23
+# version: 0.1
 
 #
 # WARNING: heavily refactored in 0.9.0 release.  Please review and

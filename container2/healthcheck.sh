@@ -3,7 +3,7 @@
 # innovation-hub-api - container2 - healthycheck.sh
 # written by: Andrew McDonald
 # initial: 23/05/23
-# current: 23/05/23
+# current: 17/07/23
 # version: 0.9
 
 # this script runs simple health check on
