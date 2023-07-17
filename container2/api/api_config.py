@@ -1,7 +1,7 @@
 # innovation-hub-api - container2 - api/api_config.py
 # written by: Andrew McDonald
 # initial: 23/05/23
-# current: 23/05/23
+# current: 17/07/23
 # version: 0.9
 
 import os
