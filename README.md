@@ -4,7 +4,7 @@
 
 pull to local via:
 ```bash
-git clone --single-branch --branch master https://github.com/Hololens-Latrobe-Cisco/innovation-hub-api-container.git
+git clone --single-branch --branch master https://github.com/Latrobe-Innovation-Hub/innovation-hub-controller-API-CONTAINER.git  
 ```
 
 ---
