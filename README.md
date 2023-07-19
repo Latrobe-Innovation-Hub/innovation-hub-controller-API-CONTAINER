@@ -396,7 +396,7 @@ url: /send_nircmd,
 
 ### Getting started
 1. Clone the innovation-hub-api-container project repo to your local host  
-2. Install Docker and Docker-Compose
+2. Install Docker (https://docs.docker.com/engine/install/debian/) and Docker-Compose
 3. Create the user:password file using your preferred method – see below for options.  
 4. Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
 	- or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
