@@ -408,7 +408,10 @@ url: /send_nircmd,
 	- **default user**  
 		- username: admin  
 		- password: admin  
-7. Enjoy the API!  
+7. Enjoy the API!
+  
+   	NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  
+   	see windows_ssh_psexec_setup.txt for instructions.  
   
 With container images now built, to start/stop containers, use the following:  
 Start containers (-d to demonize):  
