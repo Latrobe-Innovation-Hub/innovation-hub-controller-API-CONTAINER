@@ -423,6 +423,9 @@ Stop containers:
   
 NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  
 see windows_ssh_psexec_setup.txt for instructions.  
+
+A test automation PS script has been created to make setting up device hosts easier: SetupSSHandPsTools.ps1
+This script has yet to be tested, so please take caution before choosing to use it.
    
 ### OPTIONAL: Browse to Monit Watchdog Status Web Portal
   
