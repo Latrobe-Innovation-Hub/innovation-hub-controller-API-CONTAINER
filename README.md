@@ -410,9 +410,6 @@ url: /send_nircmd,
 		- password: admin  
 7. Enjoy the API!
   
-   	NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  
-   	see windows_ssh_psexec_setup.txt for instructions.  
-  
 With container images now built, to start/stop containers, use the following:  
 Start containers (-d to demonize):  
 ```bash
@@ -423,6 +420,9 @@ Stop containers:
 ```bash
 'docker-compose down'
 ```
+  
+NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  
+see windows_ssh_psexec_setup.txt for instructions.  
    
 ### OPTIONAL: Browse to Monit Watchdog Status Web Portal
   
