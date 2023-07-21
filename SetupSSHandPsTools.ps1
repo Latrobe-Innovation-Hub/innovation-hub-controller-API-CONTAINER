@@ -47,9 +47,9 @@ NOTE:
 Write-Host $comment
 
 # Prompt the user if they wish to continue
-$response = Read-Host "Do you wish to continue? (Y/N)"
+$response = Read-Host "Do you wish to continue? Type 'yes' to proceed."
 
-if ($response -eq 'Y' -or $response -eq 'y') {
+if ($response -eq 'YES' -or $response -eq 'yes') {
     # Step 1: Install OpenSSH via add features settings
     Add-WindowsFeature -Name OpenSSH-Server -IncludeAllSubFeature
 
@@ -81,4 +81,6 @@ if ($response -eq 'Y' -or $response -eq 'y') {
 }
 else {
     Write-Host "Script execution cancelled. No changes have been made to the system."
+    Read-Host "Press any key to exit..."
+    exit
 }
