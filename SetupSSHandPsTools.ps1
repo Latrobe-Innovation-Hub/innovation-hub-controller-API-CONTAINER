@@ -1,4 +1,19 @@
-# Display the instruction comment
+<#
+Author: Andrew McDonald
+Date: 21.07.2023
+Description: Potential host setup script for Innovation Hub API Windows devices
+
+Usage:
+  Run locally on Windows host system in Powershell with Admin Rights
+
+NOTE:
+  This is just a test script, use at your own risk
+
+Version History:
+  0.1 - Testing 
+
+#>
+
 $comment = @"
 ===============================================================================
 
@@ -28,6 +43,7 @@ NOTE:
 
 "@
 
+# Display the instruction comment
 Write-Host $comment
 
 # Prompt the user if they wish to continue
