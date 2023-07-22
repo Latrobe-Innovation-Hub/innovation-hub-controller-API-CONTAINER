@@ -1,7 +1,5 @@
 # Innovation Hub Device Control API
 
----
-
 pull to local via:
 ```bash
 git clone --single-branch --branch master https://github.com/Latrobe-Innovation-Hub/innovation-hub-controller-API-CONTAINER.git  
