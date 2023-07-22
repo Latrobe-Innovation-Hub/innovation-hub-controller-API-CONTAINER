@@ -16,7 +16,7 @@ set /p choice=Enter option number:
 
 if "%choice%"=="1" (
     echo Installing Windows Host Configurations and API Controller settings...
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-host.ps1"
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-host.ps1" >> install-log.txt 2>&1
     if %ERRORLEVEL% NEQ 0 (
         echo An error occurred during installation. Please check the install-log.txt for details.
     ) else (
@@ -28,7 +28,7 @@ if "%choice%"=="1" (
 
 if "%choice%"=="2" (
     echo Uninstalling Windows Host Configurations and reverting to default...
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0uninstall-host.ps1"
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0uninstall-host.ps1" >> uninstall-log.txt 2>&1
     if %ERRORLEVEL% NEQ 0 (
         echo An error occurred during uninstallation. Please check the uninstall-log.txt for details.
     ) else (
@@ -40,10 +40,7 @@ if "%choice%"=="2" (
 
 if "%choice%"=="3" (
     echo Checking status of changes...
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0host-checker.ps1"
-    if %ERRORLEVEL% NEQ 0 (
-        echo An error occurred during status checking. Please check the status-log.txt for details.
-    )
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0host-checker.ps1" >> status-log.txt 2>&1
     pause
     goto MainMenu
 )
