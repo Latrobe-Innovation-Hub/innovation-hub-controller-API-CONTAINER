@@ -14,6 +14,15 @@ echo 4. Exit
 
 set /p choice=Enter option number: 
 
+rem Input validation
+setlocal enabledelayedexpansion
+echo !choice! | findstr /r /c:"^[1-4]$" > nul
+if errorlevel 1 (
+    echo Invalid choice. Please try again.
+    pause
+    goto MainMenu
+)
+
 if "%choice%"=="1" (
     echo Installing Windows Host Configurations and API Controller settings...
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-host.ps1" >> install-log.txt 2>&1
@@ -22,7 +31,8 @@ if "%choice%"=="1" (
     ) else (
         echo Installation completed successfully.
     )
-    pause
+    echo Press any key to continue...
+    pause > nul
     goto MainMenu
 )
 
@@ -34,14 +44,16 @@ if "%choice%"=="2" (
     ) else (
         echo Uninstallation completed successfully.
     )
-    pause
+    echo Press any key to continue...
+    pause > nul
     goto MainMenu
 )
 
 if "%choice%"=="3" (
     echo Checking status of changes...
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0host-checker.ps1" >> status-log.txt 2>&1
-    pause
+    echo Press any key to continue...
+    pause > nul
     goto MainMenu
 )
 
@@ -49,7 +61,3 @@ if "%choice%"=="4" (
     echo Exiting...
     exit /b
 )
-
-echo Invalid choice. Please try again.
-pause
-goto MainMenu
