@@ -15,42 +15,24 @@ echo 4. Exit
 set /p choice=Enter option number: 
 
 if "%choice%"=="1" (
-    echo Checking status of changes...
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0status-checker.ps1"
-    if %ERRORLEVEL% EQU 0 (
-        echo Installing Windows Host Configurations and API Controller settings...
-        PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-host.ps1"
-        if %ERRORLEVEL% NEQ 0 (
-            echo An error occurred during installation. Please check the install-log.txt for details.
-        ) else (
-            echo Installation completed successfully.
-        )
+    echo Installing Windows Host Configurations and API Controller settings...
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install-host.ps1"
+    if %ERRORLEVEL% NEQ 0 (
+        echo An error occurred during installation. Please check the install-log.txt for details.
     ) else (
-        echo Installation canceled by user.
+        echo Installation completed successfully.
     )
     pause
     goto MainMenu
 )
 
 if "%choice%"=="2" (
-    echo Checking status of changes...
-    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0status-checker.ps1"
-    if %ERRORLEVEL% EQU 0 (
-        echo Are you sure you want to uninstall Windows Host Configurations and revert to default? (Y/N)
-        set /p uninstall_confirm=
-        if /i "%uninstall_confirm%"=="Y" (
-            echo Uninstalling Windows Host Configurations and reverting to default...
-            PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0uninstall-host.ps1"
-            if %ERRORLEVEL% NEQ 0 (
-                echo An error occurred during uninstallation. Please check the uninstall-log.txt for details.
-            ) else (
-                echo Uninstallation completed successfully.
-            )
-        ) else (
-            echo Uninstallation canceled.
-        )
+    echo Uninstalling Windows Host Configurations and reverting to default...
+    PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0uninstall-host.ps1"
+    if %ERRORLEVEL% NEQ 0 (
+        echo An error occurred during uninstallation. Please check the uninstall-log.txt for details.
     ) else (
-        echo Uninstallation canceled by user.
+        echo Uninstallation completed successfully.
     )
     pause
     goto MainMenu
@@ -59,6 +41,9 @@ if "%choice%"=="2" (
 if "%choice%"=="3" (
     echo Checking status of changes...
     PowerShell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0host-checker.ps1"
+    if %ERRORLEVEL% NEQ 0 (
+        echo An error occurred during status checking. Please check the status-log.txt for details.
+    )
     pause
     goto MainMenu
 )
