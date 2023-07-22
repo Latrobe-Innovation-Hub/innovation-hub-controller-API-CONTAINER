@@ -43,7 +43,7 @@ The Windows Host Configuration Tool facilitates the following configurations:
 Please note that these scripts should be used with caution and only on Windows hosts where you understand the potential impact of the configurations.
 
 
-# Dependencies
+## Dependencies
 
 The Windows Host Configuration Tool relies on the following PowerShell scripts:
 
