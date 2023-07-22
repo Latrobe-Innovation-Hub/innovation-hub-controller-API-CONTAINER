@@ -42,4 +42,19 @@ The Windows Host Configuration Tool facilitates the following configurations:
 
 Please note that these scripts should be used with caution and only on Windows hosts where you understand the potential impact of the configurations.
 
+
+# Dependencies
+
+The Windows Host Configuration Tool relies on the following PowerShell scripts:
+
+1. **install-host.ps1**: This PowerShell script contains the instructions to install the Windows host configurations and API Controller settings.
+
+2. **uninstall-host.ps1**: This PowerShell script contains the instructions to uninstall the Windows host configurations and revert the host back to its default state.
+
+3. **check-host.ps1**: This PowerShell script checks the status of the changes made to the Windows host without performing any installations or uninstallations.
+
+These PowerShell scripts are essential components of the Windows Host Configuration Tool and should be kept in the same directory as the `windows_host_config_tool.bat` script for proper functionality.
+
+Please ensure that you have PowerShell installed on your system and call the `windows_host_config_tool.bat` as Administrator
+
 ---
