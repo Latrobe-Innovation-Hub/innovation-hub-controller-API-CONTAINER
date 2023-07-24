@@ -12,8 +12,8 @@ Choose an option:
   3. Check Status of Changes
 
   Current ExecutionPolicy: Restricted
-  4. Set ExecutionPolicy to Unrestricted
-  5. Set ExecutionPolicy to Restricted
+  4. Set ExecutionPolicy to Unrestricted (Allows running scripts)
+  5. Set ExecutionPolicy to Restricted (Restricts running scripts)
 
   6. Reboot System
   7. Exit
