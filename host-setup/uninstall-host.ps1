@@ -124,21 +124,32 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		$undoStepsStatus += [PSCustomObject]@{Step = "Stop and Set sshd to Manual Startup"; Success = $true}
 	}
 
-    # STEP 4 Check if OpenSSH is installed and remove it
-	if (Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client*' }) {
-		# Step 4: Remove OpenSSH via remove features settings
-		$step4Success = $true
-		try {
-			# Uninstall OpenSSH.Server feature
-			Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client*' } | Remove-WindowsCapability -Online
-		} catch {
-			$step4Success = $false
-		}
-		#ConfirmStepSuccess "Remove OpenSSH" $step4Success
-	} else {
-		Write-Host "OpenSSH is not installed."
-		$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH"; Success = $true}
+
+	# Step 4: Remove OpenSSH via remove features settings
+	$step4Success = $true
+	try {
+		# Uninstall the OpenSSH Client
+		Remove-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+		#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
+	} catch {
+		$step4Success = $false
 	}
+	#Write-Host "OpenSSH is not installed."
+	$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Client"; Success = $step4Success}
+
+	# Step 4b: Remove OpenSSH via remove features settings
+	$step4bSuccess = $true
+	try {
+		# Uninstall the OpenSSH Server
+		Remove-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+
+		#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
+	} catch {
+		$step4bSuccess = $false
+	}
+	#Write-Host "OpenSSH is not installed."
+	$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Server"; Success = $step4bSuccess}
 
 	# Step 5 Remove the registry key for LocalAccountTokenFilterPolicy
 	$step5Success = $true
@@ -167,4 +178,4 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 }
 
 Write-Host
-Write-Host "Press any key to exit..."
+Write-Host "Press any key to continue..."
