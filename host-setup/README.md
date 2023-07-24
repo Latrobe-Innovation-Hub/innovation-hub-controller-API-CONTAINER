@@ -6,12 +6,19 @@
 =====================================
 
 Choose an option:
-1. Install Windows Host Configurations and API Controller settings.
-2. Uninstall Windows Host Configurations and revert to default.
-3. Check Status of Changes
-4. Exit
 
-Enter option number: 
+  1. Install Windows Host Configurations and API Controller settings.
+  2. Uninstall Windows Host Configurations and revert to default.
+  3. Check Status of Changes
+
+  Current ExecutionPolicy: Restricted
+  4. Set ExecutionPolicy to Unrestricted
+  5. Set ExecutionPolicy to Restricted
+
+  6. Reboot System
+  7. Exit
+
+Enter option number:
 ```
 
 The Windows Host Configuration Tool is a batch script designed to automate the process of configuring a Windows host system. It provides options to install and uninstall specific configurations and check the status of changes made to the system.
