@@ -67,78 +67,155 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 
 	# Array to store the status of each step
 	$stepsStatus = @()
-
-	# Install the OpenSSH Client
-	#Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 	
-	# Step 1: Install OpenSSH client
-	$step1aSuccess = $true
+ 	<# # Step 1: Install OpenSSH client
+	$step1Success = $true
 	try {
 		# Install the OpenSSH Client
 		Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
 	} catch {
-		$step1aSuccess = $false
+		$step1Success = $false
 	}
-	ConfirmStepSuccess "Install OpenSSH Client" $step1aSuccess
+	ConfirmStepSuccess "Install OpenSSH Client" $step1Success
+	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Client"; Success = $step1Success}
 
 	# Step 2: Install OpenSSH server
-	$step1bSuccess = $true
+	$step2Success = $true
 	try {
 		# Install the OpenSSH Server
 		Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 	} catch {
+		$step2Success = $false
+	}
+	ConfirmStepSuccess "Install OpenSSH Server" $step2Success
+	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step2Success} #>
+	
+	# Step 1: Download and Install OpenSSH server
+	$step1bSuccess = $true
+	try {
+		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
+		if ([Environment]::Is64BitOperatingSystem) {
+			# Use the Win64 URL if the system is 64-bit
+			$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
+		} else {
+			# Use the Win32 URL if the system is 32-bit
+			$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
+		}
+
+		$downloadPath = "$env:TEMP\openssh-server.zip"
+		Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
+
+		$extractPath = "C:\Windows\System32\OpenSSH"  # Change this path to the desired installation location
+		Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+	} catch {
 		$step1bSuccess = $false
 	}
 	ConfirmStepSuccess "Install OpenSSH Server" $step1bSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step1bSuccess}
+
+	# Step 2: Start the sshd service and set it to Automatic startup
+	$step2Success = $true
+	try {
+		#$sshPath = "C:\Windows\System32\OpenSSH"  # Change this path to the correct location of sshd
+		#Start-Process -FilePath "$sshPath\sshd.exe" -ArgumentList "-D"
+		Set-Service -Name sshd -StartupType 'Automatic'
+	} catch {
+		$step2Success = $false
+	}
+	ConfirmStepSuccess "Start SSHD service and set to Automatic startup" $step2Success
+	$stepsStatus += [PSCustomObject]@{Step = "Start SSHD service and set to Automatic startup"; Success = $step2Success}
+
+ 	# Start the sshd service
+	$step3Success = $true
+	try {
+		Start-Service sshd
+	} catch {
+		$step3Success = $false
+	}
+	$stepsStatus += [PSCustomObject]@{Step = "Start SSHD service"; Success = $step3Success}
 	
-	# Start the sshd service
-	Start-Service sshd
 
 	# OPTIONAL but recommended:
-	Set-Service -Name sshd -StartupType 'Automatic'
-
+	$step4Success = $true
+	try {
+		Set-Service -Name sshd -StartupType 'Automatic'
+	} catch {
+		$step4Success = $false
+	}
+	$stepsStatus += [PSCustomObject]@{Step = "Set SSHD service startup type"; Success = $step4Success}
+	
 	# Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
 	if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
 		Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
-		New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+		try {
+			New-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -DisplayName 'OpenSSH Server (sshd)' -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+			$stepsStatus += [PSCustomObject]@{Step = "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."; Success = $true}
+		} catch {
+			$stepsStatus += [PSCustomObject]@{Step = "Failed to create firewall rule 'OpenSSH-Server-In-TCP'."; Success = $false}
+		}
 	} else {
 		Write-Output "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."
+		$stepsStatus += [PSCustomObject]@{Step = "Firewall rule 'OpenSSH-Server-In-TCP' has been created and exists."; Success = $true}
 	}
 
 	# Check if registry key exists for LocalAccountTokenFilterPolicy
 	if (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system\LocalAccountTokenFilterPolicy")) {
 		# Step 4: Create a new registry key for LocalAccountTokenFilterPolicy
-		$step4Success = $true
+		$step5Success = $true
 		try {
 			New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" -Value 1 -PropertyType DWord -Force
 		} catch {
-			$step4Success = $false
+			$step5Success = $false
 		}
-		#ConfirmStepSuccess "Modify Registry" $step4Success
+		#ConfirmStepSuccess "Modify Registry" $step5Success
 	} else {
-		#Write-Host "Registry key for LocalAccountTokenFilterPolicy already exists."
-		$stepsStatus += [PSCustomObject]@{Step = "Modify Registry"; Success = $true}
+		$currentValue = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" | Select-Object -ExpandProperty LocalAccountTokenFilterPolicy
+		if ($currentValue -ne 1) {
+			Write-Host "Updating registry key for LocalAccountTokenFilterPolicy to the correct value (1)..."
+			$step5Success = $true
+			try {
+				Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" -Value 1 -Type DWord
+			} catch {
+				$step5Success = $false
+			}
+			#ConfirmStepSuccess "Modify Registry" $step5Success
+		} else {
+			Write-Host "Registry key for LocalAccountTokenFilterPolicy already exists and is set to the correct value (1)."
+			$stepsStatus += [PSCustomObject]@{Step = "Modify Registry"; Success = $true}
+		}
 	}
 
 	# Check if registry key exists for EnableLUA
 	if (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLUA")) {
 		# Step 5: Disable UAC by setting EnableLUA to 0
-		$step5Success = $true
+		$step6Success = $true
 		try {
 			New-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -PropertyType DWord -Force
 		} catch {
-			$step5Success = $false
+			$step6Success = $false
 		}
-		ConfirmStepSuccess "Disable UAC" $step5Success
+		ConfirmStepSuccess "Disable UAC" $step6Success
 	} else {
-		Write-Host "Registry key for EnableLUA already exists."
-		$stepsStatus += [PSCustomObject]@{Step = "Disable UAC"; Success = $true}
+		$currentValue = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" | Select-Object -ExpandProperty EnableLUA
+		if ($currentValue -ne 0) {
+			Write-Host "Updating registry key for EnableLUA to the correct value (0)..."
+			$step6Success = $true
+			try {
+				Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" -Name "EnableLUA" -Value 0 -Type DWord
+			} catch {
+				$step6Success = $false
+			}
+			ConfirmStepSuccess "Disable UAC" $step6Success
+		} else {
+			Write-Host "Registry key for EnableLUA already exists and is set to the correct value (0)."
+			$stepsStatus += [PSCustomObject]@{Step = "Disable UAC"; Success = $true}
+		}
 	}
-
+	
 	# Check if PsTools are already present
 	if (!(Test-Path "C:\PSTools")) {
 		# Step 6: Download and install PsTools from Microsoft
-		$step6Success = $true
+		$step7Success = $true
 		try {
 			$psToolsUrl = "https://download.sysinternals.com/files/PSTools.zip"
 			
@@ -156,9 +233,32 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 			$newPath = "$pathEnv;$extractPath"
 			[System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
 		} catch {
-			$step6Success = $false
+			$step7Success = $false
 		}
-		#ConfirmStepSuccess "Download and Install PsTools" $step6Success
+		#ConfirmStepSuccess "Download and Install PsTools" $step7Success
+	} elseif (!(Get-ChildItem -Path "C:\PSTools" -Force)) {
+		# Step 6: Re-download and re-install PsTools since the directory exists but is empty
+		$step7Success = $true
+		try {
+			$psToolsUrl = "https://download.sysinternals.com/files/PSTools.zip"
+			
+			# Set the download path to the local user's Downloads directory
+			$downloadPath = [System.IO.Path]::Combine([Environment]::GetFolderPath('User'), 'Downloads\PSTools.zip')
+			
+			# Download the PSTools zip again
+			Invoke-WebRequest -Uri $psToolsUrl -OutFile $downloadPath
+			
+			# Extract the new PSTools contents
+			Expand-Archive -Path $downloadPath -DestinationPath "C:\PSTools" -Force
+
+			# Add the PSTools directory to the system's PATH environment variable
+			$pathEnv = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)
+			$newPath = "$pathEnv;C:\PSTools"
+			[System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
+		} catch {
+			$step7Success = $false
+		}
+		#ConfirmStepSuccess "Download and Install PsTools" $step7Success
 	} else {
 		#Write-Host "PsTools are already installed."
 		$stepsStatus += [PSCustomObject]@{Step = "Download and Install PsTools"; Success = $true}
@@ -197,5 +297,4 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 
 # Ask the user to press any key to exit
 Write-Host
-Write-Host "Press any key to exit..."
-
+Write-Host "Press any key to continue..."
