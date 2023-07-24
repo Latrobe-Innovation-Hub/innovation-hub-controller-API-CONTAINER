@@ -25,7 +25,7 @@ The Windows Host Configuration Tool is a batch script designed to automate the p
 
 **Please Note**:
 - The script will require administrative privileges to run successfully. Ensure that you run the script with administrative rights.
-- Some steps might encounter errors, and the script will attempt to handle them gracefully. In case of any errors, check the relevant log files for more details.
+- Some steps might encounter errors, and the script will attempt to handle them gracefully.
 - You may need to restart your computer for some changes to take effect.
 - The script relies on PowerShell scripts (`install-host.ps1`, `uninstall-host.ps1`, and `check-host.ps1`) for its functionality. Keep these PowerShell scripts in the same directory as `windows_host_config_tool.bat` for proper execution.
 
