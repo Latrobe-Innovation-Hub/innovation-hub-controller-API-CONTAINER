@@ -15,8 +15,8 @@ echo.
 for /f "usebackq delims=" %%i in (`powershell.exe -Command "Get-ExecutionPolicy"`) do (
     echo   Current ExecutionPolicy: %%i
 )
-echo   4. Set ExecutionPolicy to Unrestricted (Allows running scripts)
-echo   5. Set ExecutionPolicy to Restricted  (Restricts running scripts)
+echo   4. Set ExecutionPolicy to Unrestricted
+echo   5. Set ExecutionPolicy to Restricted
 echo.
 echo   6. Reboot System
 echo   7. Exit
@@ -37,7 +37,7 @@ if "%choice%"=="1" (
     echo.
     echo Installing Windows Host Configurations and API Controller settings...
     echo.
-    PowerShell.exe -Command "%~dp0install-host.ps1"
+    PowerShell.exe -Command "& '%~dp0install-host.ps1'"
     pause > nul
     goto MainMenu
 )
@@ -46,7 +46,7 @@ if "%choice%"=="2" (
     echo.
     echo Uninstalling Windows Host Configurations and reverting to default...
     echo.
-    PowerShell.exe -Command "%~dp0uninstall-host.ps1"
+    PowerShell.exe -Command "& '%~dp0uninstall-host.ps1'"
     pause > nul
     goto MainMenu
 )
@@ -55,7 +55,7 @@ if "%choice%"=="3" (
     echo.
     echo Checking status of changes...
     echo.
-    PowerShell.exe -Command "%~dp0check-host.ps1"
+    PowerShell.exe -Command "& '%~dp0check-host.ps1'"
     pause > nul
     goto MainMenu
 )
