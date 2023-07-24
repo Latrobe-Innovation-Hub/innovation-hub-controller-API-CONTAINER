@@ -79,5 +79,4 @@ ShowStatus "Is c:\PsTools in PATH?" $psToolsInPath
 
 # Ask the user to press any key to exit
 Write-Host
-Write-Host "Press any key to exit..."
-#Read-Host
+Write-Host "Press any key to continue..."
