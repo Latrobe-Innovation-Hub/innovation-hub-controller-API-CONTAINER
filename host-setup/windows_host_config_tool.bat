@@ -15,8 +15,8 @@ echo.
 for /f "usebackq delims=" %%i in (`powershell.exe -Command "Get-ExecutionPolicy"`) do (
     echo   Current ExecutionPolicy: %%i
 )
-echo   4. Set ExecutionPolicy to Unrestricted
-echo   5. Set ExecutionPolicy to Restricted
+echo   4. Set ExecutionPolicy to Unrestricted (Allows running scripts)
+echo   5. Set ExecutionPolicy to Restricted (Restricts running scripts)
 echo.
 echo   6. Reboot System
 echo   7. Exit
