@@ -1,9 +1,51 @@
 # Innovation Hub Device Control API
 
-pull to local via:
+### Getting started
+1. Clone the innovation-hub-api-container project repo to your local host
+   pull to local via:
+  ```bash
+  git clone --single-branch --branch master https://github.com/Latrobe-Innovation-Hub/innovation-hub-controller-API-CONTAINER.git  
+  ```
+3. Install Docker (https://docs.docker.com/engine/install/debian/) and Docker-Compose
+4. Create the user:password file using your preferred method – see below for options.  
+5. Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
+	- or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
+6. Start build and start process with:  
+	- To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
+	- To run daemonised: ‘docker-compose up  -d --build --remove-orphans’  
+7. Browse to http://localhost/api/ to access the innovation hub API.  
+	- Enter username and password  
+	- **default user**  
+		- username: admin  
+		- password: admin  
+8. Enjoy the API!
+  
+With container images now built, to start/stop containers, use the following:  
+Start containers (-d to demonize):  
 ```bash
-git clone --single-branch --branch master https://github.com/Latrobe-Innovation-Hub/innovation-hub-controller-API-CONTAINER.git  
+'docker-compose up -d'
 ```
+  
+Stop containers:
+```bash
+'docker-compose down'
+```
+  
+NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  A host configuration tool script has been created to make setting up device hosts easier. However, please be aware that this script has not been thoroughly tested, so exercise caution before choosing to use it.  See `README.md`in the host-setup directory for more information.
+   
+### OPTIONAL: Browse to Monit Watchdog Status Web Portal
+  
+container1:  
+URL: http://<host-server-IP>/monit-proxy/  
+If asked, enter username and password. Default user (can be set/changed in container1/monit/monitrc):  
+- Username: admin  
+- Password: admin  
+  
+container2:  
+URL: http://<host-server-IP>/monit-api/  
+If asked, enter username and password. Default user (can be set/changed in container2/monit/monitrc):  
+- Username: admin  
+- Password: admin  
 
 ---
 
@@ -396,53 +438,6 @@ url: /send_nircmd,
         "command": "screensaver",  
     }  
 ```
-
----
-
-### Getting started
-1. Clone the innovation-hub-api-container project repo to your local host  
-2. Install Docker (https://docs.docker.com/engine/install/debian/) and Docker-Compose
-3. Create the user:password file using your preferred method – see below for options.  
-4. Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
-	- or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
-5. Start build and start process with:  
-	- To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
-	- To run daemonised: ‘docker-compose up  -d --build --remove-orphans’  
-6. Browse to http://localhost/api/ to access the innovation hub API.  
-	- Enter username and password  
-	- **default user**  
-		- username: admin  
-		- password: admin  
-7. Enjoy the API!
-  
-With container images now built, to start/stop containers, use the following:  
-Start containers (-d to demonize):  
-```bash
-'docker-compose up -d'
-```
-  
-Stop containers:
-```bash
-'docker-compose down'
-```
-  
-NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  A host configuration tool script has been created to make setting up device hosts easier. However, please be aware that this script has not been thoroughly tested, so exercise caution before choosing to use it.  See `README.md`in the host-setup directory for more information.
-   
-### OPTIONAL: Browse to Monit Watchdog Status Web Portal
-  
-container1:  
-URL: http://<host-server-IP>/monit-proxy/  
-If asked, enter username and password. Default user (can be set/changed in container1/monit/monitrc):  
-- Username: admin  
-- Password: admin  
-  
-container2:  
-URL: http://<host-server-IP>/monit-api/  
-If asked, enter username and password. Default user (can be set/changed in container2/monit/monitrc):  
-- Username: admin  
-- Password: admin  
-  
----
 
 ### User Authentication
 NGINX basic authentication user access is managed through a txt file container user:password combinations for referencing requests against.  This file needs to be passed/shared with container1.  And while it is possible to simply pass such a file in plain text, it is much safer to first encrypt the passwords listed before doing so…  
