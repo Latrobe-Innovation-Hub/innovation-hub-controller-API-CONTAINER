@@ -11,6 +11,7 @@ function ShowStatus {
 #    Write-Host ("Step {0,-30} {1} (Actual Value: {2})" -f $stepName, $status, $actualValue)
 #}
 
+Write-Host
 Write-Host "Status of Changes:"
 Write-Host "============================================"
 
@@ -32,6 +33,9 @@ $sshagentAutoStart = ($sshagentStartupType -eq 'Automatic')
 
 # Set $openSshInstalled to true if all conditions are met
 $openSshInstalled = $sshdRunning -and $sshdAutoStart -and $sshAgentRunning -and $sshagentAutoStart
+
+# Wait for commands to run
+#Start-Sleep -Seconds 2
 
 # check all services to confirm if openssh is installed
 ShowStatus "Is OpenSSH installed?" $openSshInstalled
