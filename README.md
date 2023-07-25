@@ -51,14 +51,14 @@
 container1:  
 URL: http://<host-server-IP>/monit-proxy/  
 If asked, enter username and password. Default user (can be set/changed in container1/monit/monitrc):  
-- Username: admin  
-- Password: admin  
+    - Username: admin  
+    - Password: admin  
   
 container2:  
 URL: http://<host-server-IP>/monit-api/  
 If asked, enter username and password. Default user (can be set/changed in container2/monit/monitrc):  
-- Username: admin  
-- Password: admin  
+    -Username: admin  
+    Password: admin  
 
 ---
 
