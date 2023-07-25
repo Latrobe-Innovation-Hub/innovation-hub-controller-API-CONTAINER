@@ -105,60 +105,106 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		$undoStepsStatus += [PSCustomObject]@{Step = "Close Port 22"; Success = $true}
 	}
 	
-	# Check if SSH services are running and set to manual startup
-	$sshServiceStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
+	# Check if sshd service is running, stop and set to manual startup
+	$sshdServiceStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
 
-	# STEP 3 Stop and set sshd service to manual startup
-	$step3SshdSuccess = $true
-	if ($sshServiceStatus -ne $null -and $sshServiceStatus.ServiceName -contains 'sshd') {
+	# STEP 3A: Stop and set sshd service to manual startup
+	$step3aSuccess = $true
+	if ($sshdServiceStatus -ne $null -and $sshdServiceStatus.ServiceName -contains 'sshd') {
 		try {
 			Stop-Service sshd
 			Start-Sleep -Seconds 2
 			Set-Service -Name sshd -StartupType Manual
 		} catch {
-			$step3SshdSuccess = $false
+			$step3aSuccess = $false
+		}
+		#ConfirmStepSuccess "Stop and Set sshd to Manual Startup" $step3adSuccess
+	} else {
+		Write-Host "sshd service is already stopped."
+	}
+	$undoStepsStatus += [PSCustomObject]@{Step = "Stop and set sshd to Manual Startup"; Success = $step3aSuccess}
+
+	# Check if ssh-agent service is running, stop and set to manual startup
+	$sshagentServiceStatus = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
+
+	# STEP 3B: Stop and set ssh-agent service to manual startup
+	$step3bSuccess = $true
+	if ($sshagentServiceStatus -ne $null -and $sshagentServiceStatus.ServiceName -contains 'ssh-agent') {
+		try {
+			Stop-Service sshd-agent
+			Start-Sleep -Seconds 2
+			Set-Service -Name ssh-agent -StartupType Manual
+		} catch {
+			$step3bSuccess = $false
 		}
 		#ConfirmStepSuccess "Stop and Set sshd to Manual Startup" $step3SshdSuccess
 	} else {
 		Write-Host "sshd service is already stopped."
-		$undoStepsStatus += [PSCustomObject]@{Step = "Stop and Set sshd to Manual Startup"; Success = $true}
 	}
+	$undoStepsStatus += [PSCustomObject]@{Step = "Stop and set ssh-agent to Manual Startup"; Success = $step3bSuccess}
 
-
-	# Step 4: Remove OpenSSH via remove features settings
+	# Step 4: Run the OpenSSH uninstall script
 	$step4Success = $true
 	try {
-		# Uninstall the OpenSSH Client
-		Remove-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+    		if ([Environment]::Is64BitOperatingSystem) {
+        		$openSSHArch = "Win64"  # Use the Win64 architecture if the system is 64-bit
+    		} else {
+        		$openSSHArch = "Win32"  # Use the Win32 architecture if the system is 32-bit
+    		}
 
-		#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
+    		$installPath = "C:\Program Files\OpenSSH\OpenSSH-$openSSHArch"
+    		$uninstallScript = Join-Path $installPath "uninstall-sshd.ps1"
+
+    		if (Test-Path $uninstallScript) {
+        		Set-Location $installPath
+        		.\uninstall-sshd.ps1
+    		} else {
+        		$step4Success = $false
+    		}
 	} catch {
-		$step4Success = $false
+    		$step4Success = $false
 	}
+	ConfirmStepSuccess "Run OpenSSH uninstall script" $step4Success
+	$undoStepsStatus += [PSCustomObject]@{Step = "Run OpenSSH uninstall script"; Success = $step4Success}
+
+	# Step 4: Remove OpenSSH via remove features settings
+	#$step4Success = $true
+	#try {
+	#	# Uninstall the OpenSSH Client
+	#	Remove-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
+
+	#	#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
+	#} catch {
+	#	$step4Success = $false
+	#}
 	#Write-Host "OpenSSH is not installed."
-	$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Client"; Success = $step4Success}
+	#$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Client"; Success = $step4Success}
 
 	# Step 4b: Remove OpenSSH via remove features settings
-	$step4bSuccess = $true
-	try {
-		# Uninstall the OpenSSH Server
-		Remove-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+	#$step4bSuccess = $true
+	#try {
+	#	# Uninstall the OpenSSH Server
+	#	Remove-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
 
-		#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
-	} catch {
-		$step4bSuccess = $false
-	}
+	#	#Get-WindowsCapability -Online | Where-Object { $_.Name -like 'OpenSSH.Client' } | Remove-WindowsCapability -Online
+	#} catch {
+	#	$step4bSuccess = $false
+	#}
 	#Write-Host "OpenSSH is not installed."
-	$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Server"; Success = $step4bSuccess}
+	#$undoStepsStatus += [PSCustomObject]@{Step = "Remove OpenSSH Server"; Success = $step4bSuccess}
 
-	# Step 5 Remove the registry key for LocalAccountTokenFilterPolicy
+	# Step 5: Remove the registry key for LocalAccountTokenFilterPolicy
 	$step5Success = $true
 	try {
-		Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" -Force -ErrorAction Stop
+		if (Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system") {
+        		$valueExists = Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" -ErrorAction SilentlyContinue
+        		if ($null -ne $valueExists) {
+            			Remove-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system" -Name "LocalAccountTokenFilterPolicy" -Force
+        		}
+    		}
 	} catch {
-		$step5Success = $false
+        	$step5Success = $false
 	}
-	#ConfirmStepSuccess "Remove Registry" $step7Success
 	# Add the status to the undoStepsStatus list for the "Remove Registry" step
 	$undoStepsStatus += [PSCustomObject]@{Step = "Remove Registry"; Success = $step5Success}
 
