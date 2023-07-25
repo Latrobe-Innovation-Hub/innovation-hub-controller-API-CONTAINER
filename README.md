@@ -43,19 +43,26 @@ project
 │   │   ├── api.py
 │   │   ├── api_config.py
 │   │   ├── requirements.txt
-│   │   ├── start_api.sh
+│   │   └── start_api.sh
 │   ├── docker-entrypoint.sh
 │   ├── Dockerfile
 │   ├── healthcheck.sh
 │   └── monit				<- monit watchdog config dir
 │       ├── gunicorn3.conf
 │       └── monitrc
-├── epson_projector			<- Epson projector Python remote control 
-├──  scripts
+├── epson_projector			<- Epson projector Python remote control
+├── host-setup
+    ├── README.md  
+    ├── check-host.ps1  
+    ├── install-host.ps1  
+    ├── uninstall-host.ps1  
+    └── windows_host_config_tool.bat    <- tool for setting up windows hosts comms for API
+├── screensots
+├── scripts
     ├── password_script.sh		<- encrypted password script
     └── user_credentials.txt		<- example user:password file for script
 ├── README.md
-├── docker-compose.yml
+├── docker-compose.yml                  <- docker-compose build file
 └── windows_ssh_psexec_setup.txt	<- guide for windows ssh/api access/control
 ```
 
