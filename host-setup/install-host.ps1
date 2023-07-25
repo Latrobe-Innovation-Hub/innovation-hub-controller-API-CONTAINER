@@ -93,22 +93,33 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	# Step 1: Download and Install OpenSSH server
 	$step1bSuccess = $true
 	try {
-		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
-		if ([Environment]::Is64BitOperatingSystem) {
-			# Use the Win64 URL if the system is 64-bit
-			$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
-		} else {
+ 		# Step 1: Download OpenSSH release archive
+	    	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
+      		if (![Environment]::Is64BitOperatingSystem) {
 			# Use the Win32 URL if the system is 32-bit
-			$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
-		}
-
-		$downloadPath = "$env:TEMP\openssh-server.zip"
-		Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
-
-		$extractPath = "C:\Windows\System32\OpenSSH"  # Change this path to the desired installation location
-		Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+	        	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
+	    	}
+	
+	    	$downloadPath = "$env:TEMP\openssh-server.zip"
+	   	Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
+	
+	    	$extractPath = "C:\Program Files\OpenSSH"  # Change this path to the desired installation location
+	    	Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+	
+	    	# Step 2: Run OpenSSH install script
+	    	Set-Location "$extractPath\OpenSSH-Win64"
+	    	.\install-sshd.ps1
+	
+	    	# Step 3: Set OpenSSH service to automatic startup
+	    	#Set-Service -Name sshd -StartupType Automatic
+	
+	    	# Step 4: Start OpenSSH service
+	    	#Start-Service sshd
+	
+	    	# Step 5: Remove OpenSSH release archive
+	    	Remove-Item -Path $downloadPath -Force
 	} catch {
-		$step1bSuccess = $false
+	    $step1bSuccess = $false
 	}
 	ConfirmStepSuccess "Install OpenSSH Server" $step1bSuccess
 	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step1bSuccess}
