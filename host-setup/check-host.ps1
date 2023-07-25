@@ -14,34 +14,34 @@ function ShowStatus {
 Write-Host "Status of Changes:"
 Write-Host "==================="
 
-# Check if OpenSSH is installed
-$openSshInstalled = Test-Path "$env:ProgramFiles\OpenSSH\OpenSSH-Win64\ssh.exe"
+# Check if sshd service is running
+$sshdStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
+$sshdRunning = ($sshdStatus -ne $null) -and ($sshdStatus.Status -eq 'Running')
 
-if ($openSshInstalled) {
-    ShowStatus "Is OpenSSH installed?" $true
+# Check if sshd is set to auto start at boot
+$sshdStartupType = (Get-Service -Name sshd -ErrorAction SilentlyContinue).StartType
+$sshdAutoStart = ($sshdStartupType -eq 'Automatic')
 
-    # Check if sshd service is running
-    $sshdStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
-    $sshdRunning = ($sshdStatus -ne $null) -and ($sshdStatus.Status -eq 'Running')
-    ShowStatus "Is sshd running?" $sshdRunning
+# Check if ssh-agent service is running
+$sshagentStatus = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
+$sshAgentRunning = ($sshagentStatus -ne $null) -and ($sshagentStatus.Status -eq 'Running')
 
-    # Check if sshd is set to auto start at boot
-    $sshdStartupType = (Get-Service -Name sshd -ErrorAction SilentlyContinue).StartType
-    $sshdAutoStart = ($sshdStartupType -eq 'Automatic')
-    ShowStatus "Is sshd set to auto start at boot?" $sshdAutoStart
+# Check if ssh-agent is set to auto start at boot
+$sshagentStartupType = (Get-Service -Name ssh-agent -ErrorAction SilentlyContinue).StartType
+$sshagentAutoStart = ($sshagentStartupType -eq 'Automatic')
+ShowStatus "Is ssh-agent set to auto start at boot?" $sshagentAutoStart
 
-    # Check if ssh-agent service is running
-    $sshagentStatus = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
-    $sshAgentRunning = ($sshagentStatus -ne $null) -and ($sshagentStatus.Status -eq 'Running')
-    ShowStatus "Is ssh-agent running?" $sshAgentRunning
+# Set $openSshInstalled to true if all conditions are met
+$openSshInstalled = $sshdRunning -and $sshdAutoStart -and $sshAgentRunning -and $sshagentAutoStart
 
-    # Check if ssh-agent is set to auto start at boot
-    $sshagentStartupType = (Get-Service -Name ssh-agent -ErrorAction SilentlyContinue).StartType
-    $sshagentAutoStart = ($sshagentStartupType -eq 'Automatic')
-    ShowStatus "Is ssh-agent set to auto start at boot?" $sshagentAutoStart
-} else {
-    ShowStatus "Is OpenSSH installed?" $false
-}
+# check all services to confirm if openssh is installed
+ShowStatus "Is OpenSSH installed?" $openSshInstalled
+
+# show openssh service state messages
+ShowStatus "Is sshd running?" $sshdRunning
+ShowStatus "Is sshd set to auto start at boot?" $sshdAutoStart
+ShowStatus "Is ssh-agent running?" $sshAgentRunning
+ShowStatus "Is ssh-agent set to auto start at boot?" $sshagentAutoStart
 
 $port22Rule = Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue
 
