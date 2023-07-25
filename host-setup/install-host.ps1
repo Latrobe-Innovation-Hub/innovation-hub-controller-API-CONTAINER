@@ -68,106 +68,93 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	# Array to store the status of each step
 	$stepsStatus = @()
 	
- 	<# # Step 1: Install OpenSSH client
-	$step1Success = $true
-	try {
-		# Install the OpenSSH Client
-		Add-WindowsCapability -Online -Name OpenSSH.Client~~~~0.0.1.0
-	} catch {
-		$step1Success = $false
-	}
-	ConfirmStepSuccess "Install OpenSSH Client" $step1Success
-	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Client"; Success = $step1Success}
-
-	# Step 2: Install OpenSSH server
-	$step2Success = $true
-	try {
-		# Install the OpenSSH Server
-		Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
-	} catch {
-		$step2Success = $false
-	}
-	ConfirmStepSuccess "Install OpenSSH Server" $step2Success
-	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step2Success} #>
-	
 	# Step 1: Download and Install OpenSSH server
 	$step1bSuccess = $true
 	try {
- 		# Check if sshd service is running and stop it if it is
-	    	$sshdService = Get-Service -Name sshd -ErrorAction SilentlyContinue
-	    	if ($sshdService -ne $null -and $sshdService.Status -eq 'Running') {
-	        	Stop-Service -Name sshd
-	    	}
-	
-	    	# Check if ssh-agent service is running and stop it if it is
-	   	$sshAgentService = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
-	    	if ($sshAgentService -ne $null -and $sshAgentService.Status -eq 'Running') {
-	        	Stop-Service -Name ssh-agent
-	    	}
-	
-	    	# Step 1: Download OpenSSH release archive
-	    	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
-	    	if (![Environment]::Is64BitOperatingSystem) {
-	        	# Use the Win32 URL if the system is 32-bit
-	        	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
-	    	}
-	
-	    	$downloadPath = "$env:TEMP\openssh-server.zip"
-	    	Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
-	
-	    	$extractPath = "C:\Program Files\OpenSSH"  # Change this path to the desired installation location
-	    	Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
-	
-	    	# Step 2: Run OpenSSH install script
-	    	Set-Location "$extractPath\OpenSSH-Win64"
-	    	.\install-sshd.ps1
-	
-	    	# Step 3: Set OpenSSH service to automatic startup
-	    	#Set-Service -Name sshd -StartupType Automatic
-	
-	    	# Step 4: Start OpenSSH service
-	    	#Start-Service sshd
-	
-	    	# Step 5: Remove OpenSSH release archive
-	    	Remove-Item -Path $downloadPath -Force
+		# Check if sshd service is running and stop it if it is
+    		$sshdService = Get-Service -Name sshd -ErrorAction SilentlyContinue
+    		if ($sshdService -ne $null -and $sshdService.Status -eq 'Running') {
+        		Stop-Service -Name sshd
+    		}
+
+    		# Check if ssh-agent service is running and stop it if it is
+    		$sshAgentService = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
+    		if ($sshAgentService -ne $null -and $sshAgentService.Status -eq 'Running') {
+        		Stop-Service -Name ssh-agent
+    		}
+
+    		# Step 1: Download OpenSSH release archive
+    		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
+    		if (![Environment]::Is64BitOperatingSystem) {
+        		# Use the Win32 URL if the system is 32-bit
+        		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
+    		}
+
+    		$downloadPath = "$env:TEMP\openssh-server.zip"
+    		Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
+
+    		$extractPath = "C:\Program Files\OpenSSH"  # Change this path to the desired installation location
+    		Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+
+    		# Step 2: Run OpenSSH install script
+    		Set-Location "$extractPath\OpenSSH-Win64"
+    		.\install-sshd.ps1
+
+    		# Step 3: Set OpenSSH service to automatic startup
+    		#Set-Service -Name sshd -StartupType Automatic
+
+    		# Step 4: Start OpenSSH service
+    		#Start-Service sshd
+
+    		# Step 5: Remove OpenSSH release archive
+    		Remove-Item -Path $downloadPath -Force
 	} catch {
-	    	$step1bSuccess = $false
+    		$step1bSuccess = $false
 	}
 	ConfirmStepSuccess "Install OpenSSH Server" $step1bSuccess
 	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step1bSuccess}
 
-	# Step 2: Start the sshd service and set it to Automatic startup
-	$step2Success = $true
+	# Step 2A: Set the sshd service to Automatic startup
+	$step2aSuccess = $true
 	try {
-		#$sshPath = "C:\Windows\System32\OpenSSH"  # Change this path to the correct location of sshd
-		#Start-Process -FilePath "$sshPath\sshd.exe" -ArgumentList "-D"
 		Set-Service -Name sshd -StartupType 'Automatic'
 	} catch {
-		$step2Success = $false
+		$step2aSuccess = $false
 	}
-	ConfirmStepSuccess "Start SSHD service and set to Automatic startup" $step2Success
-	$stepsStatus += [PSCustomObject]@{Step = "Start SSHD service and set to Automatic startup"; Success = $step2Success}
+	ConfirmStepSuccess "Set sshd service to Automatic startup" $step2aSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Set sshd service to Automatic startup"; Success = $step2aSuccess}
 
- 	# Start the sshd service
-	$step3Success = $true
+	# Step 2B: Set the ssh-agent service to Automatic startup
+	$step2bSuccess = $true
+	try {
+		Set-Service -Name ssh-agent -StartupType 'Automatic'
+	} catch {
+		$step2bSuccess = $false
+	}
+	ConfirmStepSuccess "Set the ssh-agent service to Automatic startup" $step2bSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Set the ssh-agent service to Automatic startup"; Success = $step2bSuccess}
+
+ 	# Step 3A: Start the sshd service
+	$step3aSuccess = $true
 	try {
 		Start-Service sshd
 	} catch {
-		$step3Success = $false
+		$step3aSuccess = $false
 	}
-	$stepsStatus += [PSCustomObject]@{Step = "Start SSHD service"; Success = $step3Success}
+	ConfirmStepSuccess "Start sshd service" $step3aSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Start sshd service"; Success = $step3aSuccess}
 	
-
-	# OPTIONAL but recommended:
-	$step4Success = $true
+ 	# Step 3B: Start the ssh-agent service
+	$step3bSuccess = $true
 	try {
-		Set-Service -Name sshd -StartupType 'Automatic'
+		Start-Service ssh-agent
 	} catch {
-		$step4Success = $false
+		$step3bSuccess = $false
 	}
-	$stepsStatus += [PSCustomObject]@{Step = "Set SSHD service startup type"; Success = $step4Success}
+	ConfirmStepSuccess "Start sshd service" $step3bSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Start ssh-agent service"; Success = $step3bSuccess}
 	
-	# Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
+	# Step 4: Confirm the Firewall rule is configured. It should be created automatically by setup. Run the following to verify
 	if (!(Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue | Select-Object Name, Enabled)) {
 		Write-Output "Firewall Rule 'OpenSSH-Server-In-TCP' does not exist, creating it..."
 		try {
@@ -208,7 +195,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		}
 	}
 
-	# Check if registry key exists for EnableLUA
+	# Step 5: Check if registry key exists for EnableLUA
 	if (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System\EnableLUA")) {
 		# Step 5: Disable UAC by setting EnableLUA to 0
 		$step6Success = $true
@@ -235,7 +222,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		}
 	}
 	
-	# Check if PsTools are already present
+	# Step 6: Check if PsTools are already present
 	if (!(Test-Path "C:\PSTools")) {
 		# Step 6: Download and install PsTools from Microsoft
 		$step7Success = $true
