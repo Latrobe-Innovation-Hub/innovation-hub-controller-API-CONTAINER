@@ -12,7 +12,7 @@ function ShowStatus {
 #}
 
 Write-Host "Status of Changes:"
-Write-Host "==================="
+Write-Host "============================================"
 
 # Check if sshd service is running
 $sshdStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
