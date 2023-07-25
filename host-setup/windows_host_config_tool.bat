@@ -64,8 +64,8 @@ if "%choice%"=="4" (
     echo.
     echo Changine ExecutionPolicy to Unrestricted...
     echo.
-	powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser"
-	echo Press any key to continue...
+    powershell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser"
+    echo Press any key to continue...
     pause > nul
     goto MainMenu
 )
@@ -75,7 +75,7 @@ if "%choice%"=="5" (
     echo Changine ExecutionPolicy to Restricted...
     echo.
     PowerShell.exe -Command "Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope CurrentUser"
-	echo Press any key to continue...
+    echo Press any key to continue...
     pause > nul
     goto MainMenu
 )
@@ -83,7 +83,8 @@ if "%choice%"=="5" (
 if "%choice%"=="6" (
     echo.
     echo Restarting...
-	shutdown /r /t 0
+    shutdown /r /t 0
+    exit /b
 )
 
 if "%choice%"=="7" (
