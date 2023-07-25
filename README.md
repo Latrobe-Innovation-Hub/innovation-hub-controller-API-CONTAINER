@@ -1,37 +1,50 @@
 # Innovation Hub Device Control API
 
 ### Getting started
-1. Clone the innovation-hub-api-container project repo to your local host
-   pull to local via:
-  ```bash
+1. **Clone the `innovation-hub-api-container` project repository** to your local host.
+ ```bash
   git clone --single-branch --branch master https://github.com/Latrobe-Innovation-Hub/innovation-hub-controller-API-CONTAINER.git  
   ```
-3. Install Docker (https://docs.docker.com/engine/install/debian/) and Docker-Compose
-4. Create the user:password file using your preferred method – see below for options.  
-5. Edit the docker-compose.yml file to your preferred setting, adjust the options to fit your desired log level and location (hosted or in container only) and make sure the container1 htpasswd volume is pointing to your created user:password file  
-	- or If wanting to store logs on host, make sure the log volume is pointing to the desired local directory path  
-6. Start build and start process with:  
-	- To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
-	- To run daemonised: ‘docker-compose up  -d --build --remove-orphans’  
-7. Browse to http://localhost/api/ to access the innovation hub API.  
-	- Enter username and password  
-	- **default user**  
-		- username: admin  
-		- password: admin  
-8. Enjoy the API!
-  
-With container images now built, to start/stop containers, use the following:  
-Start containers (-d to demonize):  
-```bash
-'docker-compose up -d'
-```
-  
-Stop containers:
-```bash
-'docker-compose down'
-```
-  
-NOTE: For the API to communicate with Windows devices, they need to be setup to do so.  A host configuration tool script has been created to make setting up device hosts easier. However, please be aware that this script has not been thoroughly tested, so exercise caution before choosing to use it.  See `README.md`in the host-setup directory for more information.
+
+2. **Install Docker and Docker-Compose** on your system. You can follow the official installation guides for [Docker](https://docs.docker.com/engine/install/) and [Docker-Compose](https://docs.docker.com/compose/install/).
+
+3. **OPTIONAL: Create a `user:password` file** using your preferred method. This file will be used for authentication. Ensure to keep this file secure as it contains login credentials.
+
+4. **Open the `docker-compose.yml` file** in the cloned repository using a text editor. This file defines the services, networks, and volumes for your containers. You can adjust the settings to your preferred configuration:
+   - Set the desired log level and location (hosted or in-container only) for your API.
+   - Make sure the `container1` htpasswd volume points to the `user:password` file you created in step 3.
+   - If you want to store logs on the host machine, ensure the log volume points to the desired local directory path.
+
+5. **After making the necessary adjustments to the `docker-compose.yml` file**, save the changes and close the text editor.
+
+6. **Open your terminal or command prompt**, navigate to the root folder of the cloned repository (where the `docker-compose.yml` file is located).
+
+7. **Build and start the containers** using the appropriate command.
+   - To run live and see outputs: ‘docker-compose up  --build --remove-orphans’  
+   - To run daemonised: ‘docker-compose up  -d --build --remove-orphans’
+
+8. **The containers will be built and started** based on the configuration specified in the `docker-compose.yml` file.
+
+9. **Once the containers are up and running**, you can access the Innovation Hub API at: [http://localhost/api/](http://localhost/api/)
+
+10. **When accessing the API for the first time**, you will be prompted to enter a username and password. Use the following default credentials:
+    - Username: admin
+    - Password: admin
+    - **Note**: see authentification section for explanation on setting other user:pass combinations
+
+11. **After logging in**, you can begin using the Innovation Hub API for device control.
+
+12. **If you want to star/stop the running containers**, you can use the appropriate command.
+    - Start containers (-d to demonize):
+    ```bash
+    'docker-compose up -d'
+    ```
+    - Stop containers:
+    ```bash
+    'docker-compose down'
+    ```
+
+**Note**: If you plan to use the API to communicate with Windows devices, additional setup may be required. A host configuration tool script is provided in the `host-setup` directory to help with this process. Please exercise caution and review the instructions in `README.md` in the `host-setup` directory before using the script.
    
 ### OPTIONAL: Browse to Monit Watchdog Status Web Portal
   
