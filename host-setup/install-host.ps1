@@ -279,7 +279,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	Write-Host "RESULT"
 	Write-Host "============================================"
 	$stepsStatus | ForEach-Object { ConfirmStepSuccess $_.Step $_.Success }
- 	Write-Host "============================================"
+	Write-Host "============================================"
 
 	# Check if all steps were successful
 	$allStepsSuccessful = ($stepsStatus | ForEach-Object { $_.Success }) -contains $false -eq $false
