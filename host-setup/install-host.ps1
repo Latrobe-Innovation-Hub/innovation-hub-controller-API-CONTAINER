@@ -93,15 +93,27 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	# Step 1: Download and Install OpenSSH server
 	$step1bSuccess = $true
 	try {
- 		# Step 1: Download OpenSSH release archive
+ 		# Check if sshd service is running and stop it if it is
+	    	$sshdService = Get-Service -Name sshd -ErrorAction SilentlyContinue
+	    	if ($sshdService -ne $null -and $sshdService.Status -eq 'Running') {
+	        	Stop-Service -Name sshd
+	    	}
+	
+	    	# Check if ssh-agent service is running and stop it if it is
+	   	$sshAgentService = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
+	    	if ($sshAgentService -ne $null -and $sshAgentService.Status -eq 'Running') {
+	        	Stop-Service -Name ssh-agent
+	    	}
+	
+	    	# Step 1: Download OpenSSH release archive
 	    	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
-      		if (![Environment]::Is64BitOperatingSystem) {
-			# Use the Win32 URL if the system is 32-bit
+	    	if (![Environment]::Is64BitOperatingSystem) {
+	        	# Use the Win32 URL if the system is 32-bit
 	        	$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
 	    	}
 	
 	    	$downloadPath = "$env:TEMP\openssh-server.zip"
-	   	Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
+	    	Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
 	
 	    	$extractPath = "C:\Program Files\OpenSSH"  # Change this path to the desired installation location
 	    	Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
@@ -119,7 +131,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	    	# Step 5: Remove OpenSSH release archive
 	    	Remove-Item -Path $downloadPath -Force
 	} catch {
-	    $step1bSuccess = $false
+	    	$step1bSuccess = $false
 	}
 	ConfirmStepSuccess "Install OpenSSH Server" $step1bSuccess
 	$stepsStatus += [PSCustomObject]@{Step = "Install OpenSSH Server"; Success = $step1bSuccess}
