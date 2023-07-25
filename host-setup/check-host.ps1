@@ -29,7 +29,6 @@ $sshAgentRunning = ($sshagentStatus -ne $null) -and ($sshagentStatus.Status -eq 
 # Check if ssh-agent is set to auto start at boot
 $sshagentStartupType = (Get-Service -Name ssh-agent -ErrorAction SilentlyContinue).StartType
 $sshagentAutoStart = ($sshagentStartupType -eq 'Automatic')
-ShowStatus "Is ssh-agent set to auto start at boot?" $sshagentAutoStart
 
 # Set $openSshInstalled to true if all conditions are met
 $openSshInstalled = $sshdRunning -and $sshdAutoStart -and $sshAgentRunning -and $sshagentAutoStart
