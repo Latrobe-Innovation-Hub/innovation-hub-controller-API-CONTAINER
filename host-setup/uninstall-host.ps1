@@ -69,10 +69,9 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	# Array to store the status of each undo step
 	$undoStepsStatus = @()
 
-	# STEP 1 Check if PsTools were installed
+	# STEP 1 Remove PsTools if installed
+	$step1Success = $true
 	if (Test-Path "C:\PsTools") {
-		# Step 1: Remove PsTools
-		$step1Success = $true
 		try {
 			Remove-Item "C:\PsTools" -Force -Recurse
 
@@ -83,13 +82,13 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		} catch {
 			$step1Success = $false
 		}
-		#ConfirmStepSuccess "Remove PsTools" $step1Success
 	} else {
 		Write-Host "PsTools were not installed."
-		$undoStepsStatus += [PSCustomObject]@{Step = "Remove PsTools"; Success = $true}
 	}
+	$undoStepsStatus += [PSCustomObject]@{Step = "Remove PsTools"; Success = $step1Success}
 
 	# Check if port 22 is open for SSH
+	$step2Success = $true
 	$port22Rule = Get-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -ErrorAction SilentlyContinue
 	if ($port22Rule -ne $null) {
 		# Step 2: Close port 22 for SSH via firewall
@@ -102,8 +101,8 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		#ConfirmStepSuccess "Close Port 22" $step2Success
 	} else {
 		Write-Host "Port 22 is already closed for SSH."
-		$undoStepsStatus += [PSCustomObject]@{Step = "Close Port 22"; Success = $true}
 	}
+	$undoStepsStatus += [PSCustomObject]@{Step = "Close Port 22"; Success = $step2Success}
 	
 	# Check if sshd service is running, stop and set to manual startup
 	$sshdServiceStatus = Get-Service -Name sshd -ErrorAction SilentlyContinue
@@ -128,20 +127,20 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	$sshagentServiceStatus = Get-Service -Name ssh-agent -ErrorAction SilentlyContinue
 
 	# STEP 3B: Stop and set ssh-agent service to manual startup
-	$step3bSuccess = $true
-	if ($sshagentServiceStatus -ne $null -and $sshagentServiceStatus.ServiceName -contains 'ssh-agent') {
-		try {
-			Stop-Service sshd-agent
-			Start-Sleep -Seconds 2
-			Set-Service -Name ssh-agent -StartupType Manual
-		} catch {
-			$step3bSuccess = $false
-		}
-		#ConfirmStepSuccess "Stop and Set sshd to Manual Startup" $step3SshdSuccess
-	} else {
-		Write-Host "sshd service is already stopped."
-	}
-	$undoStepsStatus += [PSCustomObject]@{Step = "Stop and set ssh-agent to Manual Startup"; Success = $step3bSuccess}
+	#$step3bSuccess = $true
+	#if ($sshagentServiceStatus -ne $null -and $sshagentServiceStatus.ServiceName -contains 'ssh-agent') {
+	#	try {
+	#		Stop-Service sshd-agent
+	#		Start-Sleep -Seconds 2
+	#		Set-Service -Name ssh-agent -StartupType Manual
+	#	} catch {
+	#		$step3bSuccess = $false
+	#	}
+	#	#ConfirmStepSuccess "Stop and Set sshd to Manual Startup" $step3SshdSuccess
+	#} else {
+	#	Write-Host "sshd service is already stopped."
+	#}
+	#$undoStepsStatus += [PSCustomObject]@{Step = "Stop and set ssh-agent to Manual Startup"; Success = $step3bSuccess}
 
 	# Step 4: Run the OpenSSH uninstall script
 	$step4Success = $true
@@ -220,7 +219,11 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	$undoStepsStatus += [PSCustomObject]@{Step = "Enable UAC"; Success = $step6Success}
 	
 	# Display status of each undo step
+        Write-Host
+	Write-Host "RESULT"
+	Write-Host "============================================"
 	$undoStepsStatus | ForEach-Object { ConfirmStepSuccess $_.Step $_.Success }
+	Write-Host "============================================"
 }
 
 Write-Host
