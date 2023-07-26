@@ -36,7 +36,7 @@ If you encounter any issues or have concerns, please seek help from your IT depa
 
 1. Clone or download the repository containing the configuration tool script to your local machine.
 
-2. Run the `windows_host_config_tool.bat` script to interact with the Windows Host Configuration Tool.
+2. Run the `windows_host_config_tool.bat` script as Administrator to interact with the Windows Host Configuration Tool.
 
 3. Choose an option from the menu:
 
@@ -49,7 +49,17 @@ If you encounter any issues or have concerns, please seek help from your IT depa
    - **Option 3**: Check Status of Changes.
      - Displays the status of each configuration step, indicating whether it has been applied or not.
 
-   - **Option 4**: Exit.
+   - **Option 4**: Set ExecutionPolicy to Unrestricted (Allows running scripts)
+     - Sets the Windows Security ExecutionPolicy to allow the running of local PowerShell scripts
+
+   - **Option 5**: Set ExecutionPolicy to Restricted (Restricts running scripts)
+     - Sets the Windows Security ExecutionPolicy to forbid the running of local PowerShell scripts
+     - (default Windows setting)
+
+   - **Option 6**: Reboot System.
+     - Exits the Windows Host Configuration Tool.
+
+   - **Option 7**: Exit.
      - Exits the Windows Host Configuration Tool.
 
 ## Configurations
