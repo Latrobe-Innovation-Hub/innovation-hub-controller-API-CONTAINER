@@ -57,7 +57,8 @@ If you encounter any issues or have concerns, please seek help from your IT depa
      - (default Windows setting)
 
    - **Option 6**: Reboot System.
-     - Exits the Windows Host Configuration Tool.
+     - Rebooots Windows system.
+     - May be necessary for some changes to take effect.
 
    - **Option 7**: Exit.
      - Exits the Windows Host Configuration Tool.
