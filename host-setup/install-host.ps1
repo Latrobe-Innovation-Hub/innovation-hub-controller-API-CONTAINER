@@ -83,30 +83,47 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
         		Stop-Service -Name ssh-agent
     		}
 
-    		# Step 1: Download OpenSSH release archive
-    		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win64.zip"
-    		if (![Environment]::Is64BitOperatingSystem) {
-        		# Use the Win32 URL if the system is 32-bit
-        		$openSSHServerUrl = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/v9.2.2.0p1-Beta/OpenSSH-Win32.zip"
-    		}
+		# Fetch the latest release information from GitHub API
+		Write-Host "Fetching the latest release information from GitHub API..."
+		$repoApiUrl = "https://api.github.com/repos/PowerShell/Win32-OpenSSH/releases/latest"
+		$latestRelease = Invoke-RestMethod -Uri $repoApiUrl
+		
+		# Extract the latest release version and use it to construct the download URLs
+		$latestVersion = $latestRelease.tag_name
+		Write-Host "Latest Version: $latestVersion"
+		$openSSHServerUrl64 = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/$latestVersion/OpenSSH-Win64.zip"
+		$openSSHServerUrl32 = "https://github.com/PowerShell/Win32-OpenSSH/releases/download/$latestVersion/OpenSSH-Win32.zip"
+		
+		# Choose the correct URL based on system architecture and download
+		Write-Host "Downloading the appropriate release based on system architecture..."
+		$downloadPath = "$env:TEMP\OpenSSH.zip"
+		if ([Environment]::Is64BitOperatingSystem) {
+			Write-Host "Downloading from URL: $openSSHServerUrl64"
+			Invoke-WebRequest -Uri $openSSHServerUrl64 -OutFile $downloadPath
+		} else {
+			Write-Host "Downloading from URL: $openSSHServerUrl32"
+			Invoke-WebRequest -Uri $openSSHServerUrl32 -OutFile $downloadPath
+		}
+		
+		# Extract downloaded files
+		Write-Host "Extracting downloaded files..."
+		$extractPath = "C:\Program Files\OpenSSH\"  # Change this path to the desired installation location
+		Write-Host "Extraction Path: $extractPath"
+		Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+		
+		# Set OpenSSH install path based on the system architecture
+		Write-Host "Running OpenSSH install script..."
+		if ([Environment]::Is64BitOperatingSystem) {
+			Set-Location "$extractPath\OpenSSH-Win64"
+		} else {
+			Set-Location "$extractPath\OpenSSH-Win32"
+		}
 
-    		$downloadPath = "$env:TEMP\openssh-server.zip"
-    		Invoke-WebRequest -Uri $openSSHServerUrl -OutFile $downloadPath
+  		# Run OpenSSH install script
+    		Write-Host "Installing openSSH..."
+		.\install-sshd.ps1
 
-    		$extractPath = "C:\Program Files\OpenSSH"  # Change this path to the desired installation location
-    		Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
-
-    		# Step 2: Run OpenSSH install script
-    		Set-Location "$extractPath\OpenSSH-Win64"
-    		.\install-sshd.ps1
-
-    		# Step 3: Set OpenSSH service to automatic startup
-    		#Set-Service -Name sshd -StartupType Automatic
-
-    		# Step 4: Start OpenSSH service
-    		#Start-Service sshd
-
-    		# Step 5: Remove OpenSSH release archive
+    		# Remove OpenSSH release archive
     		Remove-Item -Path $downloadPath -Force
 	} catch {
     		$step1bSuccess = $false
