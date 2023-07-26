@@ -186,7 +186,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	}
 
 	# Check if registry key exists for LocalAccountTokenFilterPolicy
-	if (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system\LocalAccountTokenFilterPolicy")) {
+	if (!(Test-Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\system\LocalAccountTokenFilterPolicy" -ErrorAction SilentlyContinue)) {
 		# Step 4: Create a new registry key for LocalAccountTokenFilterPolicy
 		$step5Success = $true
 		try {
