@@ -23,11 +23,11 @@ def download_chromedriver(version='114.0.5735.90'):
         'chromedriver_win32.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_win32.zip'.format(version),
     }
     
-    for link in download_links:
-        print(download_links[link])
+    #for link in download_links:
+    #    print(download_links[link])
 
     os_name = platform.system()
-    print("platform", os_name)
+    #print("platform", os_name)
     
     if os_name == 'Linux':
         os_arch = 'linux64'
@@ -67,7 +67,6 @@ def download_chromedriver(version='114.0.5735.90'):
         print(f"Failed to download ChromeDriver: {response.status_code} - {response.reason}")
         return None
 
-
 def view_outlet_settings_for_all_devices(devices):
     if not devices:
         print("No devices added yet. Please add a device first.")
@@ -75,7 +74,6 @@ def view_outlet_settings_for_all_devices(devices):
         for index, device in enumerate(devices):
             print(f"\nDevice {index + 1} Outlet Settings:")
             device.print_outlet_info()
-
 
 def main():
     chromedriver_path = download_chromedriver()
