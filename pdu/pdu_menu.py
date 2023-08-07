@@ -4,7 +4,84 @@
 # Import the DeviceController class from pdu_class.py
 from pdu_class import DeviceController
 
+import os
+import sys
+import requests
+import platform
+from zipfile import ZipFile
+from pathlib import Path
+
+
+def download_chromedriver(version='114.0.5735.90'):
+    extracted_file = None
+
+    base_url = f'https://chromedriver.storage.googleapis.com/{version}/'
+    download_links = {
+        'chromedriver_linux64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_linux64.zip'.format(version),
+        'chromedriver_mac64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_mac64.zip'.format(version),
+        'chromedriver_mac_arm64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_mac_arm64.zip'.format(version),
+        'chromedriver_win32.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_win32.zip'.format(version),
+    }
+    
+    for link in download_links:
+        print(download_links[link])
+
+    os_name = platform.system()
+    print("platform", os_name)
+    
+    if os_name == 'Linux':
+        os_arch = 'linux64'
+        chromedriver_filename = 'chromedriver'
+    elif os_name == 'Darwin':
+        os_arch = 'mac64' if 'arm' not in platform.machine().lower() else 'mac_arm64'
+        chromedriver_filename = 'chromedriver'
+    elif os_name == 'Windows':
+        os_arch = 'win32' if 'PROGRAMFILES(x86)' in os.environ else 'win64'
+        chromedriver_filename = 'chromedriver.exe'
+    else:
+        print(f"Chromedriver for your operating system '{os_name}' is not available.")
+        return None
+
+    driver_url = download_links[f'chromedriver_{os_arch}.zip']
+    chromedriver_zip = driver_url.split('/')[-1]
+
+    print(f"Downloading ChromeDriver {version} for '{os_name}'...")
+    response = requests.get(driver_url, stream=True)
+
+    if response.status_code == 200:
+        with open(chromedriver_zip, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                f.write(chunk)
+
+        with ZipFile(chromedriver_zip, 'r') as zip_ref:
+            extracted_files = zip_ref.namelist()
+            print("extracted_files", extracted_files)
+
+            if chromedriver_filename in extracted_files:
+                zip_ref.extract(chromedriver_filename)
+
+        os.remove(chromedriver_zip)
+        print("ChromeDriver downloaded and extracted successfully.")
+        return chromedriver_filename
+    else:
+        print(f"Failed to download ChromeDriver: {response.status_code} - {response.reason}")
+        return None
+
+
+def view_outlet_settings_for_all_devices(devices):
+    if not devices:
+        print("No devices added yet. Please add a device first.")
+    else:
+        for index, device in enumerate(devices):
+            print(f"\nDevice {index + 1} Outlet Settings:")
+            device.print_outlet_info()
+
+
 def main():
+    chromedriver_path = download_chromedriver()
+    if chromedriver_path is None:
+        print(f"ChromeDriver file download failed... exiting.")
+
     master_username = input("Enter the master username: ")
     master_password = input("Enter the master password: ")
 
@@ -16,15 +93,18 @@ def main():
         print("2. Connect to a device")
         print("3. Show available devices")
         print("4. Remove a device")
-        print("5. Exit")
+        print("5. View Outlet Settings for all Devices")
+        print("6. Exit")
 
-        main_choice = input("Enter your choice (1/2/3/4): ")
+        main_choice = input("Enter your choice: ")
 
         if main_choice == "1":
             host_address = input("Enter the device address: ")
-            new_device = DeviceController(host_address, master_username, master_password)
+            print(chromedriver_path)
+            new_device = DeviceController(host_address, master_username, master_password, chromedriver_path)
             devices.append(new_device)
             print("Device added successfully!")
+            new_device.connect()  # Connect to the newly added device
 
         elif main_choice == "2":
             if not devices:
@@ -36,33 +116,28 @@ def main():
 
                 device_choice = int(input("Enter the device number you want to connect to: "))
                 selected_device = devices[device_choice - 1]
-                selected_device.connect()
-                print("Connected to the selected device.")
+                #selected_device.connect()
+                #print("Connected to the selected device.")
+                print("\ndevice: ", selected_device.hostAddress)
 
                 while True:
                     print("\nDevice Menu:")
-                    print("1. Disconnect from the current device")
-                    print("2. View System Settings")
-                    print("3. Change System Settings")
-                    print("4. Change User Settings")
-                    print("5. Change Ping Action Settings")
-                    print("6. Change Outlet Settings")
-                    print("7. Change PDU Settings")
-                    print("8. Change Network Settings")
-                    print("9. Back")
+                    print("1. View System Settings")
+                    print("2. Change System Settings")
+                    print("3. Change User Settings")
+                    print("4. Change Ping Action Settings")
+                    print("5. Change Outlet Settings")
+                    print("6. Change PDU Settings")
+                    print("7. Change Network Settings")
+                    print("8. Back")
 
-                    device_option = input("Enter your choice (1/2/3/4/5/6): ")
+                    device_option = input("Enter your choice: ")
 
                     if device_option == "1":
-                        selected_device.disconnect()
-                        print("Disconnected from the current device.")
-                        break
-
-                    elif device_option == "2":
                         print("View System Settings.")
                         selected_device.print_all_info()
                     
-                    elif device_option == "3":
+                    elif device_option == "2":
                         print("\nChange System Settings:")
                         selected_device.print_system_info()
                         system_name = input("Enter new system name (leave blank to keep current): ")
@@ -75,7 +150,7 @@ def main():
                                                                driver=driver)
                         print("System settings updated successfully.")
                         
-                    elif device_option == "4":
+                    elif device_option == "3":
                         print("\nChange User Settings:")
                         new_username = input("Enter new username (leave blank to keep current): ")
                         new_password = input("Enter new password (leave blank to keep current): ")
@@ -85,7 +160,7 @@ def main():
                                                              driver=driver)
                         print("User settings updated successfully.")
                     
-                    elif device_option == "5":
+                    elif device_option == "4":
                         print("\nChange Ping Action Settings:")
                         selected_device.print_ping_action_info()
                         outletA_IP = input("Enter new IP for outlet A (leave blank to keep current): ")
@@ -102,7 +177,7 @@ def main():
                                                                     outletB_active=outletB_active)
                         print("Ping action settings updated successfully.")
                     
-                    elif device_option == "6":
+                    elif device_option == "5":
                         print("\nChange Outlet Settings:")
                         selected_device.print_outlet_info()
                         outlet_name = input("Enter outlet name (A/B): ")
@@ -110,7 +185,7 @@ def main():
                         selected_device.change_power_action(outlet_name=outlet_name, action=action)
                         print("Outlet settings updated successfully.")
                         
-                    elif device_option == "7":
+                    elif device_option == "6":
                         print("\nChange PDU Settings:")
                         selected_device.print_pdu_info()
                         outletA_name = input("Enter new name for Outlet A (leave blank to keep current): ")
@@ -127,7 +202,7 @@ def main():
                                                             outletB_offDelay=outletB_offDelay)
                         print("PDU settings updated successfully.")
                     
-                    elif device_option == "8":
+                    elif device_option == "7":
                         print("\nChange Network Settings:")
                         selected_device.print_network_info()
                         dhcp = input("Enable DHCP? (True/False): ")
@@ -150,7 +225,7 @@ def main():
                                                                 DNS2=DNS2)
                         print("Network settings updated successfully.")
 
-                    elif device_option == "9":
+                    elif device_option == "8":
                         print("Returning to Main Menu.")
                         break
 
@@ -185,8 +260,11 @@ def main():
                     # Remove the device from the list
                     devices.pop(device_choice - 1)
                     print("Device removed successfully.")
-
+                    
         elif main_choice == "5":
+            view_outlet_settings_for_all_devices(devices)
+
+        elif main_choice == "6":
             print("Exiting the program.")
             break
 
