@@ -17,7 +17,7 @@ import re
 import time
 
 class DeviceController:
-    def __init__(self, hostAddress, username, password): 
+    def __init__(self, hostAddress, username, password, chromedriver_path): 
         # device credentials
         self.username = username
         self.password = password
@@ -60,7 +60,8 @@ class DeviceController:
         self.driver = None
 
         # Need to downlaod and store browser driver...
-        self.chromedriver_path = r'C:\Program Files (x86)\chromedriver\chromedriver.exe'
+        #self.chromedriver_path = r'C:\Program Files (x86)\chromedriver\chromedriver.exe'
+        self.chromedriver_path = chromedriver_path
         
         # Webdriver settings
         self.service = Service(executable_path=self.chromedriver_path)
@@ -501,7 +502,7 @@ class DeviceController:
     # System Settings
     # ===================================================
     def change_system_settings(self, system_name=None, system_contact=None, location=None, driver=None):
-        if self.driver is not None
+        if self.driver is not None:
             # Navigate to the URL
             alert = self.driver.get(self.base_url)
             
@@ -2003,4 +2004,3 @@ class DeviceController:
     def set_hostname(self, new_hostname):
         print(f"Changing dhcp to: {new_hostname}")
         self.hostname = new_hostname
-   
