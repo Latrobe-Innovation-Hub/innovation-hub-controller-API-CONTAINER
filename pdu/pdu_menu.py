@@ -1,3 +1,6 @@
+## Author: Andrew J. McDonald
+## Date: 07.08.2023
+
 # Import the DeviceController class from pdu_class.py
 from pdu_class import DeviceController
 
