@@ -35,11 +35,13 @@ Enter your choice:
 ## Outlet
 
 Options: ON, OFF, OFF/ON
+- `outlet_name`: String(A, B)
+- `action`: String(ON, OFF, OFF/ON)
 
 ## Ping Action
 
 - `Ping IP Address`: String (IP)
-- `Action`: OFF, OFF/ON
+- `Action`: String(OFF, OFF/ON)
 - `Active`: Enabled, Disabled
 
 ## PDU
@@ -61,11 +63,11 @@ Options: ON, OFF, OFF/ON
 - `IP Address`: String (IP)
 - `Subnet Mask`: String (IP)
 - `Gateway`: String (IP)
-- `DHCP`: String (Enable, Disable)
+- `DHCP`: String (dhcp can be either yes/on/enable or no/off/disable)
 - `Primary DNS IP`: String (IP)
 - `Secondary DNS IP`: String (IP)
 
 ## Time
 
-- `Time between updates (NTP)`: String (On, Off)
+- `Time between updates (NTP)`: String (on, off)
 
