@@ -240,8 +240,9 @@ def main():
                     print("5. Change Outlet Settings")
                     print("6. Change PDU Settings")
                     print("7. Change Network Settings")
-                    print("8. Change Time Settings")
-                    print("9. Back")
+                    print("8. Enable/Disable DHCP")
+                    print("9. Change Time Settings")
+                    print("b. Back")
 
                     device_option = input("Enter your choice: ")
 
@@ -313,37 +314,44 @@ def main():
                                                             outletB_onDelay=outletB_onDelay,
                                                             outletB_offDelay=outletB_offDelay)
                         print("PDU settings updated successfully.")
-                    
+
                     elif device_option == "7":
                         print("\nChange Network Settings:")
                         selected_device.print_network_info()
-                        dhcp = input("Enable DHCP? (True/False): ")
+                        #dhcp = input("Enable DHCP? (True/False): ")
                         IP = input("Enter new IP address (leave blank to keep current): ")
                         subnet = input("Enter new subnet mask (leave blank to keep current): ")
                         gateway = input("Enter new gateway IP (leave blank to keep current): ")
                         DNS1 = input("Enter new primary DNS server (leave blank to keep current): ")
                         DNS2 = input("Enter new secondary DNS server (leave blank to keep current): ")
 
-                        if dhcp.lower() == "true":
-                            dhcp = True
-                        else:
-                            dhcp = False
+                        #if dhcp.lower() == "true":
+                        #    dhcp = True
+                        #else:
+                        #    dhcp = False
 
-                        selected_device.change_network_settings(dhcp=dhcp,
+                        selected_device.change_network_settings(#dhcp=dhcp,
                                                                 IP=IP,
                                                                 subnet=subnet,
                                                                 gateway=gateway,
                                                                 DNS1=DNS1,
                                                                 DNS2=DNS2)
                         print("Network settings updated successfully.")
-
+                    
                     elif device_option == "8":
+                        print("\nEnable/Disable DHCP:")
+                        dhcp = input("Enable DHCP? (OPTIONS: dhcp can be either yes/on/enable or no/off/disable): ")
+
+                        selected_device.change_dhcp_setting(dhcp=dhcp)
+                        print("DHCP settings updated successfully.")
+
+                    elif device_option == "9":
                         print("\nChange Time Settings:")
                         internet_time = input("Turn on/off NTP? choices: on/off: ")
                         selected_device.change_time_settings(internet_time=internet_time)
                         print("Time settings updated successfully.")
 
-                    elif device_option == "9":
+                    elif device_option.lower() == "b":
                         print("Returning to Main Menu.")
                         break
 
