@@ -1,18 +1,95 @@
 ## Author: Andrew J. McDonald
-## Date: 07.08.2023
+## Date: 08.08.2023
 
 # Import the DeviceController class from pdu_class.py
 from pdu_class import DeviceController
 
 import os
 import sys
+import shutil
 import requests
 import platform
 from zipfile import ZipFile
-from pathlib import Path
 
 
-def download_chromedriver(version='114.0.5735.90'):
+PLATFORM_MAPPING = {
+    'Linux': 'linux64',
+    'Darwin': 'mac-x64',
+    'Windows': 'win64' if platform.architecture()[0] == '64bit' else 'win32'
+}
+
+def download_chromedriver()
+    os_name = platform.system()
+
+    if os_name in PLATFORM_MAPPING:
+        os_arch = PLATFORM_MAPPING[os_name]
+        chromedriver_filename = 'chromedriver.exe' if os_name == 'Windows' else 'chromedriver'
+    else:
+        print(f"Chromedriver for your operating system '{os_name}' is not available.")
+        return None
+
+    # Check if chromedriver file already exists
+    if os.path.exists(chromedriver_filename):
+        print("SUCCESS! Chromedriver found in current directory.")
+        return chromedriver_filename
+    
+    json_url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
+    
+    response = requests.get(json_url)
+    if response.status_code == 200:
+        json_data = response.json()
+    else:
+        print(f"Failed to retrieve JSON data: {response.status_code} - {response.reason}")
+        return None
+    
+    try:
+        chromedriver_url = next(item['url'] for item in json_data['channels']['Stable']['downloads']['chromedriver'] if item['platform'] == os_arch)
+    except StopIteration:
+        print(f"Chromedriver for platform '{os_arch}' is not available in the JSON data.")
+        return None
+    
+    chromedriver_zip = chromedriver_url.split('/')[-1]
+    
+    print(f"Downloading ChromeDriver for '{os_name}'...")
+    response = requests.get(chromedriver_url, stream=True)
+    
+    if response.status_code == 200:
+        with open(chromedriver_zip, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                f.write(chunk)
+        
+        with ZipFile(chromedriver_zip, 'r') as zip_ref:
+            extracted_files = zip_ref.namelist()
+            chromedriver_subpath = next((file for file in extracted_files if chromedriver_filename in file), None)
+            
+            if chromedriver_subpath:
+                print(f"Extracting '{chromedriver_subpath}'...")
+                zip_ref.extract(chromedriver_subpath)       
+                shutil.move(chromedriver_subpath, '.')
+                
+                try:
+                    # Get the subdirectory name from the extracted chromedriver subpath
+                    zip_subdir = os.path.dirname(chromedriver_subpath)
+                    print("SUCCESS! ChromeDriver downloaded and extracted successfully.")
+                except:
+                    print("ERROR! ChromeDriver downloaded and extracted FAILED.")
+            else:
+                print(f"'{chromedriver_filename}' not found in the zip archive.")
+                
+        # Remove zip file and subdirectory
+        try:
+            os.remove(chromedriver_zip)
+            shutil.rmtree(zip_subdir)
+            print("Zip and non-critical driver files removed.")
+        except:
+            pass
+        
+        return chromedriver_filename
+    else:
+        print(f"Failed to download ChromeDriver: {response.status_code} - {response.reason}")
+        return None
+
+def download_chromedriver_old(version='114.0.5735.90'):
     extracted_file = None
 
     base_url = f'https://chromedriver.storage.googleapis.com/{version}/'
