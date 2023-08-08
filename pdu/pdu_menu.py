@@ -11,7 +11,9 @@ import requests
 import platform
 from zipfile import ZipFile
 
-
+# ====================================
+# CHROMEDRIVER INSTALLATION
+# ====================================
 PLATFORM_MAPPING = {
     'Linux': 'linux64',
     'Darwin': 'mac-x64',
@@ -90,34 +92,29 @@ def download_chromedriver()
         return None
 
 def download_chromedriver_old(version='114.0.5735.90'):
-    extracted_file = None
-
+    #extracted_file = None
     base_url = f'https://chromedriver.storage.googleapis.com/{version}/'
+    
     download_links = {
         'chromedriver_linux64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_linux64.zip'.format(version),
         'chromedriver_mac64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_mac64.zip'.format(version),
         'chromedriver_mac_arm64.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_mac_arm64.zip'.format(version),
         'chromedriver_win32.zip': 'https://chromedriver.storage.googleapis.com/{}/chromedriver_win32.zip'.format(version),
     }
-    
-    #for link in download_links:
-    #    print(download_links[link])
 
     os_name = platform.system()
-    #print("platform", os_name)
-    
-    if os_name == 'Linux':
-        os_arch = 'linux64'
-        chromedriver_filename = 'chromedriver'
-    elif os_name == 'Darwin':
-        os_arch = 'mac64' if 'arm' not in platform.machine().lower() else 'mac_arm64'
-        chromedriver_filename = 'chromedriver'
-    elif os_name == 'Windows':
-        os_arch = 'win32' if 'PROGRAMFILES(x86)' in os.environ else 'win64'
-        chromedriver_filename = 'chromedriver.exe'
+
+    if os_name in PLATFORM_MAPPING:
+        os_arch = PLATFORM_MAPPING[os_name]
+        chromedriver_filename = 'chromedriver.exe' if os_name == 'Windows' else 'chromedriver'
     else:
         print(f"Chromedriver for your operating system '{os_name}' is not available.")
         return None
+
+    # Check if chromedriver file already exists
+    if os.path.exists(chromedriver_filename):
+        print("SUCCESS! Chromedriver found in current directory.")
+        return chromedriver_filename
 
     driver_url = download_links[f'chromedriver_{os_arch}.zip']
     chromedriver_zip = driver_url.split('/')[-1]
@@ -144,6 +141,9 @@ def download_chromedriver_old(version='114.0.5735.90'):
         print(f"Failed to download ChromeDriver: {response.status_code} - {response.reason}")
         return None
 
+# ====================================
+# PDU INTERACTIVE MENU HELPER
+# ====================================
 def view_outlet_settings_for_all_devices(devices):
     if not devices:
         print("No devices added yet. Please add a device first.")
@@ -152,11 +152,15 @@ def view_outlet_settings_for_all_devices(devices):
             print(f"\nDevice {index + 1} Outlet Settings:")
             device.print_outlet_info()
 
+# ====================================
+# PDU INTERACTIVE MENU
+# ====================================
 def main():
     chromedriver_path = download_chromedriver()
     if chromedriver_path is None:
         print(f"ChromeDriver file download failed... exiting.")
 
+    # set master credentials for all pdus - assuming all will be the same
     master_username = input("Enter the master username: ")
     master_password = input("Enter the master password: ")
 
@@ -191,8 +195,6 @@ def main():
 
                 device_choice = int(input("Enter the device number you want to connect to: "))
                 selected_device = devices[device_choice - 1]
-                #selected_device.connect()
-                #print("Connected to the selected device.")
                 print("\ndevice: ", selected_device.hostAddress)
 
                 while True:
