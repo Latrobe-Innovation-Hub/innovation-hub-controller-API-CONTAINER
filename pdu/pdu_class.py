@@ -1770,22 +1770,25 @@ class DeviceController:
             alert = self.driver.get(self.base_url)
     
             # Construct the URL for the "Outlet B" page
-            outletB_url = self.base_url + "/onfignet.htm"
+            network_url = self.base_url + "/confignet.htm"
     
             # Navigate to the "Outlet B" page
-            self.driver.get(outletB_url)
+            self.driver.get(network_url)
     
             # Add a wait here to ensure the page has settled after the action
             time.sleep(1)  # Adjust the sleep duration as needed
     
             apply = False
             
+            # Find the checkbox element by its name attribute
+            checkbox = self.driver.find_element(By.NAME, "dhcpenabled")
+            
             # Remove spaces and convert to uppercase for case-insensitive comparison
             dhcp_lower = dhcp.strip().lower()
             
             if dhcp_lower == "enable" or dhcp_lower == "on" or dhcp_lower == "yes":
                 dhcp_state = True       
-            elif dhcp_lower == "disable" or dhcp_lower == "off" or dhcp_lower == "no"
+            elif dhcp_lower == "disable" or dhcp_lower == "off" or dhcp_lower == "no":
                 dhcp_state = False
             else:
                 dhcp = None
@@ -1793,9 +1796,6 @@ class DeviceController:
             if dhcp is not None and dhcp_lower:
                 # Perform action to enable/disable dhcp 
                 print(f"Changing dhcp to: {dhcp_state}")
-            
-                # Find the checkbox element by its name attribute
-                checkbox = self.driver.find_element(By.NAME, "dhcpenabled")
     
                 # Check the checkbox if it's not already checked
                 if not checkbox.is_selected() and dhcp_state: #dhcp.strip().lower() == "enable":
@@ -1821,6 +1821,8 @@ class DeviceController:
                     
                     # Update Class dhcp attribute
                     self._fetch_dhcp_settings()
+                    
+                    print("dhcp updated!")
                 except Exception as e:
                     print(f"An error occurred while applying the changes: {e}")
                     # Handle the error as needed, e.g., log the error, display a message, etc.
@@ -1833,7 +1835,7 @@ class DeviceController:
             alert = self.driver.get(self.base_url)
     
             # Construct the URL for the "Outlet B" page
-            outletB_url = self.base_url + "/onfignet.htm"
+            outletB_url = self.base_url + "/confignet.htm"
     
             # Navigate to the "Outlet B" page
             self.driver.get(outletB_url)
@@ -1886,10 +1888,10 @@ class DeviceController:
             alert = self.driver.get(self.base_url)
     
             # Construct the URL for the "Outlet B" page
-            outletB_url = self.base_url + "/onfignet.htm"
+            network_url = self.base_url + "/confignet.htm"
     
             # Navigate to the "Outlet B" page
-            self.driver.get(outletB_url)
+            self.driver.get(network_url)
     
             # Add a wait here to ensure the page has settled after the action
             time.sleep(1)  # Adjust the sleep duration as needed
