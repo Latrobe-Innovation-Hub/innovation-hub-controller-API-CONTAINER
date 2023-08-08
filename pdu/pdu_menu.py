@@ -240,7 +240,8 @@ def main():
                     print("5. Change Outlet Settings")
                     print("6. Change PDU Settings")
                     print("7. Change Network Settings")
-                    print("8. Back")
+                    print("8. Change Time Settings")
+                    print("9. Back")
 
                     device_option = input("Enter your choice: ")
 
@@ -337,6 +338,12 @@ def main():
                         print("Network settings updated successfully.")
 
                     elif device_option == "8":
+                        print("\nChange Time Settings:")
+                        internet_time = input("Turn on/off NTP? choices: on/off: ")
+                        selected_device.change_time_settings(internet_time=internet_time)
+                        print("Time settings updated successfully.")
+
+                    elif device_option == "9":
                         print("Returning to Main Menu.")
                         break
 
