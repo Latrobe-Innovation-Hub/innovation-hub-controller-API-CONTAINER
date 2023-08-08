@@ -166,6 +166,37 @@ def main():
 
     devices = []
 
+    # ================================================
+    # import devices from file
+    #
+    # line structure: HOSTADDRESS, USERNAME, PASSWORD
+    # ================================================
+    file_path = "devices_list.txt"
+    try:
+        with open(file_path, "r") as file:
+            for line_number, line in enumerate(file, start=1):
+                line = line.strip()
+                if not line:
+                    print(f"Skipping empty line at line {line_number}")
+                    continue
+
+                credentials = [cred.strip() for cred in line.split(",")]
+                if len(credentials) != 3:
+                    print(f"Invalid line format at line {line_number}: {line}")
+                    continue
+
+                host_address, username, password = credentials
+                new_device = DeviceController(host_address, username, password, chromedriver_path)
+                connection_success = new_device.connect()
+                
+                if connection_success:
+                    devices.append(new_device)
+                    print(f"Device {host_address} added successfully!")
+                else:
+                    print("Failed to connect to the device.")
+    except FileNotFoundError:
+        print("Device file not found. Continuing without loading devices.")
+
     while True:
         print("\nMain Menu:")
         print("1. Add new device")
@@ -179,11 +210,14 @@ def main():
 
         if main_choice == "1":
             host_address = input("Enter the device address: ")
-            print(chromedriver_path)
-            new_device = DeviceController(host_address, master_username, master_password, chromedriver_path)
-            devices.append(new_device)
-            print("Device added successfully!")
-            new_device.connect()  # Connect to the newly added device
+            new_device = DeviceController(host_address, username, password, chromedriver_path)
+            connection_success = new_device.connect()
+                
+            if connection_success:
+                devices.append(new_device)
+                print(f"Device {host_address} added successfully!")
+            else:
+                print("Failed to connect to the device.")
 
         elif main_choice == "2":
             if not devices:
