@@ -667,7 +667,80 @@ class DeviceController:
                     # Handle the error as needed, e.g., log the error, display a message, etc.
             
             return self.driver
- 
+
+    # ===================================================
+    # Time Settings
+    # ===================================================
+    def change_time_settings(self, internet_time=None):
+        if self.driver is not None:
+            # Navigate to the URL
+            alert = self.driver.get(self.base_url)
+            
+            # Construct the URL for the "Ping Action" page
+            time_setting_url = self.base_url + "/configtime.htm"
+    
+            # Navigate to the "Ping Action" page
+            self.driver.get(time_setting_url)
+    
+            # Add a wait here to ensure the page has settled after the action
+            time.sleep(2)  # Adjust the sleep duration as needed
+            
+            apply = False
+            
+            if internet_time is not None and internet_time.strip():
+                action_dropdown_outletB = Select(self.driver.find_element(By.NAME, "t0"))
+
+                if internet_time.strip().lower() == "on":
+                    action_dropdown_outletB.select_by_visible_text("10 minutes")
+                elif internet_time.strip().lower() == "off":
+                    action_dropdown_outletB.select_by_visible_text("NO")
+                 
+                time.sleep(.5)	# Adjust the sleep duration as needed
+                
+                # Find the buttons based on their onclick attribute
+                apply_button_name = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//input[@onclick='Gett1()']"))
+                )
+                
+                # click Apply but to submit changes to names
+                apply_button_name.click()
+    
+                # Wait for the confirmation alert to appear
+                wait = WebDriverWait(self.driver, 10)
+                alert = wait.until(EC.alert_is_present())
+                print("DEBUG: Alert Text:", alert.text)
+    
+                # Accept the alert using the Alert object's accept() method
+                alert.accept()
+                print("DEBUG: Alert Accepted")
+                
+                # Add a wait here to ensure the page has settled after the action
+                time.sleep(1)  # Adjust the sleep duration as needed
+                
+                # Wait for the confirmation alert to appear
+                wait = WebDriverWait(self.driver, 10)
+                alert = wait.until(EC.alert_is_present())
+                print("DEBUG: Alert Text:", alert.text)
+    
+                # Accept the alert using the Alert object's accept() method
+                alert.accept()
+                print("DEBUG: Alert Accepted")
+                time.sleep(.5)  # Adjust the sleep duration as needed
+                
+                # Refresh the page to handle the "Please refresh this page" alert
+                self.driver.refresh()
+                
+                # Wait for the element to be present and extract its text
+                system_time_element = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "t5"))
+                )
+                system_time_text = system_time_element.text
+
+                # Print or use the extracted text
+                print("System Time:", system_time_text)
+                
+            return self.driver
+    
     # ===================================================
     # Ping Action Settings
     # ===================================================
