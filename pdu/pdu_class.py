@@ -1,5 +1,5 @@
 ## Author: Andrew J. McDonald
-## Date: 07.08.2023
+## Date: 08.08.2023
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
