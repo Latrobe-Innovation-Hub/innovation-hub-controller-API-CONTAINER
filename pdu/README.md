@@ -24,39 +24,48 @@ Device Menu:
 Enter your choice:
 ```
 
-PDU Class functions, variables:
-System:
-system Name = String
-System Contact = String
-Location = String
+# PDU Class Functions and Variables
 
-Outlet:
-options: ON,OFF, OFF/ON
+## System
 
-Ping Action:
-Ping IP Address = String (IP)
-Action: OFF,OFF/ON
-Active: enabled, disabled
+- `system Name`: String
+- `System Contact`: String
+- `Location`: String
 
-PDU:
-Name: String
-ON Delay(sec) = Int
-OFF Delay(sec) = Int
+## Outlet
 
-User:
-old ID = String
-old Password = String
-new ID = String
-new Password = String
+Options: ON, OFF, OFF/ON
 
-Network:
-Host Name = String
-IP Address =  String (IP)
-Subnet Mask = String (IP)
-Gateway = String(IP)
-DHCP = String(enable,disable)
-Primary DNS IP = String(IP)
-Secondary DNS IP = String(IP)
+## Ping Action
 
-Time:
-Time between updates (NTP)= String(on,off)
+- `Ping IP Address`: String (IP)
+- `Action`: OFF, OFF/ON
+- `Active`: Enabled, Disabled
+
+## PDU
+
+- `Name`: String
+- `ON Delay(sec)`: Int
+- `OFF Delay(sec)`: Int
+
+## User
+
+- `old ID`: String
+- `old Password`: String
+- `new ID`: String
+- `new Password`: String
+
+## Network
+
+- `Host Name`: String
+- `IP Address`: String (IP)
+- `Subnet Mask`: String (IP)
+- `Gateway`: String (IP)
+- `DHCP`: String (Enable, Disable)
+- `Primary DNS IP`: String (IP)
+- `Secondary DNS IP`: String (IP)
+
+## Time
+
+- `Time between updates (NTP)`: String (On, Off)
+
