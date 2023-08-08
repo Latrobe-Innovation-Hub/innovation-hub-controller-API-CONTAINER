@@ -1763,7 +1763,7 @@ class DeviceController:
     # ===========================================
     # Network Settings
     # ===========================================
-    # dhcp can be either on/enable or off/disable
+    # dhcp can be either yes/on/enable or no/off/disable
     def change_dhcp_setting(self, dhcp=None):
         if self.driver is not None:
             # Navigate to the URL
@@ -1783,31 +1783,31 @@ class DeviceController:
             # Remove spaces and convert to uppercase for case-insensitive comparison
             dhcp_lower = dhcp.strip().lower()
             
-            if dhcp_lower == "enable" or dhcp_lower == "on":
-                dhcp_on = True       
-            elif dhcp_lower == "disable" or dhcp_lower == "off":
-                dhcp_on = False
+            if dhcp_lower == "enable" or dhcp_lower == "on" or dhcp_lower == "yes":
+                dhcp_state = True       
+            elif dhcp_lower == "disable" or dhcp_lower == "off" or dhcp_lower == "no"
+                dhcp_state = False
             else:
                 dhcp = None
                 
             if dhcp is not None and dhcp_lower:
                 # Perform action to enable/disable dhcp 
-                print(f"Changing dhcp to: {dhcp_lower}")
+                print(f"Changing dhcp to: {dhcp_state}")
             
                 # Find the checkbox element by its name attribute
                 checkbox = self.driver.find_element(By.NAME, "dhcpenabled")
     
                 # Check the checkbox if it's not already checked
-                if not checkbox.is_selected() and dhcp_on: #dhcp.strip().lower() == "enable":
+                if not checkbox.is_selected() and dhcp_state: #dhcp.strip().lower() == "enable":
                     checkbox.click()
                     apply = True
-                elif checkbox.is_selected() and not dhcp_on: #dhcp.strip().lower() == "disable":
+                elif checkbox.is_selected() and not dhcp_state: #dhcp.strip().lower() == "disable":
                     checkbox.click()
                     apply = True
                 else:
-                    if not checkbox.is_selected() and not dhcp_on: #dhcp.strip().lower() == "disable":
+                    if not checkbox.is_selected() and not dhcp_state: #dhcp.strip().lower() == "disable":
                         print("dhcp is already disabled")
-                    elif checkbox.is_selected() and dhcp_on: #dhcp.strip().lower() == "enable":
+                    elif checkbox.is_selected() and dhcp_state: #dhcp.strip().lower() == "enable":
                         print("dhcp is already enabled")
             
             if apply:
@@ -1880,7 +1880,7 @@ class DeviceController:
         subnet_pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
         return re.match(subnet_pattern, subnet) is not None
     
-    def change_network_settings(self, dhcp=False, IP=None, subnet=None, gateway=None, DNS1=None, DNS2=None):
+    def change_network_settings(self, IP=None, subnet=None, gateway=None, DNS1=None, DNS2=None):
         if self.driver is not None:
             # Navigate to the URL
             alert = self.driver.get(self.base_url)
@@ -1896,16 +1896,13 @@ class DeviceController:
     
             apply = False
             
-            # Perform action to enable/disable dhcp 
-            print(f"Changing dhcp to: {dhcp}")
-            
             # Find the checkbox element by its name attribute
             checkbox = self.driver.find_element(By.NAME, "dhcpenabled")
             
             # Check the checkbox if it's not already checked
-            if not checkbox.is_selected() and dhcp:
+            if not checkbox.is_selected():
                 print("dhcp is already disabled")
-            elif checkbox.is_selected() and not dhcp:
+            elif checkbox.is_selected():
                 checkbox.click()
                 apply = True
             
