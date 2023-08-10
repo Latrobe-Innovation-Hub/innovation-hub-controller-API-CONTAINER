@@ -17,7 +17,7 @@ import re
 import time
 
 class DeviceController:
-    def __init__(self, hostAddress, username, password, chromedriver_path): 
+    def __init__(self, hostAddress, username, password, chromedriver_path):   
         # device credentials
         self.username = username
         self.password = password
@@ -77,13 +77,17 @@ class DeviceController:
     def connect(self):
         if self.driver is not None:
             print("connecting webdriver... ", end='')
-
-            device_url = f'http://{self.hostAddress}'
-            parsed_url = urlparse(device_url)
-            self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
-            self.driver.get(self.base_url)
+            
+            try:
+                device_url = f'http://{self.hostAddress}'
+                parsed_url = urlparse(device_url)
+                self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
+                self.driver.get(self.base_url)
+            except Exception as e:
+                raise e  # Raise the exception instead of returning it
             
             print(" done!")
+            return True
             #self.print_info()
  
     def disconnect(self):
@@ -160,7 +164,63 @@ class DeviceController:
             print(f"\tDHCP Enabled: {self.dhcp_enabled}")
             print(f"\tDNS1: {self.dns1}")
             print(f"\tDNS2: {self.dns2}")
-    
+            
+    def get_all_info(self):
+        if self.driver is not None:
+            self._fetch_system_settings()
+            self._fetch_outlet_states()
+            self._fetch_network_settings()
+            self._fetch_ping_action_settings()
+            self._fetch_pdu_settings()
+            
+            info = {
+                'device_credentials': {
+                    'username': self.username,
+                    'password': self.password
+                },
+                'system_info': {
+                    'model_number': self.model_num,
+                    'firmware_version': self.Firmware_ver,
+                    'mac_address': self.MAC,
+                    'system_name': self.system_name,
+                    'system_contact': self.system_contact,
+                    'system_location': self.system_location
+                },
+                'outlet_info': [
+                    {'outlet': outlet, 'state': state}
+                    for outlet, state in self.outlet_states.items()
+                ],
+                'ping_action_info': [
+                    {
+                        'outlet': outlet,
+                        'address': self.outlet_ping_addresses.get(outlet, 'Not Available'),
+                        'action': self.outlet_ping_action.get(outlet, 'Not Available'),
+                        'active': self.outlet_ping_active.get(outlet, 'Not Available')
+                    }
+                    for outlet in self.outlet_states
+                ],
+                'pdu_info': [
+                    {
+                        'outlet': outlet,
+                        'name': name,
+                        'on_delay': self.outlet_onDelays.get(outlet, 'Not Available'),
+                        'off_delay': self.outlet_oFFDelays.get(outlet, 'Not Available')
+                    }
+                    for outlet, name in self.outlet_names.items()
+                ],
+                'network_info': {
+                    'hostname': self.hostname,
+                    'ip_address': self.ip_address,
+                    'subnet': self.subnet,
+                    'gateway': self.gateway,
+                    'dhcp_enabled': self.dhcp_enabled,
+                    'dns1': self.dns1,
+                    'dns2': self.dns2
+                }
+            }
+            
+            return info
+
     def print_system_info(self):
         if self.driver is not None:
             self._fetch_system_settings()
@@ -171,6 +231,19 @@ class DeviceController:
             print(f"\tSystem Name: {self.system_name}")
             print(f"\tSystem Contact: {self.system_contact}")
             print(f"\tSystem Location: {self.system_location}\n")
+            
+    def get_system_info(self):
+        if self.driver is not None:
+            self._fetch_system_settings()
+            system_info = {
+                'model_number': self.model_num,
+                'firmware_version': self.Firmware_ver,
+                'mac_address': self.MAC,
+                'system_name': self.system_name,
+                'system_contact': self.system_contact,
+                'system_location': self.system_location
+            }
+            return system_info
 
     def print_outlet_info(self):
         if self.driver is not None:
@@ -179,6 +252,14 @@ class DeviceController:
             for outlet, state in self.outlet_states.items():
                 print(f"\tOutlet {outlet}: {state}")
             print()
+    
+    def get_outlet_info(self):
+        if self.driver is not None:
+            self._fetch_outlet_states()
+            outlet_info = {}
+            for outlet, state in self.outlet_states.items():
+                outlet_info[outlet] = state
+            return outlet_info
         
     def print_ping_action_info(self):
         if self.driver is not None:
@@ -190,6 +271,20 @@ class DeviceController:
                 print(f"\t\taction: {self.outlet_ping_action.get(outlet, 'Not Available')}")
                 print(f"\t\tactive: {self.outlet_ping_active.get(outlet, 'Not Available')}")
             print()
+            
+    def get_ping_action_info(self):
+        if self.driver is not None:
+            self._fetch_ping_action_settings()
+            ping_action_info = [
+                {
+                    'outlet': outlet,
+                    'address': self.outlet_ping_addresses.get(outlet, 'Not Available'),
+                    'action': self.outlet_ping_action.get(outlet, 'Not Available'),
+                    'active': self.outlet_ping_active.get(outlet, 'Not Available')
+                }
+                for outlet in self.outlet_states
+            ]
+            return ping_action_info
 
     def print_pdu_info(self):
         if self.driver is not None:
@@ -203,6 +298,20 @@ class DeviceController:
                 print(f"\t\ton delay: {on_delay}")
                 print(f"\t\toff delay: {off_delay}")
             print()
+            
+    def get_pdu_info(self):
+        if self.driver is not None:
+            self._fetch_pdu_settings()
+            pdu_info = [
+                {
+                    'outlet': outlet,
+                    'name': name,
+                    'on_delay': self.outlet_onDelays.get(outlet, 'Not Available'),
+                    'off_delay': self.outlet_oFFDelays.get(outlet, 'Not Available')
+                }
+                for outlet, name in self.outlet_names.items()
+            ]
+            return pdu_info
 
     def print_network_info(self):
         if self.driver is not None:
@@ -215,6 +324,20 @@ class DeviceController:
             print(f"\tDHCP Enabled: {self.dhcp_enabled}")
             print(f"\tDNS1: {self.dns1}")
             print(f"\tDNS2: {self.dns2}")
+            
+    def get_network_info(self):
+        if self.driver is not None:
+            self._fetch_network_settings()
+            network_info = {
+                'hostname': self.hostname,
+                'ip_address': self.ip_address,
+                'subnet': self.subnet,
+                'gateway': self.gateway,
+                'dhcp_enabled': self.dhcp_enabled,
+                'dns1': self.dns1,
+                'dns2': self.dns2
+            }
+            return network_info
     
     # ===================================================
     # Class Attribute Updaters  
