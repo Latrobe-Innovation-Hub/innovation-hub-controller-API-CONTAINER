@@ -210,7 +210,7 @@ def main():
 
         if main_choice == "1":
             host_address = input("Enter the device address: ")
-            new_device = DeviceController(host_address, username, password, chromedriver_path)
+            new_device = DeviceController(host_address, master_username, master_password, chromedriver_path)
             connection_success = new_device.connect()
                 
             if connection_success:
