@@ -20,7 +20,7 @@ PLATFORM_MAPPING = {
     'Windows': 'win64' if platform.architecture()[0] == '64bit' else 'win32'
 }
 
-def download_chromedriver()
+def download_chromedriver():
     os_name = platform.system()
 
     if os_name in PLATFORM_MAPPING:
