@@ -1076,8 +1076,8 @@ class DeviceController:
                 "OFF/ON": "T21",
             }
     
-            # Ensure the connection is established
-            ##self.connect(self.driver)
+            # Update outlet states
+            self._fetch_outlet_states()
     
             # Get the current state of outlets (on or off)
             current_state = self.get_outlet_states()
