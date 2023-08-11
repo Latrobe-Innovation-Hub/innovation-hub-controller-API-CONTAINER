@@ -8,6 +8,10 @@ import requests
 import platform
 from zipfile import ZipFile
 
+from flask import Flask
+from flask_cors import CORS
+
+
 # ====================================
 # CHROMEDRIVER INSTALLATION
 # ====================================
@@ -90,6 +94,9 @@ def download_chromedriver():
 
 app = Flask(__name__)
 
+# Allow CORS for all routes
+CORS(app)
+
 # Set the path to the Chrome WebDriver file
 #chrome_driver_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chromedriver.exe")
 chrome_driver_path = None
@@ -104,7 +111,7 @@ devices = []
 @app.route('/devices', methods=['GET'])
 def list_devices():
     if not devices:
-        return jsonify({'message': 'No devices added yet. Please add a device first.'}), 400
+        return jsonify({'message': 'No devices added yet. Please add a device first.'}), 200
 
     device_list = []
     for index, device in enumerate(devices):
@@ -118,7 +125,7 @@ def list_devices():
 @app.route('/devices/<int:device_number>', methods=['GET'])
 def get_device(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     # Here you can return information about the selected device if needed
@@ -140,7 +147,7 @@ def add_device():
     # Check if a device already exists with the same host address
     for device in devices:
         if device.hostAddress == host_address:
-            return jsonify({'error': f'Device with host address {host_address} already exists.'}), 400
+            return jsonify({'error': f'Device with host address {host_address} already exists.'}), 200
 
     new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
     devices.append(new_device)
@@ -149,15 +156,15 @@ def add_device():
         new_device.connect()
         return jsonify({'success': 'Device added successfully!'})
     except Exception as e:
-        return jsonify({'error: device not reachable...'}), 500
+        return jsonify({'error: device not reachable...'}), 200
 
 @app.route('/remove_device/<int:device_choice>', methods=['POST'])
 def remove_device(device_choice):
     if not devices:
-        return jsonify({'error': 'No devices added yet. Please add a device first.'}), 400
+        return jsonify({'error': 'No devices added yet. Please add a device first.'}), 200
 
     if device_choice <= 0 or device_choice > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     device_to_remove = devices[device_choice - 1]
     device_to_remove.disconnect()
@@ -168,7 +175,7 @@ def remove_device(device_choice):
 @app.route('/view_outlet_settings_all', methods=['GET'])
 def view_outlet_settings_all():
     if not devices:
-        return jsonify({'message': 'No devices added yet. Please add a device first.'}), 400
+        return jsonify({'message': 'No devices added yet. Please add a device first.'}), 200
 
     outlet_settings_all = []
     for index, device in enumerate(devices):
@@ -182,14 +189,13 @@ def view_outlet_settings_all():
 
     return jsonify(outlet_settings_all)
 
-
 # =====================
 # DEVICE LEVEL OPTIONS
 # =====================
 @app.route('/devices/<int:device_number>/view_all_settings', methods=['GET'])
 def view_system_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     system_settings = selected_device.get_all_info()
@@ -199,7 +205,7 @@ def view_system_settings(device_number):
 @app.route('/devices/<int:device_number>/change_system_settings', methods=['PUT'])
 def change_system_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_system_settings = request.get_json()
@@ -222,7 +228,7 @@ def change_system_settings(device_number):
 @app.route('/devices/<int:device_number>/change_user_settings', methods=['PUT'])
 def change_user_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_user_settings = request.get_json()
@@ -243,7 +249,7 @@ def change_user_settings(device_number):
 @app.route('/devices/<int:device_number>/change_ping_action_settings', methods=['PUT'])
 def change_ping_action_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_ping_action_settings = request.get_json()
@@ -270,7 +276,7 @@ def change_ping_action_settings(device_number):
 @app.route('/devices/<int:device_number>/set_outlet_power_state', methods=['PUT'])
 def change_outlet_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_outlet_settings = request.get_json()
@@ -289,7 +295,7 @@ def change_outlet_settings(device_number):
 @app.route('/devices/<int:device_number>/change_pdu_settings', methods=['PUT'])
 def change_pdu_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_pdu_settings = request.get_json()
@@ -316,7 +322,7 @@ def change_pdu_settings(device_number):
 @app.route('/devices/<int:device_number>/change_network_settings', methods=['PUT'])
 def change_network_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     new_network_settings = request.get_json()
@@ -343,7 +349,7 @@ def change_network_settings(device_number):
 @app.route('/devices/<int:device_number>/enable_disable_dhcp', methods=['PUT'])
 def enable_disable_dhcp(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     dhcp_option = request.get_json().get('dhcp_option')
@@ -354,7 +360,7 @@ def enable_disable_dhcp(device_number):
 @app.route('/devices/<int:device_number>/change_time_settings', methods=['PUT'])
 def change_time_settings(device_number):
     if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 400
+        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
     selected_device = devices[device_number - 1]
     internet_time_option = request.get_json().get('internet_time_option')
