@@ -453,13 +453,23 @@ def init_db():
     # Create a table to store host data if it doesn't exist
     host_cursor.execute('''
         CREATE TABLE IF NOT EXISTS hosts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            host_address TEXT,
+            host_address TEXT PRIMARY KEY,
             username TEXT,
             password TEXT,
             platform TEXT NULL
         )
     ''')
+    
+    
+    #host_cursor.execute('''
+    #    CREATE TABLE IF NOT EXISTS hosts (
+    #        id INTEGER PRIMARY KEY AUTOINCREMENT,
+    #        host_address TEXT,
+    #        username TEXT,
+    #        password TEXT,
+    #        platform TEXT NULL
+    #    )
+    #''')
 
     host_conn.commit()
     host_conn.close()
@@ -469,6 +479,15 @@ def init_db():
     pdu_cursor = pdu_conn.cursor()
 
     # Create a table to store PDU device data if it doesn't exist
+    #pdu_cursor.execute('''
+    #    CREATE TABLE IF NOT EXISTS pdu_devices (
+    #        host_address TEXT RIMARY KEY,
+    #        username TEXT,
+    #        password TEXT,
+    #        driver_path TEXT
+    #    )
+    #''')
+    
     pdu_cursor.execute('''
         CREATE TABLE IF NOT EXISTS pdu_devices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -537,7 +556,7 @@ def add_host():
     cursor = conn.cursor()
 
     # Check if the host address already exists in the database
-    cursor.execute('SELECT id FROM hosts WHERE host_address = ?', (host_address,))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))
     existing_host = cursor.fetchone()
 
     if existing_host:
@@ -557,13 +576,33 @@ def add_host():
 
     return jsonify({'message': 'Host added successfully'}), 200
 
-@app.route('/remove_host/<int:host_id>', methods=['POST'])
-def remove_host(host_id):
+# @app.route('/remove_host/<int:host_id>', methods=['POST'])
+# def remove_host(host_id):
+    # conn = get_db_connection()
+    # cursor = conn.cursor()
+
+    # # Check if the host exists in the database
+    # cursor.execute('SELECT id FROM hosts WHERE id = ?', (host_id,))
+    # existing_host = cursor.fetchone()
+
+    # if not existing_host:
+        # conn.close()
+        # return jsonify({'error': 'Host not found'}), 200
+
+    # # Remove the host from the database
+    # cursor.execute('DELETE FROM hosts WHERE id = ?', (host_id,))
+    # conn.commit()
+    # conn.close()
+
+    # return jsonify({'success': 'Host removed successfully!'}), 200
+    
+@app.route('/remove_host/<string:host_address>', methods=['POST'])
+def remove_host(host_address):
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # Check if the host exists in the database
-    cursor.execute('SELECT id FROM hosts WHERE id = ?', (host_id,))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))
     existing_host = cursor.fetchone()
 
     if not existing_host:
@@ -571,14 +610,14 @@ def remove_host(host_id):
         return jsonify({'error': 'Host not found'}), 200
 
     # Remove the host from the database
-    cursor.execute('DELETE FROM hosts WHERE id = ?', (host_id,))
+    cursor.execute('DELETE FROM hosts WHERE host_address = ?', (host_address,))
     conn.commit()
     conn.close()
 
     return jsonify({'success': 'Host removed successfully!'}), 200
 
 
-@app.route('/remove_host_by_address', methods=['POST'])
+@app.route('/remove_host_address', methods=['POST'])
 def remove_host_address():
     data = request.get_json()
 
@@ -592,7 +631,7 @@ def remove_host_address():
     cursor = conn.cursor()
 
     # Check if the host exists in the database based on 'host_address'
-    cursor.execute('SELECT id FROM hosts WHERE host_address = ?', (host_address,))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))    
     existing_host = cursor.fetchone()
 
     if not existing_host:
@@ -615,17 +654,30 @@ def get_hosts():
     cursor.execute('SELECT * FROM hosts')
     hosts = cursor.fetchall()
     conn.close()
-
+    
+    logger.info(f"testing.... in get_hosts, cursor.execute('SELECT * FROM hosts') is: {hosts}")
+    
     if len(hosts) < 1:
         return jsonify({'message': 'No hosts added yet. Please add a host first.'}), 200
 
     host_list = []
+    #for host in hosts:
+    #    host_list.append({
+    #        'host_id': host['id'],
+    #        'host_address': host['host_address']
+    #    })
+    
+    host_id = 0  # Initialize host_id to 0
+
     for host in hosts:
         host_list.append({
-            'host_id': host['id'],
+            'host_id': host_id,
             'host_address': host['host_address']
         })
+        host_id += 1  # Increment host_id for the next host
 
+    logger.info(f"testing.... in get_hosts, host_list is: {host_list}")
+    
     return jsonify({'hosts': host_list}), 200
 
 # =========================================================================
