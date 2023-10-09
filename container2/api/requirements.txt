@@ -16,3 +16,10 @@ six==1.16.0
 tenacity==8.0.1
 Werkzeug==2.0.3
 paramiko==3.2.0
+flask_cors==4.0.0
+selenium==4.11.2
+bs4==0.0.1
+requests==2.31.0
+lxml==4.9.3
+Flask-SQLAlchemy
+cachetools

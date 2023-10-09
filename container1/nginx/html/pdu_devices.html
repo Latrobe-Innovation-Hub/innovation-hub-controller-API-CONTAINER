@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PDU Device Management</title>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    form {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666666;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    h2 {
+      margin-top: 20px;
+      color: #333333;
+    }
+
+    pre {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+	  width: fit-content;
+    }
+
+    #returnButton {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    #returnButton:hover {
+      background-color: #555555;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Function to update the device list
+        function updateDeviceList(devices) {
+            var deviceListHtml = '<h2>Current Devices:</h2><ul>';
+            console.log('updating device list:', devices); // Debugging console print
+            if (devices && devices.length > 0) {
+                console.log('updating device list greater than 0'); // Debugging console print
+                $.each(devices, function(index, device) {
+                    deviceListHtml += '<li>PDU ' + device.device_number + ': ' + device.host_address +
+                        ' <button class="removeButton" data-device-choice="' + device.device_number + '">Remove</button></li>';
+                });
+            } else {
+                deviceListHtml += '<li>No devices available.</li>';
+            }
+            deviceListHtml += '</ul>';
+            $('#deviceList').html(deviceListHtml);
+
+            // Bind click event for remove buttons
+            $('.removeButton').click(function() {
+                var deviceChoice = $(this).data('device-choice');
+                console.log('Clicked Remove Button for Device Choice:', deviceChoice); // Debugging console print
+                removeDevice(deviceChoice);
+            });
+        }
+
+        // Function to remove a device
+        function removeDevice(deviceChoice) {
+            $.ajax({
+                url: 'api/pdu/remove_device/' + deviceChoice,
+                method: 'POST',
+                success: function(response) {
+                    console.log('Remove Device Response:', response); // Debugging console print
+                    updateDeviceList(response.devices);
+                    $('#response').text('Device removed successfully.');
+                },
+                error: function(xhr, status, error) {
+                    console.log('Remove Device Error:', xhr.responseText); // Debugging console print
+                    $('#response').text('Error removing device: ' + error);
+                }
+            });
+        }
+
+        // Fetch initial device list and bind click event for remove buttons
+        function fetchInitialDeviceList() {
+            $.ajax({
+                url: 'api/pdu/devices',
+                method: 'GET',
+                success: function(response) {
+                    updateDeviceList(response.devices);
+                },
+                error: function(xhr, status, error) {
+                    $('#deviceList').html('<h2>Error fetching devices: ' + error + '</h2>');
+                }
+            });
+        }
+
+        // Bind click event for the "Refresh Device List" button
+        $('#refreshDeviceListButton').click(function() {
+            fetchInitialDeviceList();
+        });
+
+        // Bind form submit event for adding a device
+        $('#addDeviceForm').submit(function(event) {
+            event.preventDefault();
+
+            var hostAddress = $('#hostAddress').val();
+            console.log('Host Address Submitted:', hostAddress); // Debugging console print
+
+            $.ajax({
+                url: 'api/pdu/add_device',
+                method: 'POST',
+                data: JSON.stringify({'host_address': hostAddress}),
+                contentType: 'application/json',
+                success: function(response) {
+                    console.log('Add Device Response:', response); // Debugging console print
+                    $('#response').text(JSON.stringify(response, null, 2));
+                    // Fetch updated device list and update
+                    fetchInitialDeviceList();
+                },
+                error: function(xhr, status, error) {
+                    console.log('Add Device Error:', xhr.responseText); // Debugging console print
+                    $('#response').text('Error: ' + error);
+                }
+            });
+        });
+
+        // Fetch initial device list on page load
+        fetchInitialDeviceList();
+
+        $('#returnButton').click(function() {
+            window.location.href = 'index.html';
+        });
+    });
+</script>
+</head>
+<body>
+  <h1>PDU Device Management</h1>
+  
+  <h2>Add PDU Device:</h2>
+  <form id="addDeviceForm">
+    <label for="hostAddress">Host Address:</label>
+    <input type="text" id="hostAddress" required><br>
+
+    <button type="submit">Add Device</button>
+  </form>
+
+  <!--<h2>PDU List:</h2> -->
+  <button id="refreshDeviceListButton">Refresh PDU List</button>
+  <div id="deviceList"></div>
+
+  <h2>API Response:</h2>
+  <pre id="response"></pre>
+  
+  <button id="returnButton">Return to Main Menu</button>
+  
+  <button onclick="window.location.href = 'outlets.html';">Control Outlets</button>
+</body>
+</html>

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Host Management</title>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    form {
+      margin-top: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666666;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    h2 {
+      margin-top: 20px;
+      color: #333333;
+    }
+
+    pre {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+      width: fit-content;
+    }
+
+    #returnButton {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    #returnButton:hover {
+      background-color: #555555;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Function to update the host list
+      function updateHostList(hosts) {
+        var hostListHtml = '<h2>Current Hosts:</h2><ul>';
+        console.log('updating hosts list:', hosts); // Debugging console print
+        if (hosts && hosts.length > 0) {
+          console.log('updating device list greater than 0'); // Debugging console print
+          $.each(hosts, function(index, host) {
+            hostListHtml += '<li>Host ' + host.host_id + ': ' + host.host_address +
+              ' <button class="removeButton" data-host-address="' + host.host_address + '">Remove</button></li>';
+          });
+        } else {
+          hostListHtml += '<li>No hosts available.</li>';
+        }
+        hostListHtml += '</ul>';
+        $('#hostList').html(hostListHtml);
+
+        // Bind click event for remove buttons
+        $('.removeButton').click(function() {
+          var hostAddress = $(this).data('host-address');
+          console.log('Clicked Remove Button for hostAddress:', hostAddress); // Debugging console print
+          removeHost(hostAddress);
+        });
+      }
+
+      // Function to remove a host by address
+      function removeHost(hostAddress) {
+        $.ajax({
+          url: 'api/remove_host_address',
+          method: 'POST',
+          data: JSON.stringify({'host_address': hostAddress}),
+          contentType: 'application/json',
+          success: function(response) {
+            console.log(response); // Log the response for debugging
+            updateHostList(response.hosts);
+            $('#response').text('Host removed successfully.');
+          },
+          error: function(xhr, status, error) {
+            console.log(xhr.responseText); // Log the error response for debugging
+            $('#response').text('Error removing host: ' + error);
+          }
+        });
+      }
+
+      // Function to fetch the initial host list
+      function fetchInitialHostList() {
+        $.ajax({
+          url: 'api/get_hosts',
+          method: 'GET',
+          success: function(response) {
+            updateHostList(response.hosts);
+          },
+          error: function(xhr, status, error) {
+            $('#hostList').text('Error fetching hosts: ' + error);
+          }
+        });
+      }
+
+      // Bind click event for the "Refresh Host List" button
+      $('#refreshHostListButton').click(function() {
+        fetchInitialHostList();
+      });
+
+      $('#addHostForm').submit(function(event) {
+        event.preventDefault();
+
+        var hostAddress = $('#hostAddress').val();
+        var username = $('#username').val();
+        var password = $('#password').val();
+        var platform = $('#platform').val(); // Get the platform value
+
+        // Create an empty object to hold the data
+        var dataToSend = {
+          'host_address': hostAddress,
+          'username': username,
+          'password': password
+        };
+
+        // Check if the 'platform' field has a value, and include it in the data if it does
+        if (platform) {
+          dataToSend['platform'] = platform;
+        }
+
+        $.ajax({
+          url: 'api/add_host',
+          method: 'POST',
+          data: JSON.stringify(dataToSend), // Include platform in the data if it has a value
+          contentType: 'application/json',
+          success: function(response) {
+            $('#response').text(JSON.stringify(response, null, 2));
+
+            // Add a delay of 1 second (adjust as needed) before refreshing the host list
+            setTimeout(function() {
+              fetchInitialHostList();
+            }, 2000); // 1000 milliseconds = 1 second
+          },
+          error: function(xhr, status, error) {
+            $('#response').text('Error: ' + error);
+          }
+        });
+      });
+
+      // Fetch initial host list on page load
+      fetchInitialHostList();
+
+      $('#returnButton').click(function() {
+        window.location.href = 'index.html';
+      });
+    });
+  </script>
+</head>
+<body>
+  <h1>Host Management</h1>
+
+  <h2>Add Host:</h2>
+  <form id="addHostForm">
+    <label for="hostAddress">Host Address:</label>
+    <input type="text" id="hostAddress" required><br>
+    <label for="username">Username:</label>
+    <input type="text" id="username" required><br>
+    <label for="password">Password:</label>
+    <input type="password" id="password" required><br>
+    <label for="platform">Platform (optional):</label>
+    <input type="text" id="platform"><br>
+
+    <button type="submit">Add Host</button>
+  </form>
+
+  <button id="refreshHostListButton">Refresh Host List</button>
+  <div id="hostList"></div>
+
+  <h2>API Response:</h2>
+  <pre id="response"></pre>
+
+  <button onclick="window.location.href = 'outlets.html';">Control Outlets</button>
+  <button id="returnButton">Return to Main Menu</button>
+</body>
+</html>

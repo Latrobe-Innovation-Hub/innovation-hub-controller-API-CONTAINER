@@ -49,6 +49,35 @@ echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setting gunicorn threads: " $thr
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setting gunicorn listening port: " $port | tee -a $container_log
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setting application logging level: " $log_level_lower | tee -a $container_log
 
+install_chromedriver() {
+    local chromedriver_url="https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.92/linux64/chromedriver-linux64.zip"
+    local chromedriver_dir="/home/innovation-hub-api/api/"
+
+    # Create the directory if it doesn't exist
+    mkdir -p "$chromedriver_dir"
+
+    # Download the Chromedriver ZIP file
+    curl -O "$chromedriver_url"
+
+    # Unzip the Chromedriver directly to the specified directory
+    unzip -o chromedriver-linux64.zip chromedriver-linux64/chromedriver -d "$chromedriver_dir"
+
+    # Rename the Chromedriver file if needed
+    mv "$chromedriver_dir/chromedriver-linux64/chromedriver" "$chromedriver_dir/chromedriver"
+
+    # Make the Chromedriver executable
+    chmod +x "$chromedriver_dir/chromedriver"
+
+    # Clean up the ZIP file and subdirectory (if created)
+    rm chromedriver-linux64.zip
+    rm -r "$chromedriver_dir/chromedriver-linux64"
+
+    # Display a success message
+    echo "Chromedriver has been downloaded and installed to $chromedriver_dir"
+	
+}
+
+
 start_api() {
   # check if files exist and have content
   if [ -s /home/innovation-hub-api/api/api.py ]
@@ -63,6 +92,9 @@ start_api() {
       # install app requirements
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
       pip3 install -r requirements.txt --no-warn-script-location --break-system-packages
+	  
+	  # install the chrome web driver for selenium
+	  install_chromedriver
 
       # start api via wsgi (gunicorn)
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log

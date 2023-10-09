@@ -39,10 +39,11 @@ bind = '0.0.0.0:' + environ.get('APP_PORT', '8050')
 #
 #       The number of worker threads for handling requests.
 
-threads_default = max_workers() - 1
+#threads_default = max_workers() - 1
+threads_default = 1
 worker_tmp_dir = '/dev/shm'
-workers = environ.get('APP_WORKERS', max_workers())
-threads = environ.get('APP_THREADS', threads_default)
+workers = 1 #environ.get('APP_WORKERS', max_workers())
+threads = 1 #environ.get('APP_THREADS', threads_default)
 
 #
 #   spew - Install a trace function that spews every line of Python
