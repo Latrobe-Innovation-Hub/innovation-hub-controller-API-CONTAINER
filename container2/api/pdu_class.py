@@ -823,10 +823,23 @@ class DeviceController:
     # ===================================================
     # User Settings
     # ===================================================
+        # Setter method for username
+    def set_username(self, new_username):
+        if new_username is not None:
+            self._username = new_username
+
+    # Setter method for password
+    def set_password(self, new_password):
+        if new_password is not None:
+            self._password = new_password
+    
+    # ===================================================
+    # User Settings
+    # ===================================================
     def change_user_settings(self, new_username=None, new_password=None, driver=None):
         if self.driver is not None:
             # Ensure the connection is established
-            self.connect(self.driver)
+            #self.connect(self.driver)
         
             # Navigate to the URL
             alert = self.driver.get(self.base_url)
@@ -845,39 +858,48 @@ class DeviceController:
             if new_username is not None and new_username.strip() and new_password is not None and new_password.strip():
                 # Perform action to change the hostname
                 #print(f"Changing username to: {new_username}")
+                logger.info(f"PDU CLASS, change_user_settings, {new_username} {new_password}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T0")
+                logger.info(f"PDU CLASS, change_user_settings, Locate the input element by its name attribute")
     
                 # Change the value of the input element
                 input_element.clear()		# Clear the existing value (optional, if needed)
                 input_element.send_keys(self.username)
+                logger.info(f"PDU CLASS, Change the value of the input element {self.username}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T2")
+                logger.info(f"PDU CLASS,  Locate the input element by its name attribute")
     
                 # Change the value of the input element
                 input_element.clear()		# Clear the existing value (optional, if needed)
                 new_value = new_username	# Replace this with the value you want to set
-                input_element.send_keys(new_value)        
+                input_element.send_keys(new_value)     
+                logger.info(f"PDU CLASS,  Locate the input element by its name attribute {new_value}")
                 
                 # Perform action to change the password
                 #print(f"Changing password to: {new_password}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T1")
+                logger.info(f"PDU CLASS,  Locate the input element by its name attribute")  
     
                 # Change the value of the input element
                 input_element.clear()		# Clear the existing value (optional, if needed)
                 input_element.send_keys(self.password)
+                logger.info(f"PDU CLASS,  Change the value of the input element {self.password}")  
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T3")
+                logger.info(f"PDU CLASS, Locate the input element by its name attribute")  
     
                 # Change the value of the input element
                 input_element.clear()		# Clear the existing value (optional, if needed)
                 new_value = new_password	# Replace this with the value you want to set
                 input_element.send_keys(new_value)
+                logger.info(f"PDU CLASS,  Change the value of the input element {new_value}")  
                 
                 apply = True
             
@@ -886,13 +908,24 @@ class DeviceController:
                     # click Apply button to submit changes
                     apply_button = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Apply'][@type='submit']")))
                     apply_button.click()
+                    logger.info(f"PDU CLASS,  click Apply button to submit changes")  
     
                     # Add a wait here to ensure the page has settled after the action
                     time.sleep(1)  # Adjust the sleep duration as needed
     
-                    # Update class attributes only if the apply button worked
+                    # Update class attributes using setter methods only if the apply button worked
                     self.set_username(new_username)
                     self.set_password(new_password)
+                    
+                    # device address
+                    device_url = f'http://{self.hostAddress}'
+                    logger.info(f"device_url: {device_url}")
+                    parsed_url = urlparse(device_url)
+                    logger.info(f"parsed_url: {parsed_url}")
+                    self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
+                    logger.info(f"self.base_url: {self.base_url}")
+                    
+                    logger.info(f"PDU CLASS, Update class attributes only if the apply button worked")
     
                 except Exception as e:
                     print(f"An error occurred while applying the changes: {e}")

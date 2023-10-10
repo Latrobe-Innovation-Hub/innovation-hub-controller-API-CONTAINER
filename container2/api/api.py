@@ -1991,6 +1991,8 @@ def view_system_settings(host_address):
 
     if selected_device is None:
         return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        
+    logger.info(f"Testing: in view_all_settings: device info: {device.hostAddress, device.username, device.password, device.chromedriver_path}")
 
     system_settings = selected_device.get_all_info()
 
@@ -2097,6 +2099,11 @@ def change_system_settings(host_address):
     
 @app.route('/pdu/devices/<string:host_address>/change_user_settings', methods=['PUT'])
 def change_user_settings(host_address):
+    # Check for required fields in the JSON data
+    required_fields = ['new_username', 'new_password']
+    if not request.is_json or not all(field in request.json for field in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2120,13 +2127,33 @@ def change_user_settings(host_address):
     # Explicitly extract parameters from the JSON data
     new_username = new_user_settings.get('new_username', None)
     new_password = new_user_settings.get('new_password', None)
-    #driver = new_user_settings.get('driver', None)
+    # driver = new_user_settings.get('driver', None)
 
+    # Update the selected device's settings
     selected_device.change_user_settings(
         new_username=new_username,
         new_password=new_password,
-        #driver=driver
+        # driver=driver
     )
+
+    # Update the device settings in the SQLite database
+    conn = sqlite3.connect('pdu_devices.db')
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE pdu_devices SET username=?, password=? WHERE host_address=?',
+        (new_username, new_password, host_address)
+    )
+    conn.commit()
+    conn.close()
+
+    # Update the device in the app.config['pdu_data']
+    for index, device in enumerate(devices):
+        if device.hostAddress == host_address:
+            devices[index] = selected_device
+            break
+
+    # Update the cached devices in app.config
+    app.config['pdu_data'] = devices
 
     return jsonify({'message': 'User settings updated successfully.'})
 

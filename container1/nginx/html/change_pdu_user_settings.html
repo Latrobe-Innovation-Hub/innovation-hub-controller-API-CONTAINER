@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Include jQuery library -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Fetch the list of available devices and populate the dropdown menu
+      $.ajax({
+        url: 'api/pdu/devices',
+        method: 'GET',
+        success: function(response) {
+          if (response.devices && response.devices.length > 0) {
+            var deviceDropdown = $('#deviceDropdown');
+            $.each(response.devices, function(index, device) {
+              deviceDropdown.append($('<option>', {
+                value: device.host_address,
+                text: 'PDU ' + device.device_number + ': ' + device.host_address
+              }));
+            });
+          } else {
+            $('#deviceDropdown').text('No devices available.');
+          }
+        },
+        error: function(xhr, status, error) {
+          $('#deviceDropdown').text('Error fetching devices: ' + error);
+        }
+      });
+
+      $('#updateButton').click(function() {
+        updateUserSettings();
+      });
+
+      function updateUserSettings() {
+        var hostAddress = $('#deviceDropdown').val();
+        var newUsername = $('#newUsername').val();
+        var newPassword = $('#newPassword').val();
+
+        var userSettings = {
+          new_username: newUsername,
+          new_password: newPassword
+        };
+
+        console.log('Updating user settings for host address:', hostAddress);
+
+        $.ajax({
+          url: 'api/pdu/devices/' + hostAddress + '/change_user_settings',
+          method: 'PUT',
+          data: JSON.stringify(userSettings),
+          contentType: 'application/json',
+          success: function(response) {
+            console.log('API Response:', response);
+            $('#response').text(JSON.stringify(response, null, 2));
+          },
+          error: function(xhr, status, error) {
+            $('#response').text('Error updating user settings: ' + error);
+          }
+        });
+      }
+
+      $('#returnButton').click(function() {
+        window.location.href = 'index.html';
+      });
+    });
+  </script>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666666;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #response {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+      width: fit-content;
+    }
+
+    #returnButton {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    #returnButton:hover {
+      background-color: #555555;
+    }
+  </style>
+</head>
+<body>
+  <h1>Change User Settings</h1>
+  <label for="deviceDropdown">Select a Device:</label>
+  <select id="deviceDropdown"></select>
+  <label for="newUsername">New Username:</label>
+  <input type="text" id="newUsername">
+  <label for="newPassword">New Password:</label>
+  <input type="password" id="newPassword">
+  <button id="updateButton">Update User Settings</button>
+  <h2>API Response:</h2>
+  <pre id="response"></pre>
+  <button id="returnButton">Return to Main Menu</button>
+</body>
+</html>
