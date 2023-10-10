@@ -726,6 +726,8 @@ class DeviceController:
         if self.driver is not None:
             # Navigate to the URL
             alert = self.driver.get(self.base_url)
+            logger.info(f"PDU CLASS, change_system_settings")
+            logger.info(f"PDU CLASS, change_system_settings, self.base_url: {self.base_url}")
             
             # Add a wait here to ensure the page has settled after the action
             time.sleep(1)  # Adjust the sleep duration as needed
@@ -735,6 +737,7 @@ class DeviceController:
             if system_name is not None and system_name.strip():
                 # Perform action to change the hostname
                 print(f"Changing system name to: {system_name}")
+                logger.info(f"PDU CLASS, change_system_settings, Changing system name to: {system_name}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T0")
@@ -750,6 +753,7 @@ class DeviceController:
             if system_contact is not None and system_contact.strip():
                 # Perform action to change the hostname
                 print(f"Changing system contact to: {system_contact}")
+                logger.info(f"PDU CLASS, change_system_settings, Changing system contact to: {system_contact}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T1")
@@ -765,6 +769,7 @@ class DeviceController:
             if location is not None and location.strip():
                 # Perform action to change the hostname
                 print(f"Changing location to: {location}")
+                logger.info(f"PDU CLASS, change_system_settings, Changing location to: {location}")
                 
                 # Locate the input element by its name attribute
                 input_element = self.driver.find_element(By.NAME, "T2")
@@ -776,21 +781,25 @@ class DeviceController:
                 
                 apply=True
                 ln = True
-                
+            
             if apply:
-                try:
+                try: 
+                    logger.info(f"PDU CLASS, change_system_settings in apply {apply}")
                     # Wait for the "Apply" button to be clickable and then click it
-                    apply_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Apply'][@type='button']")))
+                    apply_button = WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.XPATH, "//input[@value='Apply'][@type='button']")))
                     apply_button.click()
+                    logger.info(f"PDU CLASS, change_system_settings, after apply_button = WebDriverWait(driver, 10).until(EC.element_to_be_clickable...")
                 
                     # Wait for the "Alert" to appear
                     wait = WebDriverWait(self.driver, 10)
                     alert = wait.until(EC.alert_is_present())
                     print("DEBUG: Alert Text:", alert.text)
+                    logger.info(f"PDU CLASS, change_system_settings, DEBUG: Alert Text {alert.text}")
     
                     # Accept the alert using the Alert object's accept() method
                     alert.accept()
                     print("DEBUG: Alert Accepted")
+                    logger.info(f"PDU CLASS, change_system_settings, DEBUG: Alert accepted")
     
                     # Add a wait here to ensure the page has settled after the action
                     time.sleep(1)  # Adjust the sleep duration as needed
@@ -803,8 +812,10 @@ class DeviceController:
                     if ln:
                         self.set_location(location)
                         
+                    logger.info(f"PDU CLASS, change_system_settings, apply try passed")
                 except Exception as e:
                     print(f"An error occurred while applying the changes: {e}")
+                    
                     # Handle the error as needed, e.g., log the error, display a message, etc.
             
             return self.driver

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Include jQuery library -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+   <script>
+    $(document).ready(function() {
+      // Function to update the device list
+      function updateDeviceList(devices) {
+        var deviceListHtml = '<h2>Available PDU Devices:</h2><ul>';
+        if (devices && devices.length > 0) {
+          $.each(devices, function(index, device) {
+            deviceListHtml += '<li>PDU ' + device.device_number + ': ' + device.host_address +
+              ' <button class="viewSettingsButton" data-device-host="' + device.host_address + '">View Settings</button></li>';
+          });
+        } else {
+          deviceListHtml += '<li>No devices available.</li>';
+        }
+        deviceListHtml += '</ul>';
+        $('#deviceList').html(deviceListHtml);
+
+        // Bind click event for view settings buttons
+        $('.viewSettingsButton').click(function() {
+          var deviceHost = $(this).data('device-host');
+          fetchSystemSettings(deviceHost);
+        });
+      }
+
+      // Function to fetch system settings for a device
+      function fetchSystemSettings(hostAddress) {
+		  console.log('Fetching system settings for host address:', hostAddress);
+		  $.ajax({
+			url: 'api/pdu/devices/' + hostAddress + '/view_all_settings',
+			method: 'GET',
+			success: function(response) {
+			  if (response) {
+				console.log('Fetch system settings response:', response);
+				
+				// Build HTML to display system settings
+				var systemSettingsHtml = '<h2>System Settings:</h2><ul>';
+				
+				// Display device credentials
+				systemSettingsHtml += '<li><b>Device Credentials:</b>';
+				systemSettingsHtml += '<ul>';
+				systemSettingsHtml += '<li>Username: ' + response.device_credentials.username + '</li>';
+				systemSettingsHtml += '<li>Password: ' + response.device_credentials.password + '</li>';
+				systemSettingsHtml += '</ul></li>';
+				
+				// Display network info
+				systemSettingsHtml += '<li><b>Network Info:</b>';
+				systemSettingsHtml += '<ul>';
+				systemSettingsHtml += '<li>IP Address: ' + response.network_info.ip_address + '</li>';
+				systemSettingsHtml += '<li>Subnet Mask: ' + response.network_info.subnet + '</li>';
+				systemSettingsHtml += '<li>Gateway: ' + response.network_info.gateway + '</li>';
+				systemSettingsHtml += '<li>DNS1: ' + response.network_info.dns1 + '</li>';
+				systemSettingsHtml += '<li>DNS2: ' + response.network_info.dns2 + '</li>';
+				systemSettingsHtml += '<li>DHCP Enabled: ' + response.network_info.dhcp_enabled + '</li>';
+				systemSettingsHtml += '</ul></li>';
+				
+				// Display outlet info
+				systemSettingsHtml += '<li><b>Outlet Info:</b>';
+				systemSettingsHtml += '<ul>';
+				$.each(response.outlet_info, function(index, outlet) {
+				  systemSettingsHtml += '<li>Outlet ' + outlet.outlet + ': State - ' + outlet.state + '</li>';
+				});
+				systemSettingsHtml += '</ul></li>';
+				
+				// Display PDU info
+				systemSettingsHtml += '<li><b>PDU Info:</b>';
+				systemSettingsHtml += '<ul>';
+				$.each(response.pdu_info, function(index, pdu) {
+				  systemSettingsHtml += '<li>Name: ' + pdu.name + '</li>';
+				  systemSettingsHtml += '<li>On Delay: ' + pdu.on_delay + '</li>';
+				  systemSettingsHtml += '<li>Off Delay: ' + pdu.off_delay + '</li>';
+				});
+				systemSettingsHtml += '</ul></li>';
+				
+				// Display ping action info
+				systemSettingsHtml += '<li><b>Ping Action Info:</b>';
+				systemSettingsHtml += '<ul>';
+				$.each(response.ping_action_info, function(index, pingAction) {
+				  systemSettingsHtml += '<li>Outlet ' + pingAction.outlet + ':';
+				  systemSettingsHtml += '<ul>';
+				  systemSettingsHtml += '<li>Action: ' + pingAction.action + '</li>';
+				  systemSettingsHtml += '<li>Active: ' + pingAction.active + '</li>';
+				  systemSettingsHtml += '<li>Address: ' + pingAction.address + '</li>';
+				  systemSettingsHtml += '</ul></li>';
+				});
+				systemSettingsHtml += '</ul></li>';
+				
+				// Display system info
+				systemSettingsHtml += '<li><b>System Info:</b>';
+				systemSettingsHtml += '<ul>';
+				systemSettingsHtml += '<li>Model Number: ' + response.system_info.model_number + '</li>';
+				systemSettingsHtml += '<li>Firmware Version: ' + response.system_info.firmware_version + '</li>';
+				systemSettingsHtml += '<li>MAC Address: ' + response.system_info.mac_address + '</li>';
+				systemSettingsHtml += '<li>System Name: ' + response.system_info.system_name + '</li>';
+				systemSettingsHtml += '<li>System Location: ' + response.system_info.system_location + '</li>';
+				systemSettingsHtml += '<li>System Contact: ' + response.system_info.system_contact + '</li>';
+				systemSettingsHtml += '</ul></li>';
+				
+				systemSettingsHtml += '</ul>';
+				
+				// Update the #systemSettings element with the system settings HTML
+				$('#systemSettings').html(systemSettingsHtml);
+			  } else {
+				$('#systemSettings').text('No system settings available.');
+			  }
+			},
+			error: function(xhr, status, error) {
+			  $('#systemSettings').text('Error fetching system settings: ' + error);
+			}
+		  });
+		}
+
+      // Fetch initial device list and bind click event for view settings buttons
+      $.ajax({
+        url: 'api/pdu/devices',
+        method: 'GET',
+        success: function(response) {
+          updateDeviceList(response.devices);
+        },
+        error: function(xhr, status, error) {
+          $('#deviceList').text('Error fetching devices: ' + error);
+        }
+      });
+
+      $('#returnButton').click(function() {
+        window.location.href = 'index.html';
+      });
+    });
+  </script>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666666;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    h2 {
+      margin-top: 20px;
+      color: #333333;
+    }
+
+    #deviceList {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+      width: fit-content;
+    }
+
+    #systemSettings {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+      width: fit-content;
+    }
+
+    #returnButton {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    #returnButton:hover {
+      background-color: #555555;
+    }
+  </style>
+</head>
+<body>
+  <h1>View All System Settings</h1>
+  <div id="deviceList"></div>
+  <h2>System Settings:</h2>
+  <div id="systemSettings"></div>
+  
+  <button onclick="window.location.href = 'change_pdu_system_settings.html';">Change PDU System Settings</button>
+  <button id="returnButton">Return to Main Menu</button>
+</body>
+</html>

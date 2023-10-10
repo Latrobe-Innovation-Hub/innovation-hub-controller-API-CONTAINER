@@ -1374,7 +1374,7 @@ master_username = "admin"
 master_password = "admin"
 
 # Initialize an empty list to store host data
-app.config['pdu_data'] = []
+app.config['pdu_data'] = None
 
 from cachetools import TTLCache
 
@@ -1382,8 +1382,13 @@ object_cache = TTLCache(maxsize=100, ttl=86400)  # Adjust ttl and maxsize as nee
 
 # Helper function to create and cache devices
 def get_or_create_devices():
-    if 'pdu_data' in object_cache:
-        return object_cache['pdu_data']
+    pdu_data = app.config['pdu_data']
+    
+    if pdu_data is not None:
+        return pdu_data
+
+    #if 'pdu_data' in object_cache:
+    #    return object_cache['pdu_data']
     
     conn = sqlite3.connect('pdu_devices.db')
     cursor = conn.cursor()
@@ -1407,7 +1412,8 @@ def get_or_create_devices():
             
     conn.close()
     
-    object_cache['pdu_data'] = devices  # Cache the loaded devices
+    #object_cache['pdu_data'] = devices  # Cache the loaded devices
+    app.config['pdu_data'] = devices
     return devices
 
 
@@ -1463,8 +1469,9 @@ def load_pdu_devices():
 def load_pdu():
     #app.config['pdu_data'] = load_pdu_devices()
     #logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}")
-    get_or_create_devices()
-    logger.info(f"load_pdu.... object_cache['pdu_data'] is: {object_cache['pdu_data']}")
+    app.config['pdu_data'] = get_or_create_devices()
+    #logger.info(f"load_pdu.... object_cache['pdu_data'] is: {object_cache['pdu_data']}")
+    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
 
 # Helper function to load devices from the text file
 def load_devices():
@@ -1506,15 +1513,23 @@ def initial_add_device(host_address, master_username, master_password, chrome_dr
 def list_devices():    
     logger.info("testing.... in list_devices")
 
-    pdus = None
+    #pdus = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        pdus = object_cache['pdu_data']
-        logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
-    else:
+    #if 'pdu_data' in object_cache:
+    #    pdus = object_cache['pdu_data']
+    #    logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
+    #else:
         # If the cache doesn't exist, you might want to create it
+    #    pdus = get_or_create_devices()
+    #    logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
+        
+    pdus = None
+    if 'pdu_data' in app.config:
+        pdus = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
         pdus = get_or_create_devices()
-        logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
+        logger.info("Testing: got pdus from get_or_create_devices()")
         
     logger.info(f"testing.... devices is: {pdus}")
     
@@ -1536,15 +1551,23 @@ def list_devices():
 @app.route('/pdu/devices/<int:device_number>', methods=['GET'])
 def get_device(device_number):
     #devices = app.config['pdu_data']
-    devices = None
+    #devices = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        pdus = object_cache['pdu_data']
-        logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
-    else:
+    #if 'pdu_data' in object_cache:
+    #    pdus = object_cache['pdu_data']
+    #    logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
+    #else:
         # If the cache doesn't exist, you might want to create it
-        pdus = get_or_create_devices()
-        logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
+    #    pdus = get_or_create_devices()
+    #    logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
+        
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
         
     if device_number <= 0 or device_number > len(devices):
         return jsonify({'error': 'Invalid device number. Please try again.'}), 200
@@ -1569,14 +1592,25 @@ def add_device():
     if host_address is None:
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    devices = None        
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-        logger.info(f"testing.... got devices = object_cache[pdu_data] <--- here!")
-    else:
+    #devices = None        
+    #if 'pdu_data' in object_cache:
+    #    devices = object_cache['pdu_data']
+    #    logger.info(f"testing.... got devices = object_cache[pdu_data] <--- here!")
+    #else:
         # If the cache doesn't exist, you might want to create it
+    #    devices = get_or_create_devices()
+    #    logger.info(f"testing.... got devices = get_or_create_devices() <--- here!")
+        
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
         devices = get_or_create_devices()
-        logger.info(f"testing.... got devices = get_or_create_devices() <--- here!")
+        logger.info("Testing: got pdus from get_or_create_devices()")
+        
+    #if device_number <= 0 or device_number > len(devices):
+    #    return jsonify({'error': 'Invalid device number. Please try again.'}), 200
     
     logger.info(f"testing.... load devices {devices}")
 
@@ -1602,7 +1636,8 @@ def add_device():
         conn.close()
 
         # Cache the updated devices
-        object_cache['pdu_data'] = devices
+        #object_cache['pdu_data'] = devices
+        app.config['pdu_data'] = devices
 
         return jsonify({'success': 'Device added successfully!'})
     except Exception as e:
@@ -1748,28 +1783,45 @@ def add_device():
     
 
 # Function to remove a device from the cache
-def remove_device_from_cache(device):
-    logger.error(f"Removing {device} from the cache")
-    if 'pdu_data' in object_cache:
-        devices_cache = object_cache['pdu_data']
-        devices_cache.remove(device)
-        object_cache['pdu_data'] = devices_cache
-        logger.error(f" object_cache[pdu_data] {devices_cache}")
+#def remove_device_from_cache(device):
+#    logger.error(f"Removing {device} from the cache")
+#    if 'pdu_data' in object_cache:
+#        devices_cache = object_cache['pdu_data']
+#        devices_cache.remove(device)
+#        object_cache['pdu_data'] = devices_cache
+#        logger.error(f" object_cache[pdu_data] {devices_cache}")
+
+def remove_device_from_config(device):
+    logger.error(f"Removing {device} from app.config['pdu_data']")
+    pdu_data = app.config.get('pdu_data', [])
+    
+    if device in pdu_data:
+        pdu_data.remove(device)
+        app.config['pdu_data'] = pdu_data
+        logger.error(f"app.config['pdu_data']: {pdu_data}")
 
 # Modify your remove_device function to use the cache management functions
 @app.route('/pdu/remove_device/<int:device_choice>', methods=['POST'])
 def remove_device(device_choice):
     logger.info(f"testing.... in remove_device, device choice: {device_choice}")
 
-    devices = None
+    #devices = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-        logger.info(f"testing.... in remove_device, devices = object_cache[pdu_data]")
-    else:
+    #if 'pdu_data' in object_cache:
+    #    devices = object_cache['pdu_data']
+    #    logger.info(f"testing.... in remove_device, devices = object_cache[pdu_data]")
+    #else:
         # If the cache doesn't exist, you might want to create it
+    #    devices = get_or_create_devices()
+    #    logger.info(f"testing.... in remove_device, devices = get_or_create_devices()")
+        
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
         devices = get_or_create_devices()
-        logger.info(f"testing.... in remove_device, devices = get_or_create_devices()")
+        logger.info("Testing: got pdus from get_or_create_devices()")
 
     if not devices:
         return jsonify({'error': 'No devices added yet. Please add a device first.'}), 200
@@ -1798,7 +1850,7 @@ def remove_device(device_choice):
         conn.close()
 
     # Remove the device from the cache
-    remove_device_from_cache(device_to_remove)
+    remove_device_from_config(device_to_remove)
 
     return jsonify({'success': f"Device removed successfully!{device_to_remove} {host_address_to_remove}"})
 
@@ -1807,13 +1859,21 @@ def remove_device(device_choice):
 def remove_device_by_address(host_address):
     logger.info(f"testing.... in remove_device, host_address: {host_address}")
 
-    devices = None
+    #devices = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
+    #if 'pdu_data' in object_cache:
+    #    devices = object_cache['pdu_data']
+    #else:
         # If the cache doesn't exist, you might want to create it
+    #    devices = get_or_create_devices()
+        
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
         devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
 
     device_to_remove = None
 
@@ -1831,29 +1891,39 @@ def remove_device_by_address(host_address):
     # Remove the device information from the database
     conn = sqlite3.connect('pdu_devices.db')
     cursor = conn.cursor()
+    
+    try:
+        cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (host_address,))
+        conn.commit()
+        logger.info("Device removed from the database.")
+    except sqlite3.Error as e:
+        logger.error(f"Error removing device from the database: {str(e)}")
+    finally:
+        conn.close()
 
-    cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (host_address,))
-    conn.commit()
-    conn.close()
-
-    # Update the cache by removing the device from it
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-        devices.remove(device_to_remove)
-        object_cache['pdu_data'] = devices
+    # Remove the device from the cache
+    remove_device_from_config(device_to_remove)
 
     return jsonify({'success': 'Device removed successfully!'})
 
 @app.route('/pdu/view_outlet_settings_all', methods=['GET'])
 def view_outlet_settings_all():
     #devices = app.config['pdu_data']
-    devices = None
+    #devices = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
+    #if 'pdu_data' in object_cache:
+    #    devices = object_cache['pdu_data']
+    #else:
         # If the cache doesn't exist, you might want to create it
+    #    devices = get_or_create_devices()
+        
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
         devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
     
     if len(devices) < 1:
         return jsonify({'message': 'No devices added yet. Please add a device first.'}), 200
@@ -1876,98 +1946,245 @@ def view_outlet_settings_all():
 # =====================
 # DEVICE LEVEL OPTIONS
 # =====================
-@app.route('/pdu/devices/<int:device_number>/view_all_settings', methods=['GET'])
-def view_system_settings(device_number):
+#@app.route('/pdu/devices/<int:device_number>/view_all_settings', methods=['GET'])
+#def view_system_settings(device_number):
     #devices = app.config['pdu_data']
-    devices = None
+    #devices = None
     #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
+    #if 'pdu_data' in object_cache:
+    #    devices = object_cache['pdu_data']
+    #else:
         # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+    #    devices = get_or_create_devices()
+    #if device_number <= 0 or device_number > len(devices):
+    #    return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+        
+#    devices = None
+#    if 'pdu_data' in app.config:
+#        devices = app.config['pdu_data']
+#        logger.info("Testing: got pdus from app.config['pdu_data']")
+#    else:
+#        devices = get_or_create_devices()
+#        logger.info("Testing: got pdus from get_or_create_devices()")
 
-    selected_device = devices[device_number - 1]
+#    selected_device = devices[device_number - 1]
+#    system_settings = selected_device.get_all_info()
+
+#    return jsonify(system_settings)
+    
+@app.route('/pdu/devices/<string:host_address>/view_all_settings', methods=['GET'])
+def view_system_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     system_settings = selected_device.get_all_info()
 
     return jsonify(system_settings)
 
-@app.route('/pdu/devices/<int:device_number>/change_system_settings', methods=['PUT'])
-def change_system_settings(device_number):
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    #devices = app.config['pdu_data']
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_system_settings', methods=['PUT'])
+# def change_system_settings(device_number):
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # #devices = app.config['pdu_data']
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # new_system_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # system_name = new_system_settings.get('system_name', None)
+    # system_contact = new_system_settings.get('system_contact', None)
+    # location = new_system_settings.get('location', None)
+    # driver = new_system_settings.get('driver', None)
+
+    # selected_device.change_system_settings(
+        # system_name=system_name,
+        # system_contact=system_contact,
+        # location=location,
+        # driver=driver
+    # )
+
+    # return jsonify({'message': 'System settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/change_system_settings', methods=['PUT'])
+def change_system_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_system_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
     system_name = new_system_settings.get('system_name', None)
     system_contact = new_system_settings.get('system_contact', None)
     location = new_system_settings.get('location', None)
-    driver = new_system_settings.get('driver', None)
+    #driver = new_system_settings.get('driver', None)
+    
+    logger.info(f"in change_system_settings: {system_name}, {system_contact}, {location}")
 
     selected_device.change_system_settings(
         system_name=system_name,
         system_contact=system_contact,
         location=location,
-        driver=driver
+        #driver=driver
     )
 
     return jsonify({'message': 'System settings updated successfully.'})
 
-@app.route('/pdu/devices/<int:device_number>/change_user_settings', methods=['PUT'])
-def change_user_settings(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_user_settings', methods=['PUT'])
+# def change_user_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # new_user_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # new_username = new_user_settings.get('new_username', None)
+    # new_password = new_user_settings.get('new_password', None)
+    # driver = new_user_settings.get('driver', None)
+
+    # selected_device.change_user_settings(
+        # new_username=new_username,
+        # new_password=new_password,
+        # driver=driver
+    # )
+
+    # return jsonify({'message': 'User settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/change_user_settings', methods=['PUT'])
+def change_user_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_user_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
     new_username = new_user_settings.get('new_username', None)
     new_password = new_user_settings.get('new_password', None)
-    driver = new_user_settings.get('driver', None)
+    #driver = new_user_settings.get('driver', None)
 
     selected_device.change_user_settings(
         new_username=new_username,
         new_password=new_password,
-        driver=driver
+        #driver=driver
     )
 
     return jsonify({'message': 'User settings updated successfully.'})
 
-@app.route('/pdu/devices/<int:device_number>/change_ping_action_settings', methods=['PUT'])
-def change_ping_action_settings(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_ping_action_settings', methods=['PUT'])
+# def change_ping_action_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # new_ping_action_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # outletA_IP = new_ping_action_settings.get('outletA_IP', None)
+    # outletA_action = new_ping_action_settings.get('outletA_action', None)
+    # outletA_active = new_ping_action_settings.get('outletA_active', None)
+    # outletB_IP = new_ping_action_settings.get('outletB_IP', None)
+    # outletB_action = new_ping_action_settings.get('outletB_action', None)
+    # outletB_active = new_ping_action_settings.get('outletB_active', None)
+
+    # selected_device.change_ping_action_settings(
+        # outletA_IP=outletA_IP,
+        # outletA_action=outletA_action,
+        # outletA_active=outletA_active,
+        # outletB_IP=outletB_IP,
+        # outletB_action=outletB_action,
+        # outletB_active=outletB_active
+    # )
+
+    # return jsonify({'message': 'Ping action settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings', methods=['PUT'])
+def change_ping_action_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_ping_action_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
@@ -1989,24 +2206,107 @@ def change_ping_action_settings(device_number):
 
     return jsonify({'message': 'Ping action settings updated successfully.'})
 
-@app.route('/pdu/devices/<int:device_number>/set_outlet_power_state', methods=['PUT'])
-def change_outlet_settings(device_number):
-    #devices = app.config['pdu_data']
+### not tested
+@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings_dynamic', methods=['PUT'])
+def change_ping_action_settings_dynamic(host_address):
     devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
-        # If the cache doesn't exist, you might want to create it
         devices = get_or_create_devices()
-    
-    logger.info(f"testing change_outlet_settings... device_number): {device_number}")
-    logger.info(f"testing change_outlet_settings... len(devices): {len(devices)}")
-    
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+        logger.info("Testing: got pdus from get_or_create_devices()")
 
-    selected_device = devices[device_number - 1]
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
+    new_ping_action_settings = request.get_json()
+
+    # Extract the device's IP address from the JSON data
+    device_IP = new_ping_action_settings.get('device_IP', None)
+
+    if device_IP is None:
+        return jsonify({'error': 'Device IP address is missing in the request.'}), 400
+
+    # Iterate through the outlets list and update settings
+    outlets = new_ping_action_settings.get('outlets', [])
+
+    for outlet in outlets:
+        outlet_name = outlet.get('outlet_name', None)
+        outlet_action = outlet.get('outlet_action', None)
+        outlet_active = outlet.get('outlet_active', None)
+
+        # Perform actions for each outlet based on device_IP
+        # Example: selected_device.change_ping_action_settings(device_IP, outlet_name, outlet_action, outlet_active)
+
+    return jsonify({'message': 'Ping action settings updated successfully.'})
+
+# @app.route('/pdu/devices/<int:device_number>/set_outlet_power_state', methods=['PUT'])
+# def change_outlet_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # #devices = None
+    # #pdus = app.config['pdu_data']
+    # #if 'pdu_data' in object_cache:
+    # #    devices = object_cache['pdu_data']
+    # #else:
+        # # If the cache doesn't exist, you might want to create it
+    # #    devices = get_or_create_devices()
+    
+    # devices = None
+    # if 'pdu_data' in app.config:
+        # devices = app.config['pdu_data']
+        # logger.info("Testing: got pdus from app.config['pdu_data']")
+    # else:
+        # devices = get_or_create_devices()
+        # logger.info("Testing: got pdus from get_or_create_devices()")
+    
+    # logger.info(f"testing change_outlet_settings... device_number): {device_number}")
+    # logger.info(f"testing change_outlet_settings... len(devices): {len(devices)}")
+    
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+
+    # selected_device = devices[device_number - 1]
+    # new_outlet_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # outlet_name = new_outlet_settings.get('outlet_name', None)
+    # action = new_outlet_settings.get('action', None)
+
+    # selected_device.change_power_action(
+        # outlet_name=outlet_name,
+        # action=action
+    # )
+
+    # return jsonify({'message': 'Outlet settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/set_outlet_power_state', methods=['PUT'])
+def change_outlet_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_outlet_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
@@ -2020,20 +2320,61 @@ def change_outlet_settings(device_number):
 
     return jsonify({'message': 'Outlet settings updated successfully.'})
 	
-@app.route('/pdu/devices/<int:device_number>/change_pdu_settings', methods=['PUT'])
-def change_pdu_settings(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_pdu_settings', methods=['PUT'])
+# def change_pdu_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # new_pdu_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # outletA_name = new_pdu_settings.get('outletA_name', None)
+    # outletA_onDelay = new_pdu_settings.get('outletA_onDelay', None)
+    # outletA_offDelay = new_pdu_settings.get('outletA_offDelay', None)
+    # outletB_name = new_pdu_settings.get('outletB_name', None)
+    # outletB_onDelay = new_pdu_settings.get('outletB_onDelay', None)
+    # outletB_offDelay = new_pdu_settings.get('outletB_offDelay', None)
+
+    # selected_device.change_pdu_settings(
+        # outletA_name=outletA_name,
+        # outletA_onDelay=outletA_onDelay,
+        # outletA_offDelay=outletA_offDelay,
+        # outletB_name=outletB_name,
+        # outletB_onDelay=outletB_onDelay,
+        # outletB_offDelay=outletB_offDelay
+    # )
+
+    # return jsonify({'message': 'PDU settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/change_pdu_settings', methods=['PUT'])
+def change_pdu_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_pdu_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
@@ -2055,20 +2396,61 @@ def change_pdu_settings(device_number):
 
     return jsonify({'message': 'PDU settings updated successfully.'})
 
-@app.route('/pdu/devices/<int:device_number>/change_network_settings', methods=['PUT'])
-def change_network_settings(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_network_settings', methods=['PUT'])
+# def change_network_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # new_network_settings = request.get_json()
+
+    # # Explicitly extract parameters from the JSON data
+    # dhcp = new_network_settings.get('dhcp', None)
+    # IP = new_network_settings.get('IP', None)
+    # subnet = new_network_settings.get('subnet', None)
+    # gateway = new_network_settings.get('gateway', None)
+    # DNS1 = new_network_settings.get('DNS1', None)
+    # DNS2 = new_network_settings.get('DNS2', None)
+
+    # selected_device.change_network_settings(
+        # dhcp=dhcp,
+        # IP=IP,
+        # subnet=subnet,
+        # gateway=gateway,
+        # DNS1=DNS1,
+        # DNS2=DNS2
+    # )
+
+    # return jsonify({'message': 'Network settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/change_network_settings', methods=['PUT'])
+def change_network_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     new_network_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
@@ -2090,44 +2472,93 @@ def change_network_settings(device_number):
 
     return jsonify({'message': 'Network settings updated successfully.'})
     
-@app.route('/pdu/devices/<int:device_number>/enable_disable_dhcp', methods=['PUT'])
-def enable_disable_dhcp(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/enable_disable_dhcp', methods=['PUT'])
+# def enable_disable_dhcp(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # dhcp_option = request.get_json().get('dhcp_option')
+
+    # selected_device.change_dhcp_setting(dhcp=dhcp_option)
+    # return jsonify({'message': 'DHCP settings updated successfully.'})
+    
+@app.route('/pdu/devices/<string:host_address>/enable_disable_dhcp', methods=['PUT'])
+def enable_disable_dhcp(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+    
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     dhcp_option = request.get_json().get('dhcp_option')
 
     selected_device.change_dhcp_setting(dhcp=dhcp_option)
     return jsonify({'message': 'DHCP settings updated successfully.'})
     
-@app.route('/pdu/devices/<int:device_number>/change_time_settings', methods=['PUT'])
-def change_time_settings(device_number):
-    #devices = app.config['pdu_data']
-    devices = None
-    #pdus = app.config['pdu_data']
-    if 'pdu_data' in object_cache:
-        devices = object_cache['pdu_data']
-    else:
-        # If the cache doesn't exist, you might want to create it
-        devices = get_or_create_devices()
-    if device_number <= 0 or device_number > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+# @app.route('/pdu/devices/<int:device_number>/change_time_settings', methods=['PUT'])
+# def change_time_settings(device_number):
+    # #devices = app.config['pdu_data']
+    # devices = None
+    # #pdus = app.config['pdu_data']
+    # if 'pdu_data' in object_cache:
+        # devices = object_cache['pdu_data']
+    # else:
+        # # If the cache doesn't exist, you might want to create it
+        # devices = get_or_create_devices()
+    # if device_number <= 0 or device_number > len(devices):
+        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    selected_device = devices[device_number - 1]
+    # selected_device = devices[device_number - 1]
+    # internet_time_option = request.get_json().get('internet_time_option')
+
+    # selected_device.change_time_settings(internet_time=internet_time_option)
+    # return jsonify({'message': 'Time settings updated successfully.'})
+
+@app.route('/pdu/devices/<string:host_address>/change_time_settings', methods=['PUT'])
+def change_time_settings(host_address):
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
+
+    selected_device = None
+
+    for device in devices:
+        if device.hostAddress == host_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+
     internet_time_option = request.get_json().get('internet_time_option')
 
     selected_device.change_time_settings(internet_time=internet_time_option)
     return jsonify({'message': 'Time settings updated successfully.'})
-
 
 # =========================================================================
 #  UNTESTED - endpoints

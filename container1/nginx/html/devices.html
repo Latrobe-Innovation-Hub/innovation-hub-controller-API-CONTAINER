@@ -127,7 +127,7 @@
                     $('#response').text(JSON.stringify(response, null, 2));
                     // Fetch updated device list and update
                     $.ajax({
-                        url: 'http://192.168.20.5:8050/devices',
+                        url: 'api/pdu/devices',
                         method: 'GET',
                         success: function(response) {
                             updateDeviceList(response.devices);
