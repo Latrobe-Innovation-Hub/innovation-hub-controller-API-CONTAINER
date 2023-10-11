@@ -291,6 +291,35 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		$stepsStatus += [PSCustomObject]@{Step = "Download and Install PsTools"; Success = $true}
 	}
 
+ 	# Step 7: Set up Auto-Login
+	$autoLoginSuccess = $true
+	try {
+     	    # Get the current username
+	    $AutoLoginUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+	
+	    # Prompt the user for their password
+	    $AutoLoginPassword = Read-Host "Enter your password for $AutoLoginUsername" -AsSecureString
+	
+	    # Set the auto-login registry values
+	    function Set-AutoLogin {
+	        param(
+	            [string]$Username,
+	            [securestring]$Password
+	        )
+	
+	        $RegistryPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
+	        Set-ItemProperty $RegistryPath 'AutoAdminLogon' -Value "1" -Type String 
+	        Set-ItemProperty $RegistryPath 'DefaultUsername' -Value $Username -Type String 
+	        Set-ItemProperty $RegistryPath 'DefaultPassword' -Value (ConvertFrom-SecureString $Password) -Type String
+	    }
+	
+	    Set-AutoLogin -Username $AutoLoginUsername -Password $AutoLoginPassword
+	} catch {
+	    $autoLoginSuccess = $false
+	}
+	ConfirmStepSuccess "Set up Auto-Login" $autoLoginSuccess
+	$stepsStatus += [PSCustomObject]@{Step = "Set up Auto-Login"; Success = $autoLoginSuccess}
+
 	# Display status of each step
         Write-Host
 	Write-Host "RESULT"
