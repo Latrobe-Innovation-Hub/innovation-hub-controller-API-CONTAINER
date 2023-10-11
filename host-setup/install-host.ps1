@@ -304,6 +304,10 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	    # Prompt the user for their password
 	    $AutoLoginPassword = Read-Host "Enter your password for $AutoLoginUsername" -AsSecureString
 	
+	    # Output to verify the username and password
+	    Write-Host "Username: $AutoLoginUsername"
+	    Write-Host "Password: $AutoLoginPassword"
+	
 	    # Set the auto-login registry values
 	    function Set-AutoLogin {
 	        param(
@@ -320,9 +324,14 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	    Set-AutoLogin -Username $AutoLoginUsername -Password $AutoLoginPassword
 	} catch {
 	    $autoLoginSuccess = $false
+	    Write-Host "Error setting Auto-Login registry values: $_"
 	}
+	
 	ConfirmStepSuccess "Set up Auto-Login" $autoLoginSuccess
 	$stepsStatus += [PSCustomObject]@{Step = "Set up Auto-Login"; Success = $autoLoginSuccess}
+	
+	# Output to verify the status of Auto-Login
+	Write-Host "Auto-Login status: $autoLoginSuccess"
 
 	# Display status of each step
         Write-Host
