@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Send NirCmd Command</title>
+  <style>
+    body {
+      background-color: #f2f2f2;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #333333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #666666;
+    }
+
+    input {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      margin-bottom: 15px;
+    }
+
+    button {
+      background-color: #4CAF50;
+      border: none;
+      border-radius: 4px;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 18px;
+      margin-top: 10px;
+      padding: 10px 20px;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    #response {
+      background-color: #ffffff;
+      border-radius: 4px;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      overflow-x: auto;
+      text-align: left;
+      font-size: 14px;
+      line-height: 1.5;
+      width: fit-content;
+    }
+
+    #returnButton {
+      background-color: #333333;
+      color: #ffffff;
+    }
+
+    #returnButton:hover {
+      background-color: #555555;
+    }
+  </style>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Function to populate the dropdown list with hosts
+      function populateHostDropdown(hosts) {
+        var dropdown = $('#hostDropdown');
+        dropdown.empty();
+        $.each(hosts, function(index, host) {
+          dropdown.append($('<option></option>').attr('value', host.host_address).text(host.host_address));
+        });
+      }
+
+      // Fetch the initial list of hosts and populate the dropdown
+      function fetchInitialHostList() {
+        $.ajax({
+          url: 'api/get_hosts',
+          method: 'GET',
+          success: function(response) {
+            populateHostDropdown(response.hosts);
+          },
+          error: function(xhr, status, error) {
+            $('#response').text('Error fetching hosts: ' + error);
+          }
+        });
+      }
+
+      // Bind click event for the "Refresh Host List" button
+      $('#refreshHostListButton').click(function() {
+        fetchInitialHostList();
+      });
+
+      // Submit the NirCmd command to the selected host
+      $('#sendNirCmdForm').submit(function(event) {
+        event.preventDefault();
+
+        var selectedHost = $('#hostDropdown').val();
+        var command = $('#nirCmdCommand').val();
+
+        var dataToSend = {
+          'hostname': selectedHost,
+          'command': command
+        };
+
+        $.ajax({
+          url: 'api/send_nircmd',
+          method: 'POST',
+          data: JSON.stringify(dataToSend),
+          contentType: 'application/json',
+          success: function(response) {
+            $('#response').text(JSON.stringify(response, null, 2));
+          },
+          error: function(xhr, status, error) {
+            $('#response').text('Error: ' + error);
+          }
+        });
+      });
+
+      // Fetch the initial host list on page load
+      fetchInitialHostList();
+    });
+  </script>
+</head>
+<body>
+  <h1>Send NirCmd Command</h1>
+
+  <button id="refreshHostListButton">Refresh Host List</button>
+
+  <form id="sendNirCmdForm">
+    <label for="hostDropdown">Select Host:</label>
+    <select id="hostDropdown" required>
+      <option value="" disabled selected>Select a host</option>
+    </select>
+
+    <label for="nirCmdCommand">NirCmd Command:</label>
+    <input type="text" id="nirCmdCommand" required>
+
+    <button type="submit">Send NirCmd</button>
+  </form>
+
+  <h2>API Response:</h2>
+  <pre id="response"></pre>
+
+  <button onclick="window.location.href = 'outlets.html';">Control Outlets</button>
+  <button id="returnButton">Return to Main Menu</button>
+</body>
+</html>
