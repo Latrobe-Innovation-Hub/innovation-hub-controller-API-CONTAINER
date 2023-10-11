@@ -294,8 +294,12 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
  	# Step 7: Set up Auto-Login
 	$autoLoginSuccess = $true
 	try {
-     	    # Get the current username
-	    $AutoLoginUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+	    # Get the full domain-qualified username
+	    $FullUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+	
+	    # Split the username to extract the part after the backslash (domain\username format)
+	    $UsernameParts = $FullUsername -split '\\'
+	    $AutoLoginUsername = $UsernameParts[1]
 	
 	    # Prompt the user for their password
 	    $AutoLoginPassword = Read-Host "Enter your password for $AutoLoginUsername" -AsSecureString
