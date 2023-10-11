@@ -337,6 +337,40 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	# Output to verify the status of Auto-Login
 	Write-Host "Auto-Login status: $autoLoginSuccess"
 
+ 	# Step 8: Download and Install NirCmd
+	$step8Success = $true
+	try {
+	    # Define the download URL for NirCmd
+	    $nircmdUrl = "http://www.nirsoft.net/utils/nircmd-x64.zip"
+	
+	    # Set the download path to a temporary directory
+	    $downloadPath = Join-Path $env:TEMP "nircmd.zip"
+	
+	    # Set the destination path for extraction
+	    $extractPath = "C:\NirCmd"  # Change this path to the desired installation location
+	
+	    # Download NirCmd
+	    Invoke-WebRequest -Uri $nircmdUrl -OutFile $downloadPath
+	
+	    # Check if the destination directory exists, and create it if not
+	    if (-not (Test-Path -Path $extractPath -PathType Container)) {
+	        New-Item -ItemType Directory -Path $extractPath
+	    }
+	
+	    # Extract NirCmd to the destination path
+	    Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
+	
+	    # Add the NirCmd directory to the system's PATH environment variable
+	    $pathEnv = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)
+	    $newPath = "$pathEnv;$extractPath"
+	    [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
+	} catch {
+	    $step8Success = $false
+	}
+	ConfirmStepSuccess "Download and Install NirCmd" $step8Success
+	$stepsStatus += [PSCustomObject]@{Step = "Download and Install NirCmd"; Success = $step8Success}
+
+
 	# Display status of each step
         Write-Host
 	Write-Host "RESULT"
