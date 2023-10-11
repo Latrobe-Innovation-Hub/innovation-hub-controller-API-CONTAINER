@@ -93,6 +93,10 @@ ShowStatus "Is c:\PsTools in PATH?" $psToolsInPath
 $autoLoginStatus = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon -eq "1"
 ShowStatus "Is Auto-Login enabled?" $autoLoginStatus
 
+# Step 8: Check if NirCmd is installed
+$nircmdInstalled = (Test-Path "C:\NirCmd\nircmd.exe" -PathType Leaf)
+ShowStatus "Is NirCmd installed?" $nircmdInstalled
+
 # Ask the user to press any key to exit
 Write-Host
 Write-Host "Press any key to continue..."
