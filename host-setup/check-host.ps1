@@ -89,6 +89,10 @@ foreach ($entry in $envPathEntries) {
 
 ShowStatus "Is c:\PsTools in PATH?" $psToolsInPath
 
+# Check the status of Auto-Login -test?
+$autoLoginStatus = (Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' -Name 'AutoAdminLogon' -ErrorAction SilentlyContinue).AutoAdminLogon -eq "1"
+ShowStatus "Is Auto-Login enabled?" $autoLoginStatus
+
 # Ask the user to press any key to exit
 Write-Host
 Write-Host "Press any key to continue..."
