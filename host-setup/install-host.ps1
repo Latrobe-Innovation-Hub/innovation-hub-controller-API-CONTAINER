@@ -370,9 +370,21 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Download and Install NirCmd" $step8Success
 	$stepsStatus += [PSCustomObject]@{Step = "Download and Install NirCmd"; Success = $step8Success}
 
+	# Step 9: Set Windows Power and Sleep Settings - Need to test!
+	$step9Success = $true
+	try {
+	    # Set the screen turn off time to "Never" when plugged in
+	    powercfg -x -monitor-timeout-ac 0
+	    
+	    Write-Host "Windows power and sleep settings updated: Screen turns off after 'Never' when plugged in."
+	} catch {
+	    $step9Success = $false
+	}
+	ConfirmStepSuccess "Set Windows Power and Sleep Settings" $step9Success
+	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power and Sleep Settings"; Success = $step9Success}
 
 	# Display status of each step
-    Write-Host
+   	Write-Host
 	Write-Host "RESULT"
 	Write-Host "============================================"
 	$stepsStatus | ForEach-Object { ConfirmStepSuccess $_.Step $_.Success }
