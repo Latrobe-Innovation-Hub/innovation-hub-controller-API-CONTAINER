@@ -314,7 +314,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	        $RegistryPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 	        Set-ItemProperty $RegistryPath 'AutoAdminLogon' -Value "1" -Type String 
 	        Set-ItemProperty $RegistryPath 'DefaultUsername' -Value $Username -Type String 
-	        Set-ItemProperty $RegistryPath 'DefaultPassword' -Value (ConvertFrom-SecureString $Password) -Type String
+	        Set-ItemProperty $RegistryPath 'DefaultPassword' -Value (ConvertTo-SecureString -SecureKey $Password -AsPlainText -Force) -Type SecureString
 	    }
 	
 	    Set-AutoLogin -Username $AutoLoginUsername -Password $AutoLoginPassword
