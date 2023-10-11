@@ -314,14 +314,18 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	            [string]$Username,
 	            [securestring]$Password
 	        )
-	
+	    
 	        $RegistryPath = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon'
 	        Set-ItemProperty $RegistryPath 'AutoAdminLogon' -Value "1" -Type String 
 	        Set-ItemProperty $RegistryPath 'DefaultUsername' -Value $Username -Type String 
-	        Set-ItemProperty $RegistryPath 'DefaultPassword' -Value (ConvertTo-SecureString -SecureKey $Password -AsPlainText -Force) -Type SecureString
+	
+	        # Convert the secure string to a plain text password
+	        $PasswordPlainText = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto([System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($Password))
+	
+	        Set-ItemProperty $RegistryPath 'DefaultPassword' -Value $PasswordPlainText -Type String
 	    }
 	
-	    Set-AutoLogin -Username $AutoLoginUsername -Password $AutoLoginPassword
+	Set-AutoLogin -Username $AutoLoginUsername -Password $AutoLoginPassword
 	} catch {
 	    $autoLoginSuccess = $false
 	    Write-Host "Error setting Auto-Login registry values: $_"
