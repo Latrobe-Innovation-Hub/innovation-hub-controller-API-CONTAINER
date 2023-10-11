@@ -97,6 +97,13 @@ ShowStatus "Is Auto-Login enabled?" $autoLoginStatus
 $nircmdInstalled = (Test-Path "C:\NirCmd\nircmd.exe" -PathType Leaf)
 ShowStatus "Is NirCmd installed?" $nircmdInstalled
 
+# Check if Windows 10 display sleep settings are set to "Never" when plugged in - testing
+$displaySleepSettings = Get-ItemProperty -Path "HKCU:\Control Panel\PowerCfg" -Name "ACSettingIndex" -ErrorAction SilentlyContinue
+$displayNeverSleep = ($displaySleepSettings.ACSettingIndex -eq 0)
+
+# Display the status using ShowStatus
+ShowStatus "Is display sleep set to 'Never' when plugged in?" $displayNeverSleep
+
 # Ask the user to press any key to exit
 Write-Host
 Write-Host "Press any key to continue..."
