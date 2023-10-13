@@ -506,6 +506,62 @@ def init_db():
     pdu_conn.commit()
     pdu_conn.close()
 
+# single database init - need to test and integrate
+# def init_db():
+    # conn = sqlite3.connect('IH_device_database.db')
+    # cursor = conn.cursor()
+
+    # # Create a table for rooms
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS rooms (
+            # room_code TEXT PRIMARY KEY,
+            # description TEXT
+        # )
+    # ''')
+
+    # # Create a table for hosts
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS hosts (
+            # host_address TEXT PRIMARY KEY,
+            # host_name TEXT,
+            # description TEXT,
+            # username TEXT,
+            # password TEXT,
+            # platform TEXT,
+            # room_code TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+
+    # # Create a table for displays
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS displays (
+            # display_address TEXT PRIMARY KEY,
+            # display_name TEXT,
+            # display_type TEXT,
+            # username TEXT,
+            # password TEXT,
+            # room_code TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+
+    # # Create a table for pdus
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS pdus (
+            # pdu_address TEXT PRIMARY KEY,
+            # username TEXT,
+            # password TEXT,
+            # room_code TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+
+    # conn.commit()
+    # conn.close()
+
+init_db()
+
 @app.before_first_request
 def before_first_request():
     init_db()

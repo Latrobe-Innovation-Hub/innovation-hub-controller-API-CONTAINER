@@ -400,8 +400,13 @@ def run_nircmd(hostname, username, password, cmd):
             # Connect to the remote host
             client.connect(hostname, username=username, password=password)
 
-            # Build the nircmd command
-            command = f'nircmd {cmd}'
+            # Specify the path to NirCmd and its executable file names
+            nircmd_path = 'C:/NirCmd/'
+            nircmd_executable = 'nircmd.exe'
+            nircmdc_executable = 'nircmdc.exe'
+
+            # Build the full nircmd command with the specified path
+            command = f'{nircmd_path}{nircmd_executable} {cmd}'
 
             # Send the nircmd command
             _, stdout, stderr = client.exec_command(command)
