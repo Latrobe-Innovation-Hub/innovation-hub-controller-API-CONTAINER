@@ -88,7 +88,7 @@ class Projector:
 
     async def get_property(self, command):
         """Get property state from device."""
-        _LOGGER.debug("Getting property %s", command)
+        #_LOGGER.debug("Getting property %s", command)
         if self.__checkLock():
             return BUSY
         timeout = self.__get_timeout(command)
@@ -105,7 +105,7 @@ class Projector:
 
     async def send_command(self, command):
         """Send command to Epson."""
-        _LOGGER.debug("Sending command to projector %s", command)
+        #_LOGGER.debug("Sending command to projector %s", command)
         if self.__checkLock():
             return False
         self.__setLock(command)
@@ -128,8 +128,7 @@ class Projector:
                     url=url, params=params,
                         headers=self._headers) as response:
                     if response.status != HTTP_OK:
-                        _LOGGER.warning(
-                            "Error message %d from Epson.", response.status)
+                        _LOGGER.warning("Error message %d from Epson.", response.status)
                         return False
                     if command == TURN_ON and self._powering_on:
                         self._powering_on = False
