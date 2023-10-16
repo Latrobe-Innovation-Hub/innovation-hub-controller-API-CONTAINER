@@ -38,6 +38,7 @@
 # ======================================================================================================================================================
 
 
+from calendar import c
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS, cross_origin
 import paramiko
@@ -45,6 +46,7 @@ import platform
 import json
 import re
 import os
+from pathlib import Path
 
 import api_config as conf
 
@@ -232,7 +234,7 @@ def run_reboot_device(hostname, username, password, platformInput="windows"):
 
 
 # open powerpoint slide file/url on remote windows pc in google chrome
-def run_powerpoint(hostname, username, password, url=None):
+def run_browser(hostname, username, password, url=None):
     # Create an SSH client
     client = paramiko.SSHClient()
 
@@ -246,16 +248,17 @@ def run_powerpoint(hostname, username, password, url=None):
             client.connect(hostname, username=username, password=password)
 
             # Set Chrome browser application path
-            chrome = "c:\Program Files\Google\Chrome\Application\chrome.exe"
+            #chrome = "C:\Google\Chrome\Application\chrome.exe"
 
             # Execute the qwinsta command to retrieve session information for the target user
             session_id = get_session_id(client, username)
 
             if session_id:
                 # Build psexec command string to open chrome in kiosk mode, at url
-                command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{chrome}\"  \"--kiosk\" \"{url}\""
+                #command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{chrome}\"  \"--kiosk --disable-pinch --no-user-gesture-required\" \"{url}\""
+                command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk --edge-kiosk-type=fullscreen "{url}\"'
 
-                print("\n", command, "\n")
+                logger.info(f"testing.... in run_browser, command: {command}")
                 
                 _, stdout, stderr = client.exec_command(command)
 
@@ -329,9 +332,59 @@ def kill_process(hostname, username, password, pid):
         except Exception as e:
             return {'error': str(e)}
 
+def run_application(hostname, username, password, application=None, arguments=None):
+     # Create an SSH client
+    client = paramiko.SSHClient()
+
+    # Automatically add the remote host key (not recommended for production use)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+   # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute the qwinsta command to retrieve session information for the target user
+            session_id = get_session_id(client, username)
+            
+            if session_id:
+                logger.info(f"testing.... in run_application, application command sent by request: {application}")
+                
+                command = None
+                if arguments and video:
+                    # If both arguments and video are present
+                    command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{application}" {arguments}'
+                elif video:
+                    # If only video is present
+                    command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{application}"'          
+                
+                if command:
+                    logger.info(f"testing.... in run_application, command created in runn_application: {command}")
+                    _, stdout, stderr = client.exec_command(command)
+
+                    # Retrieve the output of the command
+                    output = stdout.read().decode('utf-8')
+                    error = stderr.read().decode('utf-8')
+
+                    # Extract the PID from the error output
+                    pid_match = re.search(r"process ID (\d+)", error)
+                
+                    if pid_match:
+                        pid = pid_match.group(1)
+                        return pid
+                    else:
+                        return f"{output}, {error}"
+                else:
+                    return f"No command was constructed to send to {hostname}."        
+            else:
+                return f"No active session found for {username}."
+
+        except Exception as e:
+            return {'error': str(e)}
 
 # run a program on remote windows pc - NEED TO TEST
-def run_application(hostname, username, password, application=None, arguments=None):
+def run_vlc_application(hostname, username, password, application=None, arguments=None, video=None):
     # Create an SSH client
     client = paramiko.SSHClient()
 
@@ -348,41 +401,44 @@ def run_application(hostname, username, password, application=None, arguments=No
             session_id = get_session_id(client, username)
             
             if session_id:
-            
-                # Create the command to open the specified application with the given arguments
-                command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{application}\""
-
-                if arguments is not None:
-                    command += f' \"{arguments}\"'
-                    
-                _, stdout, stderr = client.exec_command(command)
-
-                # Retrieve the output of the command
-                output = stdout.read().decode('utf-8')
-                error = stderr.read().decode('utf-8')
-
-                # Extract the PID from the error output
-                pid_match = re.search(r"process ID (\d+)", error)
+                logger.info(f"testing.... in run_application, application command sent by request: {application}")
                 
-                if pid_match:
-                    pid = pid_match.group(1)
-                    return pid
+                # Construct the VLC command with appropriate quotes based on the video_path
+                if video.startswith(('http://', 'https://', 'ftp://')):
+                    # It's a URL, so no need to surround it with quotes
+                    video = f'{video}'
                 else:
-                    return f"{output}, {error}"
-            
+                    # It's a local file path, surround it with quotes
+                    arguments = f'"{video}"'
+                
+                command = None
+                if arguments and video:
+                    # If both arguments and video are present
+                    command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{application}" {arguments} {video}'
+                elif video:
+                    # If only video is present
+                    command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{application}" {video}'                
+                
+                if command:
+                    logger.info(f"testing.... in run_application, command created in runn_application: {command}")
+                    _, stdout, stderr = client.exec_command(command)
+
+                    # Retrieve the output of the command
+                    output = stdout.read().decode('utf-8')
+                    error = stderr.read().decode('utf-8')
+
+                    # Extract the PID from the error output
+                    pid_match = re.search(r"process ID (\d+)", error)
+                
+                    if pid_match:
+                        pid = pid_match.group(1)
+                        return pid
+                    else:
+                        return f"{output}, {error}"
+                else:
+                    return f"No command was constructed to send to {hostname}."        
             else:
                 return f"No active session found for {username}."
-
-            # send command
-            #stdin, stdout, stderr = client.exec_command(command)
-            #print(stdin, stdout, stderr)
-
-            # capture exit status
-            #exit_status = stdout.channel.recv_exit_status()
-            #if exit_status == 0:
-            #return f"{exit_status}"
-            #else:
-            #    return f"command failed with exit status {exit_status}."
 
         except Exception as e:
             return {'error': str(e)}
@@ -440,21 +496,6 @@ def init_db():
             description TEXT
         )
     ''')
-
-    # print("initialising table hosts...")
-    # # Create a table for hosts
-    # cursor.execute('''
-        # CREATE TABLE IF NOT EXISTS hosts (
-            # host_address TEXT PRIMARY KEY,
-            # host_name TEXT,
-            # description TEXT,
-            # username TEXT,
-            # password TEXT,
-            # platform TEXT,
-            # room_code TEXT,
-            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
-        # )
-    # ''')
     
     print("initialising table hosts...")
     logger.info("testing.... init_db, initialising table hosts..")
@@ -1027,6 +1068,223 @@ def remove_display(room_code, display_address):
 
     return jsonify({'message': 'Display removed successfully'}), 200
 
+import aiohttp
+import asyncio
+from epson_projector.main import Projector 
+
+@app.route('/get_projector_state/<string:room_code>/<string:display_address>', methods=['GET'])
+async def get_projector_state(room_code, display_address):
+    # Define constants for power states
+    POWER_ON = "01"
+    POWER_INIT = "02"
+    POWER_OFF = "04"
+    POWER_ERR = "ERR"  
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = ?', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    host_address, username, password = display_details
+
+    conn.close()
+
+    # Initialize aiohttp client session
+    async with aiohttp.ClientSession() as session:
+        host = host_address
+        websession = session
+        projector = Projector(host, websession)
+
+        try:
+            # Get the current power state
+            power_state = await projector.get_property("PWR")
+
+            # Map the projector's power state to a user-friendly format
+            if power_state == POWER_ON:
+                projector_state = "ON"
+            elif power_state == POWER_INIT:
+                projector_state = "INIT"
+            elif power_state == POWER_OFF:
+                projector_state = "OFF"
+            elif power_state == POWER_ERR:
+                projector_state = "ERROR"
+            else:
+                projector_state = "UNKNOWN"
+
+            return jsonify({'projector_state': projector_state}), 200
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
+@app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['POST'])
+async def turn_on_projector(room_code, display_address):
+    # Define constants for power states
+    POWER_ON = "01"
+    POWER_INIT = "02"
+    POWER_OFF = "04"
+    POWER_ERR = "ERR"  
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = ?', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    host_address, username, password = display_details
+
+    conn.close()
+
+    # Initialize aiohttp client session
+    async with aiohttp.ClientSession() as session:
+        host = host_address
+        websession = session
+        projector = Projector(host, websession)
+
+        try:
+            # Get the current power state
+            power_state = await projector.get_property("PWR")
+        
+            if power_state == POWER_ERR:
+                # Retry initialization if the response is "ERR"
+                max_retries = 15
+                for retry in range(1, max_retries + 1):                
+                    # Wait before retrying (you can adjust the duration)
+                    await asyncio.sleep(5)
+                
+                    # Retry initialization
+                    power_state = await projector.get_property("PWR")
+                    if str(power_state) != POWER_ERR:
+                        break
+                else:
+                    return jsonify({'error': "Initialization failed after all retries."}), 500
+        
+            if power_state == POWER_OFF:
+                print(f"Projector at: {host} is off, so turning on..")
+  
+                # The projector is currently off, so we can turn it on
+                await projector.send_command("PWR ON")
+                
+                # Wait for the projector to power on
+                await asyncio.sleep(5)
+                
+                # Check the current power state to confirm it's on
+                power_state = await projector.get_property("PWR")
+
+                if power_state == POWER_ON:
+                    return jsonify({'message': 'Projector turned on successfully'}), 200
+                else:
+                    return jsonify({'error': 'Failed to turn on the projector'}), 500
+            else:
+                return jsonify({'message': 'Projector is already on'}), 200
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
+@app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
+async def turn_off_projector(room_code, display_address):
+    # Define constants for power states
+    POWER_ON = "01"
+    POWER_INIT = "02"
+    POWER_OFF = "04"
+    POWER_ERR = "ERR"    
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = ?', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    host_address, username, password = display_details
+
+    conn.close()
+
+    # Initialize aiohttp client session
+    async with aiohttp.ClientSession() as session:
+        host = host_address
+        websession = session
+        projector = Projector(host, websession)
+
+        try:
+            # Get the current power state
+            power_state = await projector.get_property("PWR")
+        
+            if power_state == POWER_ERR:
+                # Retry initialization if the response is "ERR"
+                max_retries = 15
+                for retry in range(1, max_retries + 1):                
+                    # Wait before retrying (you can adjust the duration)
+                    await asyncio.sleep(5)
+                
+                    # Retry initialization
+                    power_state = await projector.get_property("PWR")
+                    if str(power_state) != POWER_ERR:
+                        break
+                else:
+                    return jsonify({'error': "Initialization failed after all retries."}), 500
+        
+            if power_state == POWER_ON:
+                # The projector is currently on, so we can turn it off
+                await projector.send_command("PWR OFF")
+                
+                # Wait for the projector to power off
+                await asyncio.sleep(5)
+                
+                # Check the current power state to confirm it's off
+                power_state = await projector.get_property("PWR")
+
+                if power_state == POWER_OFF:
+                    return jsonify({'message': 'Projector turned off successfully'}), 200
+                else:
+                    return jsonify({'error': 'Failed to turn off the projector'}), 500
+            else:
+                return jsonify({'message': 'Projector is already off'}), 200
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
 #init_db()
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -1101,6 +1359,14 @@ def get_db_connection(database='/home/innovation-hub-api/persistent/db/container
     conn = sqlite3.connect(database)
     conn.row_factory = sqlite3.Row
     return conn
+
+def create_app():
+    app = Flask(__name__)
+
+    # Initialize the app and perform any desired actions here
+    print("Performing actions at application startup...")
+
+    return app
 
 # =========================================================================
 #  API - endpoints
@@ -1233,8 +1499,8 @@ def reboot_device(room_code, host_address):
     else:
         return jsonify({'response': result}), 200
 
-@app.route('/open_powerpoint/<string:room_code>/<string:host_address>', methods=['POST'])
-def open_powerpoint(room_code, host_address):
+@app.route('/open_browser/<string:room_code>/<string:host_address>', methods=['POST'])
+def open_browser(room_code, host_address):
     data = request.get_json()
     if not all(key in data for key in ['url']):
         return jsonify({'error': 'Missing required field(s)'}), 400
@@ -1255,7 +1521,7 @@ def open_powerpoint(room_code, host_address):
     url = data.get('url')
 
     # Open PowerPoint on the remote device using the retrieved credentials and URL
-    result = run_powerpoint(host_address, username, password, url)
+    result = run_browser(host_address, username, password, url)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
@@ -1269,12 +1535,12 @@ def get_user_session_id_old():
     if not all(key in data for key in ['hostname', 'target_username']):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    hostname = data.get('hostname')
+    host_address = data.get('hostname')
     
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (host_address,))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1329,12 +1595,12 @@ def close_process_old():
     if not all(key in data for key in ['hostname', 'pid']):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    hostname = data.get('hostname')
+    host_address = data.get('hostname')
 
     # Query the database to retrieve the username and password based on the hostname
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (host_address,))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1346,10 +1612,10 @@ def close_process_old():
     password = host_data['password']
     pid = data.get('pid')
 
-    print("\n", hostname, username, password, pid, "\n")
+    print("\n", host_address, username, password, pid, "\n")
 
     # Kill the process on the remote host using the retrieved credentials
-    result = kill_process(hostname, username, password, pid)
+    result = kill_process(host_address, username, password, pid)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
@@ -1477,6 +1743,90 @@ def open_application(room_code, host_address):
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
+    
+from pathlib import Path
+
+def normalize_windows_path(path):
+    # Replace common path separators with a single backslash for Windows
+    return path.replace('/', '\\').replace('//', '\\').replace('\\\\', '\\')
+
+@app.route('/open_vlc_video/<string:room_code>/<string:host_address>', methods=['POST'])
+def open_vlc_video(room_code, host_address):
+    data = request.get_json()
+    if not all(key in data for key in ['application', 'video_path']):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+    
+    logger.info(f"testing.... in open_vlc_video, room_code: {room_code}")
+    logger.info(f"testing.... in open_vlc_video, host_address: {host_address}")
+
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
+
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    # Extract the username and password from the retrieved data
+    username = host_data['username']
+    password = host_data['password'] 
+    application = data['application']
+    
+    logger.info(f"testing.... in open_vlc_video, username: {username}")
+    logger.info(f"testing.... in open_vlc_video, password: {password}")
+    logger.info(f"testing.... in open_vlc_video, application: {application}")
+
+    # Check if the 'video_path' is a complete path or just a filename
+    #if os.path.isabs(data['video_path']):
+    #    video_path = normalize_windows_path(data['video_path'])
+    #    logger.info(f"testing.... in open_vlc_video, path provided is absolute")
+    #    logger.info(f"testing.... in open_vlc_video, video_path: {video_path}")
+    #else:
+    #    video_path = normalize_windows_path(f'C:/Users/{username}/Videos/{data["video_path"]}')
+    #    logger.info(f"testing.... in open_vlc_video, path provided is just a filename")
+    #    logger.info(f"testing.... in open_vlc_video, video_path: {video_path}")
+        
+    # Check if the 'video_path' is a URL or a local file path
+    if data['video_path'].startswith(('http://', 'https://', 'ftp://')):
+        # It's a URL
+        video_path = data['video_path']
+        logger.info(f"URL provided: {video_path}")
+    else:
+        # It's a local file path
+        if os.path.isabs(data['video_path']):
+            video_path = normalize_windows_path(data['video_path'])
+            logger.info(f"Absolute file path provided: {video_path}")
+        else:
+            video_path = normalize_windows_path(f'C:/Users/{username}/Videos/{data["video_path"]}')
+            logger.info(f"Relative file path provided: {video_path}")
+
+    # Convert the path to a string if needed
+    video_path = str(video_path)
+    logger.info(f"testing.... in open_vlc_video, Convert the path to a string if needed: {video_path}")
+
+    # Open VLC media player in fullscreen and play the specified video
+    if application.lower() == 'vlc':
+        # Specify the full path to the VLC executable
+        vlc_executable = 'C:\\VLC\\vlc.exe'        
+
+        arguments = '--fullscreen'
+
+        if data.get('loop', False):
+            arguments += ' --loop'
+
+        logger.info(f"testing.... in open_vlc_video, arguments: {arguments}")
+        result = run_vlc_application(host_address, username, password, vlc_executable, arguments=arguments,video=video_path)
+        
+        if result is None:
+            return jsonify({'error': 'Failed to open VLC or play video'}), 500
+        else:
+            return jsonify({'response': result}), 200
+    else:
+        return jsonify({'error': 'Unsupported application'}), 400
+
+
 
 @app.route('/send_nircmd', methods=['POST'])
 def send_nircmd_old():
@@ -1714,9 +2064,9 @@ def remove_device(room_code, pdu_address):
     return jsonify({'message': 'PDU removed successfully'}), 200
 
 
-@app.route('/pdu/remove_device_by_address/<string:host_address>', methods=['POST'])
-def remove_device_by_address(host_address):
-    logger.info(f"testing.... in remove_device, host_address: {host_address}")
+@app.route('/pdu/remove_device_by_address/<string:pdu_address>', methods=['POST'])
+def remove_device_by_address(pdu_address):
+    logger.info(f"testing.... in remove_device, pdu_address: {pdu_address}")
         
     devices = None
     if 'pdu_data' in app.config:
@@ -1729,12 +2079,12 @@ def remove_device_by_address(host_address):
     device_to_remove = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.hostAddress == pdu_address:
             device_to_remove = device
             break
 
     if device_to_remove is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} not found.'}), 200
 
     device_to_remove.disconnect()
     devices.remove(device_to_remove)
@@ -1744,7 +2094,7 @@ def remove_device_by_address(host_address):
     cursor = conn.cursor()
     
     try:
-        cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (host_address,))
+        cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (pdu_address,))
         conn.commit()
         logger.info("Device removed from the database.")
     except sqlite3.Error as e:
@@ -1752,8 +2102,15 @@ def remove_device_by_address(host_address):
     finally:
         conn.close()
 
-    # Remove the device from the cache
-    remove_device_from_config(device_to_remove)
+    # Now, remove the device from the app.config
+    devices = app.config.get('pdu_data', [])
+
+    for device in devices:
+        if device.hostAddress == pdu_address:
+            device.disconnect()
+            devices.remove(device)
+            app.config['pdu_data'] = devices
+            print("Device removed from app.config.")
 
     return jsonify({'success': 'Device removed successfully!'})
 
