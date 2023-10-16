@@ -43,7 +43,7 @@ services:
     container_name: 'innovation-hub-api'
     volumes:
       #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs (either)
-      - ~/innovation-hub-api/logs:/home/innovation-hub-api/persistent/logs/container2
+      - ~/innovation-hub-api/logs:/home/innovation-hub-api/persistent/logs
       - ~/innovation-hub-api/db:/home/innovation-hub-api/persistent/db/container2
     environment:
       - TZ=Australia/Melbourne

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page Title</title>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666666;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 10px;
+            padding: 10px 20px;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        h2 {
+            margin-top: 20px;
+            color: #333333;
+        }
+
+        pre {
+            background-color: #ffffff;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            padding: 10px;
+            overflow-x: auto;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+            width: fit-content;
+        }
+
+        .dropdown {
+            display: none; /* Initially hidden */
+        }
+
+        #returnButton {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+            #returnButton:hover {
+                background-color: #555555;
+            }
+    </style>
+    <script>
+        $(document).ready(function () {
+            $('#returnMainButton').click(function () {
+                window.location.href = 'index.html';
+            });
+
+            $('#returnPreviousButton').click(function () {
+                history.back(); // This will take the user to the previous page in the browsing history.
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Page Title</h1>
+
+    <h2>Add Something:</h2>
+    <form id="addSomethingForm">
+        <label for="somethingName">Something Name:</label>
+        <input type="text" id="somethingName" required><br>
+        <!-- Add your additional input fields here as needed -->
+        <button type="submit">Add Something</button>
+    </form>
+
+    <!-- Refresh Something List Button -->
+    <button id="refreshSomethingListButton">Refresh Something List</button>
+
+    <!-- Something List Container -->
+    <div id="somethingList" class="dropdown"></div>
+
+    <h2>API Response:</h2>
+    <pre id="response"></pre>
+
+    <button id="returnPreviousButton">Return to Previous Page</button>
+    <button id="returnMainButton">Return to Main Menu</button>
+</body>
+</html>

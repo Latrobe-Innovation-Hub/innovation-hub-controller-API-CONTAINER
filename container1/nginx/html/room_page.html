@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Room Management</title>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666666;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 10px;
+            padding: 10px 20px;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        h2 {
+            margin-top: 20px;
+            color: #333333;
+        }
+
+        pre {
+            background-color: #ffffff;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            padding: 10px;
+            overflow-x: auto;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+            width: fit-content;
+        }
+
+        .dropdown {
+            display: none; /* Initially hidden */
+        }
+
+        #returnButton {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+        #returnButton:hover {
+            background-color: #555555;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Function to update the room list
+            function updateRoomList(rooms) {
+                var roomListHtml = '<h2>Current Rooms:</h2>';
+                if (rooms && rooms.length > 0) {
+                    roomListHtml += '<ul>';
+                    $.each(rooms, function (index, room) {
+                        roomListHtml += '<li>' + room.room_code + ' - ' + room.description +
+                            '<button class="removeRoomButton" data-room-code="' + room.room_code + '">Remove</button>' +
+                            '<button class="pduButton" data-room-code="' + room.room_code + '">PDUs</button>' +
+                            '<button class="hostButton" data-room-code="' + room.room_code + '">Hosts</button>' +
+                            '<button class="displayButton" data-room-code="' + room.room_code + '">Displays</button></li>';
+                    });
+                    roomListHtml += '</ul>';
+                } else {
+                    roomListHtml += '<p>No rooms available.</p>';
+                }
+                $('#roomList').html(roomListHtml);
+
+                // Bind click events for remove room, PDU, Hosts, and Displays buttons
+                $('.removeRoomButton').click(function () {
+                    var roomCode = $(this).data('room-code');
+                    console.log('Clicked Remove Room Button for roomCode:', roomCode);
+                    removeRoom(roomCode);
+                });
+
+                // Bind click events for navigation buttons (PDU, Hosts, and Displays)
+                $('.pduButton').click(function () {
+                    var roomCode = $(this).data('room-code');
+                    // Redirect to the PDU page for the selected room
+                    window.location.href = 'pdus_page.html?room_code=' + roomCode;
+                });
+
+                $('.hostButton').click(function () {
+                    var roomCode = $(this).data('room-code');
+                    // Redirect to the Hosts page for the selected room
+                    window.location.href = 'hosts_page.html?room_code=' + roomCode;
+                });
+
+                $('.displayButton').click(function () {
+                    var roomCode = $(this).data('room-code');
+                    // Redirect to the Displays page for the selected room
+                    window.location.href = 'displays_page.html?room_code=' + roomCode;
+                });
+            }
+
+            // Function to remove a room by room code
+            function removeRoom(roomCode) {
+                $.ajax({
+                    url: 'api/remove_room/' + roomCode,
+                    method: 'DELETE',
+                    success: function (response) {
+                        console.log(response);
+                        // You can implement additional logic here, such as displaying a success message.
+                        // Update the room list after successful removal
+                        fetchInitialRoomList();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error: ' + error);
+                        // You can display an error message to the user.
+                    }
+                });
+            }
+
+            // Function to fetch the initial room list
+            function fetchInitialRoomList() {
+                $.ajax({
+                    url: 'api/get_rooms',
+                    method: 'GET',
+                    success: function (response) {
+                        updateRoomList(response.rooms);
+                    },
+                    error: function (xhr, status, error) {
+                        $('#roomList').html('Error fetching rooms: ' + error);
+                    }
+                });
+            }
+
+            // Bind click event for the "Refresh Room List" button
+            $('#refreshRoomListButton').click(function () {
+                fetchInitialRoomList();
+            });
+
+            // Bind submit event for the "Add Room" form
+            $('#addRoomForm').submit(function (event) {
+                event.preventDefault();
+
+                var roomCode = $('#roomCode').val();
+                var description = $('#description').val();
+
+                // Create an empty object to hold the data
+                var dataToSend = {
+                    'room_code': roomCode,
+                    'description': description
+                };
+
+                $.ajax({
+                    url: 'api/add_room',
+                    method: 'POST',
+                    data: JSON.stringify(dataToSend),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        $('#response').text(JSON.stringify(response, null, 2));
+                        // Add a delay (adjust as needed) before refreshing the room list
+                        setTimeout(function () {
+                            fetchInitialRoomList();
+                        }, 2000);
+                    },
+                    error: function (xhr, status, error) {
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            });
+
+            // Fetch initial room list on page load
+            fetchInitialRoomList();
+
+            $(document).ready(function () {
+                // Function to toggle the visibility of the form
+                $('#showFormButton').click(function () {
+                    $('.dropdown').slideToggle();
+                });
+            });
+
+            $('#returnMainButton').click(function () {
+                window.location.href = 'index.html';
+            });
+
+        }); // Close the outer $(document).ready() block
+    </script>
+</head>
+<body>
+    <h1>Room Management</h1>
+
+    <!-- Button to show/hide the form -->
+    <button id="showFormButton">Show Add Room Form</button>
+
+    <!-- Add Room Form within a dropdown container -->
+    <div class="dropdown">
+        <h2>Add Room:</h2>
+        <form id="addRoomForm">
+            <label for="roomCode">Room Code:</label>
+            <input type="text" id="roomCode" required><br>
+            <label for="description">Description:</label>
+            <input type="text" id="description" required><br>
+            <button type="submit">Add Room</button>
+        </form>
+    </div>
+
+    <!-- Refresh Room List Button -->
+    <button id="refreshRoomListButton">Refresh Room List</button>
+
+    <!-- Room List Container -->
+    <div id="roomList"></div>
+
+    <h2>API Response:</h2>
+    <pre id="response"></pre>
+
+    <button id="returnMainButton">Return to Main Menu</button>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</body>
+</html>

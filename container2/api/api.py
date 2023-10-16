@@ -603,6 +603,32 @@ def get_rooms():
 
     return jsonify({'rooms': room_list}), 200
 
+@app.route('/get_hosts/<string:room_code>', methods=['GET'])
+def get_hosts_for_room(room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM hosts WHERE room_code = ?', (room_code,))
+    hosts = cursor.fetchall()
+    conn.close()
+
+    if len(hosts) < 1:
+        return jsonify({'message': 'No hosts found for room {}'.format(room_code)}), 200
+
+    host_list = []
+    for host in hosts:
+        host_list.append({
+            'host_id': host['host_address'],
+            'host_name': host['host_name'],
+            'description': host['description'],
+            'username': host['username'],
+            'password': host['password'],
+            'platform': host['platform'],
+            'room_code': host['room_code']
+        })
+
+    return jsonify({'hosts': host_list}), 200
+
 # Route to get all displays
 @app.route('/get_displays', methods=['GET'])
 def get_displays():
@@ -629,6 +655,32 @@ def get_displays():
 
     return jsonify({'displays': display_list}), 200
 
+@app.route('/get_displays/<string:room_code>', methods=['GET'])
+def get_displays_for_room(room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM displays WHERE room_code = ?', (room_code,))
+    displays = cursor.fetchall()
+    conn.close()
+
+    if len(displays) < 1:
+        return jsonify({'message': 'No displays found for room {}'.format(room_code)}), 200
+
+    display_list = []
+    for display in displays:
+        display_list.append({
+            'display_address': display['display_address'],
+            'display_name': display['display_name'],
+            'display_type': display['display_type'],
+            'username': display['username'],
+            'password': display['password'],
+            'room_code': display['room_code']
+        })
+
+    return jsonify({'displays': display_list}), 200
+
+
 # Route to get all PDUs
 @app.route('/get_pdus', methods=['GET'])
 def get_pdus():
@@ -652,6 +704,30 @@ def get_pdus():
         })
 
     return jsonify({'pdus': pdu_list}), 200
+
+@app.route('/get_pdus/<string:room_code>', methods=['GET'])
+def get_pdus_for_room(room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    pdus = cursor.fetchall()
+    conn.close()
+
+    if len(pdus) < 1:
+        return jsonify({'message': 'No PDUs found for room {}'.format(room_code)}), 200
+
+    pdu_list = []
+    for pdu in pdus:
+        pdu_list.append({
+            'pdu_address': pdu['pdu_address'],
+            'username': pdu['username'],
+            'password': pdu['password'],
+            'room_code': pdu['room_code']
+        })
+
+    return jsonify({'pdus': pdu_list}), 200
+
 
 @app.route('/get_room/<room_code>', methods=['GET'])
 def get_room(room_code):

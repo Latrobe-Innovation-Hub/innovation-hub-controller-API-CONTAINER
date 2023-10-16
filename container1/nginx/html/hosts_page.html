@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666666;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 10px;
+            padding: 10px 20px;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        h2 {
+            margin-top: 20px;
+            color: #333333;
+        }
+
+        pre {
+            background-color: #ffffff;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            padding: 10px;
+            overflow-x: auto;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+            width: fit-content;
+        }
+
+        #returnButton {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+            #returnButton:hover {
+                background-color: #555555;
+            }
+
+        /* Additional CSS for the dropdown form */
+        .dropdown {
+            display: none; /* Initially hidden */
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        $(document).ready(function () {
+            // Function to update the host list
+            function updateHostList(hosts) {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                // Check if roomCode is not null or undefined before updating the title
+                if (roomCode) {
+                    document.title = 'Host Management - Room ' + roomCode;
+                } else {
+                    console.error('Room code not found in the URL.');
+                } 
+
+                // Update the title tag with the roomCode
+                document.title = 'Host Management - Room ' + roomCode;
+
+                var hostListHtml = '<h2>Current Hosts for Room ' + roomCode + ':</h2><ul>';
+                console.log('updating hosts list:', hosts); // Debugging console print
+                if (hosts && hosts.length > 0) {
+                    console.log('updating device list greater than 0'); // Debugging console print
+                    $.each(hosts, function (index, host) {
+                        hostListHtml += '<li>Host ' + host.host_id + ': ' + host.host_name +
+                            ' <button class="removeButton" data-host-address="' + host.host_id + '">Remove</button>' +
+                            ' <button class="vlcButton" data-host-address="' + host.host_id + '">VLC</button>' +
+                            ' <button class="webBrowserButton" data-host-address="' + host.host_id + '">Web Browser</button>' +
+                            ' <button class="configButton" data-host-address="' + host.host_id + '">Config</button>' +
+                            ' <button class="rebootButton" data-host-address="' + host.host_id + '">Reboot</button>' +
+                            '</li>';
+                    });
+                } else {
+                    hostListHtml += '<li>No hosts available.</li>';
+                }
+                hostListHtml += '</ul>';
+                $('#hostList').html(hostListHtml);
+
+                // Bind click event for remove buttons
+                $('.removeButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked Remove Button for hostAddress:', hostAddress); // Debugging console print
+                    removeHost(hostAddress);
+                });
+
+                // Add click event handlers for the new buttons
+                $('.vlcButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked VLC Button for hostAddress:', hostAddress);
+                    openNewPage('host_vlc.html', roomCode, hostAddress);
+                });
+
+                $('.webBrowserButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked Web Browser Button for hostAddress:', hostAddress);
+                    openNewPage('host_web_browser.html', roomCode, hostAddress);
+                });
+
+                $('.configButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked Config Button for hostAddress:', hostAddress);
+                    openNewPage('host_config.html', roomCode, hostAddress);
+                });
+
+                $('.rebootButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked Reboot Button for hostAddress:', hostAddress);
+                    // Send the reboot request via the API
+                    rebootHost(roomCode, hostAddress);
+                });
+            }
+
+            // Function to open a new page with query parameters
+            function openNewPage(pageName, roomCode, hostAddress) {
+                var url = pageName + '?room_code=' + roomCode + '&host_id=' + hostAddress;
+                window.open(url, '_blank');
+            }
+
+            // Function to send a reboot request
+            function rebootHost(roomCode, hostAddress) {
+                $.ajax({
+                    url: '/api/reboot/' + roomCode + '/' + hostAddress,
+                    method: 'GET', // You can adjust the method as needed
+                    success: function (response) {
+                        console.log('Reboot host response:', response); // Debugging console print
+                        // Handle the response if needed
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error rebooting host:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        // Handle the error if needed
+                    }
+                });
+            }
+
+            // Function to remove a host by address
+            function removeHost(hostAddress) {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                console.log('Removing host with address:', hostAddress); // Debugging console print
+
+                $.ajax({
+                    url: '/api/remove_host/' + roomCode + '/' + hostAddress,
+                    method: 'DELETE',
+                    success: function (response) {
+                        console.log('Remove host response:', response); // Debugging console print
+                        updateHostList(response.hosts);
+                        $('#response').text('Host removed successfully.');
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error removing host:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        $('#response').text('Error removing host: ' + error);
+                    }
+                });
+            }
+
+            // Function to fetch the initial host list
+            function fetchInitialHostList() {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                console.log('Fetching initial host list for room:', roomCode); // Debugging console print
+
+                $.ajax({
+                    url: '/api/get_hosts/' + roomCode,
+                    method: 'GET',
+                    success: function (response) {
+                        console.log('Fetch initial host list response:', response); // Debugging console print
+                        updateHostList(response.hosts);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error fetching hosts:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        $('#hostList').text('Error fetching hosts: ' + error);
+                    }
+                });
+            }
+
+            // Bind click event for the "Refresh Host List" button
+            $('#refreshHostListButton').click(function () {
+                fetchInitialHostList();
+            });
+
+            $('#addHostForm').submit(function (event) {
+                console.log('Adding host function started:');
+                event.preventDefault();
+
+                var roomCode = getRoomCodeFromURL();
+                console.log('Adding host roomCode is:', roomCode);
+
+                var hostAddress = $('#host_address').val(); // Use 'host_address'
+                console.log('Host Address:', hostAddress);
+
+                var hostName = $('#host_name').val(); // Use 'host_name'
+                console.log('Host Name:', hostName);
+
+                var description = $('#description').val();
+                console.log('Description:', description);
+
+                var username = $('#username').val();
+                console.log('Username:', username);
+
+                var password = $('#password').val();
+                console.log('Password:', password);
+
+                var platform = $('#platform').val();
+                console.log('Platform:', platform);
+
+                var dataToSend = {
+                    'host_address': hostAddress, // Use 'hostAddress'
+                    'host_name': hostName, // Use 'hostName'
+                    'description': description,
+                    'username': username,
+                    'password': password,
+                    'platform': platform
+                };
+
+                console.log('Adding host with data:', dataToSend);
+
+                $.ajax({
+                    url: '/api/add_host/' + roomCode, // Updated endpoint
+                    method: 'POST',
+                    data: JSON.stringify(dataToSend),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('Add host response:', response); // Debugging console print
+                        $('#response').text(JSON.stringify(response, null, 2));
+
+                        // Add a delay of 1 second (adjust as needed) before refreshing the host list
+                        setTimeout(function () {
+                            fetchInitialHostList();
+                        }, 2000); // 1000 milliseconds = 1 second
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error adding host:', error); // Debugging console print
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            });
+
+            // Fetch initial host list on page load
+            fetchInitialHostList();
+
+            // Function to get roomCode from URL
+            function getRoomCodeFromURL() {
+                var urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('room_code');
+            }
+
+            $('#returnMainButton').click(function () {
+                window.location.href = 'index.html';
+            });
+
+            $('#returnPreviousButton').click(function () {
+                history.back(); // This will take the user to the previous page in the browsing history.
+            });
+
+            // Add click event to show/hide the form
+            $('#showFormButton').click(function () {
+                $('.dropdown').slideToggle(); // Toggle the visibility
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Host Management</h1>
+
+    <button id="showFormButton">Show Add Host Form</button>
+
+    <div class="dropdown">
+        <h2>Add Host:</h2>
+        <form id="addHostForm">
+            <label for="host_address">Host Address:</label>
+            <input type="text" id="host_address" required><br>
+            <label for="host_name">Host Name:</label>
+            <input type="text" id="host_name" required><br>
+            <label for="description">Description:</label>
+            <input type="text" id="description" required><br>
+            <label for="username">Username:</label>
+            <input type="text" id="username" required><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required><br>
+            <label for="platform">Platform (optional):</label>
+            <input type="text" id="platform"><br>
+
+            <button type="submit">Add Host</button>
+        </form>
+    </div>
+
+    <button id="refreshHostListButton">Refresh Host List</button>
+    <div id="hostList"></div>
+
+    <h2>API Response:</h2>
+    <pre id="response"></pre>
+
+    <button id="returnPreviousButton">Return to Previous Page</button>
+    <button id="returnMainButton">Return to Main Menu</button>
+</body>
+</html>
