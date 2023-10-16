@@ -36,6 +36,13 @@ if [[ ! -d /home/innovation-hub-api/persistent/logs/container2 ]]
       mkdir -p /home/innovation-hub-api/persistent/logs/container2
 fi
 
+
+# if persistent db location doesn't exist, make it!
+if [[ ! -d /home/innovation-hub-api/persistent/db/container2 ]]
+    then
+      mkdir -p /home/innovation-hub-api/persistent/db/container2
+fi
+
 # make sure log file exists
 touch $container_log
 

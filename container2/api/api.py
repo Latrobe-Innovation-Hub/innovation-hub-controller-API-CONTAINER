@@ -44,6 +44,7 @@ import paramiko
 import platform
 import json
 import re
+import os
 
 import api_config as conf
 
@@ -60,6 +61,7 @@ logger = logging.getLogger()
 # set stdout and file log handlers
 handler_stdout = logging.StreamHandler()
 handler_file = logging.FileHandler('/home/innovation-hub-api/persistent/logs/container2/gunicorn.log')
+
 
 # set log format
 formatter = logging.Formatter('%(asctime)s [PYTHON] [%(levelname)s] %(filename)s: %(message)s')
@@ -421,104 +423,25 @@ def run_nircmd(hostname, username, password, cmd):
         except Exception as e:
             return {'error': str(e)}
             
-# Initialize an empty list to store host data
-app.config['host_data'] = []
-
-# # Helper function to load PC host devices from the text file
-# def load_pc_hosts():
-    # with open('pc_hosts.txt', 'r') as file:
-        # lines = file.readlines()
-    # hosts = []
-    # for line in lines:
-        # host_address, username, password = line.strip().split(',')
-        # hosts.append({
-            # 'host_address': host_address,
-            # 'username': username,
-            # 'password': password
-        # })  # Create a dictionary with host data
-    # return hosts
-
-# # Helper function to save PC host devices to the text file
-# def save_pc_hosts(hosts):
-    # with open('pc_hosts.txt', 'w') as file:
-        # for host in hosts:
-            # file.write(f"{host['host_address']},{host['username']},{host['password']}\n")
-
-# # Load PC host devices when the Flask app starts
-# @app.before_first_request
-# def load_hosts():
-    # app.config['host_data'] = load_pc_hosts()
-    
-# Initialize SQLite database
-def init_db():
-    # Initialize SQLite database for host data
-    host_conn = sqlite3.connect('host_data.db')
-    host_cursor = host_conn.cursor()
-
-    # Create a table to store host data if it doesn't exist
-    host_cursor.execute('''
-        CREATE TABLE IF NOT EXISTS hosts (
-            host_address TEXT PRIMARY KEY,
-            username TEXT,
-            password TEXT,
-            platform TEXT NULL
-        )
-    ''')
-    
-    
-    #host_cursor.execute('''
-    #    CREATE TABLE IF NOT EXISTS hosts (
-    #        id INTEGER PRIMARY KEY AUTOINCREMENT,
-    #        host_address TEXT,
-    #        username TEXT,
-    #        password TEXT,
-    #        platform TEXT NULL
-    #    )
-    #''')
-
-    host_conn.commit()
-    host_conn.close()
-
-    # Initialize SQLite database for PDU devices
-    pdu_conn = sqlite3.connect('pdu_devices.db')
-    pdu_cursor = pdu_conn.cursor()
-
-    # Create a table to store PDU device data if it doesn't exist
-    #pdu_cursor.execute('''
-    #    CREATE TABLE IF NOT EXISTS pdu_devices (
-    #        host_address TEXT RIMARY KEY,
-    #        username TEXT,
-    #        password TEXT,
-    #        driver_path TEXT
-    #    )
-    #''')
-    
-    pdu_cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pdu_devices (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            host_address TEXT,
-            username TEXT,
-            password TEXT,
-            driver_path TEXT
-        )
-    ''')
-
-    pdu_conn.commit()
-    pdu_conn.close()
 
 # single database init - need to test and integrate
-# def init_db():
-    # conn = sqlite3.connect('IH_device_database.db')
-    # cursor = conn.cursor()
+def init_db():
+    print("initialising the database...")
+    logger.info("testing.... IN init_db function.")
+    conn = sqlite3.connect('/home/innovation-hub-api/persistent/db/container2/IH_device_database.db')
+    cursor = conn.cursor()
 
-    # # Create a table for rooms
-    # cursor.execute('''
-        # CREATE TABLE IF NOT EXISTS rooms (
-            # room_code TEXT PRIMARY KEY,
-            # description TEXT
-        # )
-    # ''')
+    print("initialising table rooms...")
+    logger.info("testing.... init_db, initialising table rooms..")
+    # Create a table for rooms
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rooms (
+            room_code TEXT PRIMARY KEY,
+            description TEXT
+        )
+    ''')
 
+    # print("initialising table hosts...")
     # # Create a table for hosts
     # cursor.execute('''
         # CREATE TABLE IF NOT EXISTS hosts (
@@ -532,219 +455,66 @@ def init_db():
             # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
         # )
     # ''')
-
-    # # Create a table for displays
-    # cursor.execute('''
-        # CREATE TABLE IF NOT EXISTS displays (
-            # display_address TEXT PRIMARY KEY,
-            # display_name TEXT,
-            # display_type TEXT,
-            # username TEXT,
-            # password TEXT,
-            # room_code TEXT,
-            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
-        # )
-    # ''')
-
-    # # Create a table for pdus
-    # cursor.execute('''
-        # CREATE TABLE IF NOT EXISTS pdus (
-            # pdu_address TEXT PRIMARY KEY,
-            # username TEXT,
-            # password TEXT,
-            # room_code TEXT,
-            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
-        # )
-    # ''')
-
-    # conn.commit()
-    # conn.close()
-
-init_db()
-
-@app.before_first_request
-def before_first_request():
-    init_db()
-
-def get_db_connection(database='host_data.db'):
-    conn = sqlite3.connect(database)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-# @app.route('/add_host', methods=['POST'])
-# def add_host():
-    # data = request.get_json()
-    # host_address = data.get('host_address')
-    # username = data.get('username')
-    # password = data.get('password')
-
-    # conn = get_db_connection()
-    # cursor = conn.cursor()
-
-    # # Check if the host address already exists in the database
-    # cursor.execute('SELECT id FROM hosts WHERE host_address = ?', (host_address,))
-    # existing_host = cursor.fetchone()
-
-    # if existing_host:
-        # conn.close()
-        # return jsonify({'message': 'Host with the same address already exists'}), 200
-
-    # # Insert the host data into the database
-    # cursor.execute('INSERT INTO hosts (host_address, username, password) VALUES (?, ?, ?)',
-                   # (host_address, username, password))
-    # conn.commit()
-    # conn.close()
-
-    # return jsonify({'message': 'Host added successfully'}), 200
     
-@app.route('/add_host', methods=['POST'])
-def add_host():
-    logger.info(f"Testing: /add_host")
-    data = request.get_json()
+    print("initialising table hosts...")
+    logger.info("testing.... init_db, initialising table hosts..")
+    # Create a table for hosts
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS hosts (
+            host_address TEXT PRIMARY KEY,
+            host_name TEXT,
+            description TEXT,
+            username TEXT,
+            password TEXT,
+            platform TEXT,
+            room_code TEXT,
+            
+            config_default TEXT,
+            config_cisco TEXT,
+            config_optus TEXT,
+            FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        )
+    ''')
 
-    # Check if the required fields are present in the JSON data
-    required_fields = ['host_address', 'username', 'password']
-    if not all(key in data for key in required_fields):
-        return jsonify({'error': 'Missing required field(s)'}), 400
-
-    host_address = data.get('host_address')
-    logger.info(f"Testing: /add_host host_address: {host_address}")
-    username = data.get('username')
-    logger.info(f"Testing: /add_host username: {username}")
-    password = data.get('password')
-    logger.info(f"Testing: /add_host password: {password}")
+    print("initialising table displays...")
+    logger.info("testing.... init_db, initialising table displays..")
+    # Create a table for displays
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS displays (
+            display_address TEXT PRIMARY KEY,
+            display_name TEXT,
+            display_type TEXT,
+            username TEXT,
+            password TEXT,
+            room_code TEXT,
+            FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        )
+    ''')
     
-    # Get the optional 'platform' field if it exists in the JSON data
-    platform = data.get('platform')
-    logger.info(f"Testing: /add_host platform: {platform}")
+    print("initialising table pdus...")
+    logger.info("testing.... init_db, initialising table pdus..")
+    # Create a table for pdus
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pdus (
+            pdu_address TEXT PRIMARY KEY,
+            username TEXT,
+            password TEXT,
+            driver_path TEXT,
+            room_code TEXT,
+            FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        )
+    ''')
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Check if the host address already exists in the database
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))
-    existing_host = cursor.fetchone()
-
-    if existing_host:
-        logger.info(f"Testing: /add_host existing_host: {existing_host}")
-        conn.close()
-        return jsonify({'message': 'Host with the same address already exists'}), 200
-
-    # Insert the host data into the database, including the platform if provided
-    if platform is not None:
-        logger.info(f"Testing: /add_host if platform is not None is true: {platform}")
-        cursor.execute('INSERT INTO hosts (host_address, username, password, platform) VALUES (?, ?, ?, ?)',
-                       (host_address, username, password, platform))
-    else:
-        logger.info(f"Testing: /add_host if platform is not None is false: {platform}")
-        cursor.execute('INSERT INTO hosts (host_address, username, password) VALUES (?, ?, ?)',
-                       (host_address, username, password))
-
-    conn.commit() 
-    
-    # Query the database to retrieve the added host
-    cursor.execute('SELECT * FROM hosts WHERE host_address = ?', (host_address,))
-    added_host = cursor.fetchone()
-    logger.info(f"Added host in the database: {added_host}")
-    
-    # Log the actual values
-    if added_host:
-        logger.info(f"Added host: host_address={added_host[0]}, username={added_host[1]}, password={added_host[2]}, platform={added_host[3]}")
-
-    # Check the database structure and platform data type
+    logger.info("testing.... init_db, committting tables..")
     try:
-        # Check if the "hosts" table exists
-        cursor.execute("PRAGMA table_info(hosts)")
-        table_info = cursor.fetchall()
-
-        # Log the table structure
-        for column in table_info:
-            column_name, data_type, _, _, _, _ = column
-            logger.info(f"Column Name: {column_name}, Data Type: {data_type}")
-
-        # Check the data type of the "platform" column
-        for column in table_info:
-            column_name, data_type, _, _, _, _ = column
-            if column_name == 'platform':
-                logger.info(f"Data Type of 'platform' Column: {data_type}")
-
-    except sqlite3.Error as e:
-        logger.error(f"Error: {e}")
-
-    conn.close()
-
-    return jsonify({'message': 'Host added successfully'}), 200
-
-# @app.route('/remove_host/<int:host_id>', methods=['POST'])
-# def remove_host(host_id):
-    # conn = get_db_connection()
-    # cursor = conn.cursor()
-
-    # # Check if the host exists in the database
-    # cursor.execute('SELECT id FROM hosts WHERE id = ?', (host_id,))
-    # existing_host = cursor.fetchone()
-
-    # if not existing_host:
-        # conn.close()
-        # return jsonify({'error': 'Host not found'}), 200
-
-    # # Remove the host from the database
-    # cursor.execute('DELETE FROM hosts WHERE id = ?', (host_id,))
-    # conn.commit()
-    # conn.close()
-
-    # return jsonify({'success': 'Host removed successfully!'}), 200
-    
-@app.route('/remove_host/<string:host_address>', methods=['POST'])
-def remove_host(host_address):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Check if the host exists in the database
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))
-    existing_host = cursor.fetchone()
-
-    if not existing_host:
+        conn.commit()
+        logger.info("testing.... init_db, committting successful!")
+    except:
+        logger.info("testing.... init_db, committting failed!")
+    finally:
         conn.close()
-        return jsonify({'error': 'Host not found'}), 200
 
-    # Remove the host from the database
-    cursor.execute('DELETE FROM hosts WHERE host_address = ?', (host_address,))
-    conn.commit()
-    conn.close()
-
-    return jsonify({'success': 'Host removed successfully!'}), 200
-
-
-@app.route('/remove_host_address', methods=['POST'])
-def remove_host_address():
-    data = request.get_json()
-
-    # Check if the required 'host_address' field is present in the JSON data
-    if 'host_address' not in data:
-        return jsonify({'error': 'Missing required field(s)'}), 400
-
-    host_address = data['host_address']
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Check if the host exists in the database based on 'host_address'
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ?', (host_address,))    
-    existing_host = cursor.fetchone()
-
-    if not existing_host:
-        conn.close()
-        return jsonify({'error': 'Host not found'}), 404
-
-    # Remove the host from the database based on 'host_address'
-    cursor.execute('DELETE FROM hosts WHERE host_address = ?', (host_address,))
-    conn.commit()
-    conn.close()
-
-    return jsonify({'success': 'Host removed successfully!'}), 200
-
-
+# # Route to get all hosts
 @app.route('/get_hosts', methods=['GET'])
 def get_hosts():
     conn = get_db_connection()
@@ -754,116 +524,587 @@ def get_hosts():
     hosts = cursor.fetchall()
     conn.close()
     
-    logger.info(f"testing.... in get_hosts, cursor.execute('SELECT * FROM hosts') is: {hosts}")
-    
     if len(hosts) < 1:
         return jsonify({'message': 'No hosts added yet. Please add a host first.'}), 200
 
     host_list = []
-    #for host in hosts:
-    #    host_list.append({
-    #        'host_id': host['id'],
-    #        'host_address': host['host_address']
-    #    })
-    
-    host_id = 1  # Initialize host_id to 0
-
     for host in hosts:
         host_list.append({
-            'host_id': host_id,
-            'host_address': host['host_address']
+            'host_id': host['host_address'],
+            'host_name': host['host_name'],
+            'description': host['description'],
+            'username': host['username'],
+            'password': host['password'],
+            'platform': host['platform'],
+            'room_code': host['room_code']
         })
-        host_id += 1  # Increment host_id for the next host
 
-    logger.info(f"testing.... in get_hosts, host_list is: {host_list}")
-    
     return jsonify({'hosts': host_list}), 200
+
+@app.route('/get_rooms', methods=['GET'])
+def get_rooms():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM rooms')
+    rooms = cursor.fetchall()
+    conn.close()
+    
+    if len(rooms) < 1:
+        return jsonify({'message': 'No rooms added yet. Please add a room first.'}), 200
+
+    room_list = []
+    for room in rooms:
+        room_list.append({
+            'room_code': room['room_code'],
+            'description': room['description']
+        })
+
+    return jsonify({'rooms': room_list}), 200
+
+# Route to get all displays
+@app.route('/get_displays', methods=['GET'])
+def get_displays():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM displays')
+    displays = cursor.fetchall()
+    conn.close()
+    
+    if len(displays) < 1:
+        return jsonify({'message': 'No displays added yet. Please add a display first.'}), 200
+
+    display_list = []
+    for display in displays:
+        display_list.append({
+            'display_address': display['display_address'],
+            'display_name': display['display_name'],
+            'display_type': display['display_type'],
+            'username': display['username'],
+            'password': display['password'],
+            'room_code': display['room_code']
+        })
+
+    return jsonify({'displays': display_list}), 200
+
+# Route to get all PDUs
+@app.route('/get_pdus', methods=['GET'])
+def get_pdus():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM pdus')
+    pdus = cursor.fetchall()
+    conn.close()
+    
+    if len(pdus) < 1:
+        return jsonify({'message': 'No PDUs added yet. Please add a PDU first.'}), 200
+
+    pdu_list = []
+    for pdu in pdus:
+        pdu_list.append({
+            'pdu_address': pdu['pdu_address'],
+            'username': pdu['username'],
+            'password': pdu['password'],
+            'room_code': pdu['room_code']
+        })
+
+    return jsonify({'pdus': pdu_list}), 200
+
+@app.route('/get_room/<room_code>', methods=['GET'])
+def get_room(room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM rooms WHERE room_code = ?', (room_code,))
+    room = cursor.fetchone()
+
+    if room is None:
+        conn.close()
+        return jsonify({'message': f'Room with room_code {room_code} not found.'}), 404
+
+    cursor.execute('SELECT * FROM hosts WHERE room_code = ?', (room_code,))
+    hosts = cursor.fetchall()
+    
+    host_list = []
+    for host in hosts:
+        host_list.append({
+            'host_id': host['host_address'],
+            'host_name': host['host_name'],
+            'description': host['description'],
+            'username': host['username'],
+            'password': host['password'],
+            'platform': host['platform'],
+            'room_code': host['room_code'],
+            'config_default': host['config_default'],
+            'config_cisco': host['config_cisco'],
+            'config_optus': host['config_optus']
+        })
+
+    cursor.execute('SELECT * FROM displays WHERE room_code = ?', (room_code,))
+    displays = cursor.fetchall()
+    
+    display_list = []
+    for display in displays:
+        display_list.append({
+            'display_address': display['display_address'],
+            'display_name': display['display_name'],
+            'display_type': display['display_type'],
+            'username': display['username'],
+            'password': display['password'],
+            'room_code': display['room_code']
+        })
+
+    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    pdus = cursor.fetchall()
+    
+    pdu_list = []
+    for pdu in pdus:
+        pdu_list.append({
+            'pdu_address': pdu['pdu_address'],
+            'username': pdu['username'],
+            'password': pdu['password'],
+            'room_code': pdu['room_code']
+        })
+
+    conn.close()
+    
+    room_info = {
+        'room_code': room['room_code'],
+        'description': room['description'],
+        'hosts': host_list,
+        'displays': display_list,
+        'pdus': pdu_list
+    }
+
+    return jsonify({'room_info': room_info}), 200
+
+
+# Route to add a new room
+@app.route('/add_room', methods=['POST'])
+def add_room():
+    data = request.get_json()
+
+    # Check if the required fields are present in the JSON data
+    required_fields = ['room_code', 'description']
+    if not all(key in data for key in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    room_code = data.get('room_code')
+    description = data.get('description')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code already exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if existing_room:
+        conn.close()
+        return jsonify({'error': 'Room with the same room_code already exists'}), 400
+
+    # Insert the room data into the database
+    cursor.execute('INSERT INTO rooms (room_code, description) VALUES (?, ?)', (room_code, description))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Room added successfully'}), 200
+
+@app.route('/remove_room/<string:room_code>', methods=['DELETE'])
+def remove_room(room_code):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room not found'}), 404
+
+    # Delete the room from the database
+    cursor.execute('DELETE FROM rooms WHERE room_code = ?', (room_code,))
+    
+    # Delete associated PDUs, displays, and hosts from the database
+    cursor.execute('DELETE FROM pdus WHERE room_code = ?', (room_code,))
+    cursor.execute('DELETE FROM displays WHERE room_code = ?', (room_code,))
+    cursor.execute('DELETE FROM hosts WHERE room_code = ?', (room_code,))
+    
+    conn.commit()
+    conn.close()
+
+    # Now, remove the devices from app.config
+    devices = app.config.get('pdu_data', [])
+
+    for device in devices:
+        if device.room_code == room_code:
+            device.disconnect()
+            devices.remove(device)
+
+    app.config['pdu_data'] = devices
+
+    return jsonify({'message': 'Room and associated devices removed successfully'}), 200
+
+
+#Route to add a new host
+#@app.route('/add_host', methods=['POST'])
+@app.route('/add_host/<string:room_code>', methods=['POST'])
+def add_host(room_code):
+    data = request.get_json()
+
+    # Check if the required fields are present in the JSON data
+    required_fields = ['host_address', 'host_name', 'description', 'username', 'password', 'platform']
+    if not all(key in data for key in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    host_address = data.get('host_address')
+    host_name = data.get('host_name')
+    description = data.get('description')
+    username = data.get('username')
+    password = data.get('password')
+    platform = data.get('platform')
+    
+    print("display_name: ", host_name)
+    print("display_type: ", platform)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
+
+    # Check if the host address already exists in the database for the given room
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    existing_host = cursor.fetchone()
+
+    if existing_host:
+        conn.close()
+        return jsonify({'message': 'Host with the same address already exists in the room'}), 200
+
+    # Insert the host data into the database
+    cursor.execute('INSERT INTO hosts (host_address, host_name, description, username, password, platform, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                       (host_address, host_name, description, username, password, platform, room_code))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Host added successfully'}), 200
+    
+@app.route('/remove_host/<string:room_code>/<string:host_address>', methods=['DELETE'])
+def remove_host(room_code, host_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room not found'}), 404
+
+    # Check if the host with the provided host_address exists
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    existing_host = cursor.fetchone()
+
+    if not existing_host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Delete the host from the database
+    cursor.execute('DELETE FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Host removed successfully'}), 200
+
+@app.route('/update_host_config/<string:room_code>/<string:host_address>', methods=['PUT'])
+def update_host_config(room_code, host_address):
+    data = request.get_json()
+
+    # Check if the required fields are present in the JSON data
+    required_fields = ['config_default', 'config_cisco', 'config_optus']
+    if not all(key in data for key in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    config_default = data.get('config_default')
+    config_cisco = data.get('config_cisco')
+    config_optus = data.get('config_optus')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    existing_host = cursor.fetchone()
+
+    if not existing_host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Update the configuration attributes in the database
+    cursor.execute(
+        'UPDATE hosts SET config_default=?, config_cisco=?, config_optus=? WHERE host_address=? AND room_code=?',
+        (config_default, config_cisco, config_optus, host_address, room_code)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Host configuration attributes updated successfully'}), 200
+
+@app.route('/get_host_config/<string:room_code>/<string:host_address>', methods=['GET'])
+def get_host_config(room_code, host_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute('SELECT * FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host = cursor.fetchone()
+
+    if not host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Construct a dictionary containing the configuration attributes
+    host_config = {
+        'config_default': host['config_default'],
+        'config_cisco': host['config_cisco'],
+        'config_optus': host['config_optus']
+    }
+
+    conn.close()
+
+    return jsonify({'host_config': host_config}), 200
+
+@app.route('/set_host_config/<string:room_code>/<string:host_address>/<string:attribute_name>', methods=['PUT'])
+def set_host_config_attribute(room_code, host_address, attribute_name):
+    data = request.get_json()
+
+    # Check if the attribute name is valid
+    valid_attribute_names = ['config_default', 'config_cisco', 'config_optus']
+    if attribute_name not in valid_attribute_names:
+        return jsonify({'error': f'Invalid attribute name.  Must be one of: {valid_attribute_names}'}), 400
+
+    # Check if the required field is present in the JSON data
+    if attribute_name not in data:
+        return jsonify({'error': f'Missing {attribute_name} field. Must be one of: {valid_attribute_names}'}), 400
+
+    attribute_value = data[attribute_name]
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    existing_host = cursor.fetchone()
+
+    if not existing_host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Update the specific attribute in the database
+    cursor.execute(
+        f'UPDATE hosts SET {attribute_name}=? WHERE host_address=? AND room_code=?',
+        (attribute_value, host_address, room_code)
+    )
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': f'{attribute_name} attribute updated successfully'}), 200
+    
+@app.route('/get_host_config/<string:room_code>/<string:host_address>/<string:attribute_name>', methods=['GET'])
+def get_host_config_attribute(room_code, host_address, attribute_name):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute('SELECT * FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host = cursor.fetchone()
+
+    if not host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Check if the requested attribute name is valid
+    valid_attribute_names = ['config_default', 'config_cisco', 'config_optus']
+    if attribute_name not in valid_attribute_names:
+        conn.close()
+        return jsonify({'error': f'Invalid attribute name.  Must be one of: {valid_attribute_names}'}), 400
+
+    # Construct a dictionary containing the requested configuration attribute
+    host_config = {
+        attribute_name: host[attribute_name]
+    }
+
+    conn.close()
+
+    return jsonify({'host_config': host_config}), 200
+    
+#@app.route('/add_display', methods=['POST'])
+@app.route('/add_display/<string:room_code>', methods=['POST'])
+def add_display(room_code):
+    data = request.get_json()
+
+    # Check if the required fields are present in the JSON data
+    required_fields = ['display_address', 'display_name', 'display_type', 'username', 'password']
+    if not all(key in data for key in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    display_address = data.get('display_address')
+    display_name = data.get('display_name')
+    display_type = data.get('display_type')
+    username = data.get('username')
+    password = data.get('password')
+    #room_code = data.get('room_code')
+    
+    print("display_name: ", display_name)
+    print("display_type: ", display_type)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
+
+    # Check if the display address already exists in the database for the given room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if existing_display:
+        conn.close()
+        return jsonify({'message': 'Display with the same address already exists in the room'}), 200
+
+    # Insert the display data into the database
+    cursor.execute('INSERT INTO displays (display_address, display_name, display_type, username, password, room_code) VALUES (?, ?, ?, ?, ?, ?)',
+                   (display_address, display_name, display_type, username, password, room_code))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Display added successfully'}), 200
+
+@app.route('/remove_display/<string:room_code>/<string:display_address>', methods=['DELETE'])
+def remove_display(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room not found'}), 404
+
+    # Check if the display with the provided display_address exists
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Delete the display from the database
+    cursor.execute('DELETE FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Display removed successfully'}), 200
+
+#init_db()
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+chrome_driver_path = os.path.join(current_directory, 'chromedriver')
+
+# Initialize an empty list to store host data
+app.config['pdu_data'] = None
+
+# Helper function to create and cache devices
+def get_or_create_devices():
+    pdu_data = app.config.get('pdu_data')
+
+    if pdu_data is not None:
+        return pdu_data
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
+    rows = cursor.fetchall()
+    
+    print("here!!!") 
+    print(rows)
+    for row in rows:
+        print(len(row))
+        for r in row:
+            print(r)
+    print("and here!!!")
+
+    devices = []
+    for row in rows:
+        print(len(row))
+        pdu_address = row[0]
+        username = row[1]
+        password = row[2]
+        driver_path = row[3]
+        room_code = row[4]
+        print(pdu_address, username, password, driver_path, room_code)
+
+        new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
+
+        try:
+            new_pdu.connect()
+            devices.append(new_pdu)
+        except Exception as e:
+            pass
+
+    conn.close()
+
+    app.config['pdu_data'] = devices
+    return devices
+	
+app.config['pdu_data'] = None
+
+# Load PC host devices when the Flask app starts
+#@app.before_first_request
+#def load_pdu():
+#    app.config['pdu_data'] = get_or_create_devices()
+#    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
+
+@app.before_first_request
+def before_first_request():
+    print("on first run...")
+    logger.info("testing.... on first run, init db..")
+    init_db()
+    
+    # load and init any pdus form db
+    logger.info("testing.... on first run, load init pdus...")
+    app.config['pdu_data'] = get_or_create_devices()
+    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
+
+def get_db_connection(database='/home/innovation-hub-api/persistent/db/container2/IH_device_database.db'):                    
+    conn = sqlite3.connect(database)
+    conn.row_factory = sqlite3.Row
+    return conn
 
 # =========================================================================
 #  API - endpoints
 # =========================================================================
-
-# home endpoint - displays a list of the current API endpoints
-@app.route('/home')
-def home():
-    endpoints = [
-        {
-            'url': '/mute_device',
-            'method': 'POST',
-            'description': 'Mute or unmute the volume on a remote computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password',
-                'mute': True
-            }
-        },
-        {
-            'url': '/reboot_device',
-            'method': 'POST',
-            'description': 'Reboot a remote computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password'
-            }
-        },
-        {
-            'url': '/open_powerpoint',
-            'method': 'POST',
-            'description': 'Open a PowerPoint presentation on a remote computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password',
-                'url': 'presentation-url'
-            }
-        },
-        {
-            'url': '/close_process',
-            'method': 'POST',
-            'description': 'Close a process running on a remote computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password',
-                'pid': 'process-id'
-            }
-        },
-        {
-            'url': '/open_application',
-            'method': 'POST',
-            'description': 'Run an application on a remote computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password',
-                "application": "C:\\Program Files\\MyApp\\MyApp.exe",
-                "arguments": "--arg1 value1 --arg2 value2"
-            }
-        },
-        {
-            'url': '/send_nircmd',
-            'method': 'POST',
-            'description': 'Run system tool nircmd commands on remote windows computer.',
-            'example_payload': {
-                'hostname': 'remote-hostname.com',
-                'username': 'remote-username',
-                'password': 'remote-password',
-                "command": "screensaver",
-            }
-        }
-    ]
-
-    endpoint_info = ''
-    for endpoint in endpoints:
-        example_payload_str = json.dumps(endpoint['example_payload'], sort_keys=True, indent=4) #json.dumps(endpoint['example_payload'], indent=4).replace(',', ',\n')    
-
-        endpoint_info += f"<h2>{endpoint['url']}</h2><p><strong>Method:</strong> {endpoint['method']}</p>"
-        endpoint_info += f"<p><strong>Description:</strong> {endpoint['description']}</p>"
-        endpoint_info += f"<p><strong>Example Payload:</strong> <pre>{example_payload_str}</pre></p><hr>"
-
-    return f"<h1>Welcome to the office space management system!</h1><p>Here is a list of available endpoints:</p>{endpoint_info}"    
 
 ### testing connect to SAMBA
 ### ========================
@@ -969,173 +1210,39 @@ def connect_samba_share_route():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-### testing connect to SAMBA
-### ========================
 
-# # mute/unmte remote windows pc endpoint
-# @app.route('/mute_device', methods=['POST'])
-# def mute_device():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'mute']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400 
-
-    # # Get the hostname, username, and password for the specified computer
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # mute = data.get('mute')
-    # platformInput = data.get('platformInput')
-
-    # print("\n", hostname, username, password, mute, "\n")
-
-    # # Reboot the remote computer
-    # result = run_mute_device(hostname, username, password, mute, platformInput)
-
-    # if result is None:
-        # return jsonify({'error': 'backend function failed'}), 500
-    # else:
-        # return jsonify({'response': result}), 200
-
-@app.route('/mute_device', methods=['POST'])
-def mute_device():
-    data = request.get_json()
-    if not all(key in data for key in ['hostname', 'mute']):
-        return jsonify({'error': 'Missing required field(s)'}), 400 
-
-    # Get the hostname and mute status
-    hostname = data.get('hostname')
-    mute = data.get('mute')
-
-    # Fetch the username, password, and platform from the database based on the hostname
+@app.route('/reboot/<string:room_code>/<string:host_address>', methods=['GET'])
+def reboot_device(room_code, host_address):
+    # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = ?', (hostname,))
-    host_info = cursor.fetchone()
-    conn.close()
-
-    if host_info is None:
-        return jsonify({'error': 'Host not found'}), 404
-
-    username, password, platform = host_info
-
-    print("\n", hostname, username, password, mute, platform, "\n")
-
-    # Reboot the remote computer
-    result = run_mute_device(hostname, username, password, mute, platform)
-
-    if result is None:
-        return jsonify({'error': 'Backend function failed'}), 500
-    else:
-        return jsonify({'response': result}), 200
-
-# reboot remote pc endpoint
-@app.route('/reboot_device_by_platform', methods=['POST'])
-def reboot_windows():
-    data = request.get_json()
-    if not all(key in data for key in ['hostname', 'username', 'password']):
-        return jsonify({'error': 'Missing required field(s)'}), 400 
-
-    # Get the hostname, username, and password for the specified computer
-    hostname = data.get('hostname')
-    username = data.get('username')
-    password = data.get('password')
-    platform = data.get('platform')
-
-    print("\n", hostname, username, password, "\n")
-
-    # Reboot the remote computer
-    result = run_reboot_device(hostname, username, password, platform)
-
-    if result is None:
-        return jsonify({'error': 'backend function failed'}), 500
-    else:
-        return jsonify({'response': result}), 200
-
-
-@app.route('/reboot_device', methods=['POST'])
-def reboot_device():
-    logger.info("Testing: in reboot_device")
-    data = request.get_json()
-    if 'hostname' not in data:
-        return jsonify({'error': 'Missing required field(s)'}), 400 
-
-    # Get the hostname (host address) from the request
-    hostname = data.get('hostname')
-    logger.info(f"Testing: in reboot_device, hostname: {hostname}")
-
-    # Query the database to retrieve the username and password based on the hostname
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
     if host_data is None:
         return jsonify({'error': 'Host not found'}), 404
-        
-    # Log the actual values
-    if host_data:
-        try:
-            logger.info(f"retrieved host: host_address={hostname}, username={host_data[0]}, password={host_data[1]}, platform={host_data[2]}")
-        except:
-            logger.info(f"retrieved host platform excepted...")
-            logger.info(f"retrieved host: host_address={hostname}, username={host_data[0]}, password={host_data[1]}")
-            pass
-            
-    platform = None
 
-    # Extract the username, password, and platform from the retrieved data if available
-    username = host_data[0]
-    password = host_data[1]
-    platform = host_data[2] if len(host_data) > 2 else None
+    username, password, platform = host_data
 
-    # Log the values
-    logger.info(f"Testing: in reboot_device, username: {username}")
-    logger.info(f"Testing: in reboot_device, password: {password}")
-    logger.info(f"Testing: in reboot_device, platform: {platform}")
-
-    # Reboot the remote computer using the retrieved credentials
-    result = run_reboot_device(hostname, username, password, platform)
+    # Reboot the remote device based on the retrieved information
+    result = run_reboot_device(host_address, username, password, platform)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
 
-# # open powerpoint in chrome on remote windows pc endpoint
-# @app.route('/open_powerpoint', methods=['POST'])
-# def open_powerpoint():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'url']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400
-
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # url = data.get('url')
-
-    # print("\n", hostname, username, password, url, "\n")
-
-    # # open powerpoint on chrome
-    # result = run_powerpoint(hostname, username, password, url)
-
-    # if result is None:
-        # return jsonify({'error': 'backend function failed'}), 500
-    # else:
-        # return jsonify({'response': result}), 200
-
-@app.route('/open_powerpoint', methods=['POST'])
-def open_powerpoint():
+@app.route('/open_powerpoint/<string:room_code>/<string:host_address>', methods=['POST'])
+def open_powerpoint(room_code, host_address):
     data = request.get_json()
-    if not all(key in data for key in ['hostname', 'url']):
+    if not all(key in data for key in ['url']):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    hostname = data.get('hostname')
-
-    # Query the database to retrieve the username and password based on the hostname
+    # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1147,10 +1254,8 @@ def open_powerpoint():
     password = host_data['password']
     url = data.get('url')
 
-    print("\n", hostname, username, password, url, "\n")
-
-    # Open PowerPoint on Chrome using the retrieved credentials
-    result = run_powerpoint(hostname, username, password, url)
+    # Open PowerPoint on the remote device using the retrieved credentials and URL
+    result = run_powerpoint(host_address, username, password, url)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
@@ -1158,38 +1263,15 @@ def open_powerpoint():
         return jsonify({'response': result}), 200
 
 
-# # open powerpoint in chrome on remote windows pc endpoint
-# @app.route('/get_user_session_id', methods=['GET'])
-# def get_user_session_id():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'target_username']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400
-
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # target_username = data.get('target_username')
-
-    # print("\n", hostname, username, password, target_username, "\n")
-
-    # # check for target_username's session ID on remote host
-    # result = run_get_session_id(hostname, username, password, target_username)
-
-    # if result is None:
-        # return jsonify({'response': f"No user session ID found for {target_username}"}), 200
-    # else:
-        # return jsonify({'response': result}), 200
-
-
 @app.route('/get_user_session_id', methods=['POST'])
-def get_user_session_id():
+def get_user_session_id_old():
     data = request.get_json()
     if not all(key in data for key in ['hostname', 'target_username']):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
     hostname = data.get('hostname')
-
-    # Query the database to retrieve the username and password based on the hostname
+    
+    # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
@@ -1202,44 +1284,47 @@ def get_user_session_id():
     # Extract the username and password from the retrieved data
     username = host_data['username']
     password = host_data['password']
-    target_username = data.get('target_username')
-
-    print("\n", hostname, username, password, target_username, "\n")
+    target_username = host_data['username']
 
     # Check for target_username's session ID on the remote host using the retrieved credentials
-    result = run_get_session_id(hostname, username, password, target_username)
+    result = run_get_session_id(host_address, username, password, target_username)
 
     if result is None:
         return jsonify({'response': f"No user session ID found for {target_username}"}), 200
     else:
         return jsonify({'response': result}), 200
 
+@app.route('/get_user_session_id/<string:room_code>/<string:host_address>', methods=['GET'])
+def get_user_session_id(room_code, host_address):
+    #data = request.get_json()
+    #if not all(key in data for key in ['target_username']):
+    #    return jsonify({'error': 'Missing required field(s)'}), 400
 
-# # kill running process on remote windows pc endpoint
-# @app.route('/close_process', methods=['POST'])
-# def close_process():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'pid']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400
+    # Query the database to retrieve the username and password based on the host_address and room_code
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
 
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # pid = data.get('pid')
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
 
-    # print("\n", hostname, username, password, pid, "\n")
+    # Extract the username and password from the retrieved data
+    username = host_data['username']
+    password = host_data['password']
+    target_username = host_data['username']
 
-    # # kill process
-    # result = kill_process(hostname, username, password, pid)
+    # Check for target_username's session ID on the remote host using the retrieved credentials
+    result = run_get_session_id(host_address, username, password, target_username)
 
-    # if result is None:
-        # return jsonify({'error': 'backend function failed'}), 500
-    # else:
-        # return jsonify({'response': result}), 200
-
+    if result is None:
+        return jsonify({'response': f"No user session ID found for {target_username}"}), 200
+    else:
+        return jsonify({'response': result}), 200
 
 @app.route('/close_process', methods=['POST'])
-def close_process():
+def close_process_old():
     data = request.get_json()
     if not all(key in data for key in ['hostname', 'pid']):
         return jsonify({'error': 'Missing required field(s)'}), 400
@@ -1270,34 +1355,66 @@ def close_process():
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
+        
+@app.route('/close_process/<string:room_code>/<string:host_address>', methods=['POST'])
+def close_process(room_code, host_address):
+    data = request.get_json()
+    if not all(key in data for key in ['pid']):
+        return jsonify({'error': 'Missing required field(s)'}), 400
 
+    # Query the database to retrieve the username and password based on the host_address and room_code
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
 
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
 
-# @app.route('/open_application', methods=['POST'])
-# def open_application_route():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'application']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400
+    # Extract the username and password from the retrieved data
+    username = host_data['username']
+    password = host_data['password']
+    pid = data.get('pid')
 
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # application = data.get('application')
-    # arguments = data.get('arguments')
+    # Kill the process on the remote host using the retrieved credentials
+    result = kill_process(host_address, username, password, pid)
 
-    # print("\n", hostname, username, password, application, arguments, "\n")
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
 
-    # # open application
-    # result = run_application(hostname, username, password, application, arguments)
+@app.route('/close_process/<string:room_code>/<string:host_address>/<string:pid>', methods=['POST'])
+def close_process2(room_code, host_address, pid):
+    # Ensure the 'pid' is present in the URL
+    if not pid:
+        return jsonify({'error': 'Missing required field(s)'}), 400
 
-    # if result is None:
-        # return jsonify({'error': 'backend function failed'}), 500
-    # else:
-        # return jsonify({'response': result}), 200
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
 
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    # Extract the username and password from the retrieved data
+    username = host_data['username']
+    password = host_data['password']
+
+    # Kill the process on the remote host using the retrieved credentials and the 'pid' from the URL
+    result = kill_process(host_address, username, password, pid)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
 
 @app.route('/open_application', methods=['POST'])
-def open_application_route():
+def open_application_route_old():
     data = request.get_json()
     if not all(key in data for key in ['hostname', 'application']):
         return jsonify({'error': 'Missing required field(s)'}), 400
@@ -1331,29 +1448,38 @@ def open_application_route():
         return jsonify({'response': result}), 200
 
 
-# @app.route('/send_nircmd', methods=['POST'])
-# def send_nircmd():
-    # data = request.get_json()
-    # if not all(key in data for key in ['hostname', 'username', 'password', 'command']):
-        # return jsonify({'error': 'Missing required field(s)'}), 400
+@app.route('/open_application/<string:room_code>/<string:host_address>', methods=['POST'])
+def open_application(room_code, host_address):
+    data = request.get_json()
+    if not all(key in data for key in ['application']):
+        return jsonify({'error': 'Missing required field(s)'}), 400
 
-    # hostname = data.get('hostname')
-    # username = data.get('username')
-    # password = data.get('password')
-    # command = data.get('command')
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
 
-    # print("\n", hostname, username, password, command, "\n")
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
 
-    # # run nircmd
-    # result = run_nircmd(hostname, username, password, application, arguments)
+    # Extract the username and password from the retrieved data
+    username = host_data['username']
+    password = host_data['password']
+    application = data.get('application')
+    arguments = data.get('arguments')
 
-    # if result is None:
-        # return jsonify({'error': 'backend function failed'}), 500
-    # else:
-        # return jsonify({'response': result}), 200
+    # Open the application on the remote host using the retrieved credentials
+    result = run_application(host_address, username, password, application, arguments)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
 
 @app.route('/send_nircmd', methods=['POST'])
-def send_nircmd():
+def send_nircmd_old():
     data = request.get_json()
     if not all(key in data for key in ['hostname', 'command']):
         return jsonify({'error': 'Missing required field(s)'}), 400
@@ -1384,6 +1510,33 @@ def send_nircmd():
         return jsonify({'response': result}), 200
 
 
+@app.route('/send_nircmd/<string:room_code>/<string:host_address>', methods=['POST'])
+def send_nircmd(room_code, host_address):
+    data = request.get_json()
+    if not all(key in data for key in ['command']):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    host_info = cursor.fetchone()
+    conn.close()
+
+    if host_info is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password = host_info
+    command = data.get('command')
+
+    # Run nircmd on the remote host using the retrieved credentials
+    result = run_nircmd(host_address, username, password, command)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+
 # =========================================================================
 #  PDU SECTION
 # =========================================================================
@@ -1398,229 +1551,6 @@ import platform
 from zipfile import ZipFile
 from flask import Flask
 
-# ====================================
-# CHROMEDRIVER INSTALLATION
-# ====================================
-PLATFORM_MAPPING = {
-    'Linux': 'linux64',
-    'Darwin': 'mac-x64',
-    'Windows': 'win64' if platform.architecture()[0] == '64bit' else 'win32'
-}
-
-def download_chromedriver():
-    os_name = platform.system()
-
-    if os_name in PLATFORM_MAPPING:
-        os_arch = PLATFORM_MAPPING[os_name]
-        chromedriver_filename = 'chromedriver.exe' if os_name == 'Windows' else 'chromedriver'
-    else:
-        print(f"Chromedriver for your operating system '{os_name}' is not available.")
-        return None
-
-    # Check if chromedriver file already exists
-    if os.path.exists(chromedriver_filename):
-        print("SUCCESS! Chromedriver found in current directory.")
-        return chromedriver_filename
-    
-    json_url = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json"
-    
-    response = requests.get(json_url)
-    if response.status_code == 200:
-        json_data = response.json()
-    else:
-        print(f"Failed to retrieve JSON data: {response.status_code} - {response.reason}")
-        return None
-    
-    try:
-        chromedriver_url = next(item['url'] for item in json_data['channels']['Stable']['downloads']['chromedriver'] if item['platform'] == os_arch)
-    except StopIteration:
-        print(f"Chromedriver for platform '{os_arch}' is not available in the JSON data.")
-        return None
-    
-    chromedriver_zip = chromedriver_url.split('/')[-1]
-    
-    print(f"Downloading ChromeDriver for '{os_name}'...")
-    response = requests.get(chromedriver_url, stream=True)
-    
-    if response.status_code == 200:
-        with open(chromedriver_zip, 'wb') as f:
-            for chunk in response.iter_content(chunk_size=1024):
-                f.write(chunk)
-        
-        with ZipFile(chromedriver_zip, 'r') as zip_ref:
-            extracted_files = zip_ref.namelist()
-            chromedriver_subpath = next((file for file in extracted_files if chromedriver_filename in file), None)
-            
-            if chromedriver_subpath:
-                print(f"Extracting '{chromedriver_subpath}'...")
-                zip_ref.extract(chromedriver_subpath)       
-                shutil.move(chromedriver_subpath, '.')
-                
-                try:
-                    # Get the subdirectory name from the extracted chromedriver subpath
-                    zip_subdir = os.path.dirname(chromedriver_subpath)
-                    print("SUCCESS! ChromeDriver downloaded and extracted successfully.")
-                except:
-                    print("ERROR! ChromeDriver downloaded and extracted FAILED.")
-            else:
-                print(f"'{chromedriver_filename}' not found in the zip archive.")
-                
-        # Remove zip file and subdirectory
-        try:
-            os.remove(chromedriver_zip)
-            shutil.rmtree(zip_subdir)
-            print("Zip and non-critical driver files removed.")
-        except:
-            pass
-        
-        return chromedriver_filename
-    else:
-        print(f"Failed to download ChromeDriver: {response.status_code} - {response.reason}")
-        return None
-
-# Set the path to the Chrome WebDriver file
-#chrome_driver_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "chromedriver.exe")
-#chrome_driver_path = "/home/innovation-hub-api/api/chromedriver"
-
-current_directory = os.path.dirname(os.path.abspath(__file__))
-chrome_driver_path = os.path.join(current_directory, 'chromedriver')
-
-master_username = "admin"
-master_password = "admin"
-
-# Initialize an empty list to store host data
-app.config['pdu_data'] = None
-
-from cachetools import TTLCache
-
-object_cache = TTLCache(maxsize=100, ttl=86400)  # Adjust ttl and maxsize as needed, 86400 =24hrs
-
-# Helper function to create and cache devices
-def get_or_create_devices():
-    pdu_data = app.config['pdu_data']
-    
-    if pdu_data is not None:
-        return pdu_data
-
-    #if 'pdu_data' in object_cache:
-    #    return object_cache['pdu_data']
-    
-    conn = sqlite3.connect('pdu_devices.db')
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pdu_devices')
-    rows = cursor.fetchall()
-    
-    devices = []
-    for row in rows:
-        host_address = row[1]
-        username = row[2]
-        password = row[3]
-        driver_path = row[4]
-        
-        new_pdu = DeviceController(host_address, username, password, driver_path)
-        
-        try:
-            new_pdu.connect()
-            devices.append(new_pdu)
-        except Exception as e:
-            pass
-            
-    conn.close()
-    
-    #object_cache['pdu_data'] = devices  # Cache the loaded devices
-    app.config['pdu_data'] = devices
-    return devices
-
-
-# Helper function to load devices from the text file
-# def load_pdu_devices():
-    # with open('pdu_devices.txt', 'r') as file:
-        # lines = file.readlines()
-    # devices = []
-    # for line in lines:
-        # host_address, username, password, driver_path = line.strip().split(',')
-        # new_pdu = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-        
-        # try:
-            # new_pdu.connect()
-            # devices.append(new_pdu)
-        # except Exception as e:
-            # pass
-            
-    # return devices
-    
-def load_pdu_devices():
-    conn = sqlite3.connect('pdu_devices.db')
-    cursor = conn.cursor()
-
-    cursor.execute('SELECT * FROM pdu_devices')
-    rows = cursor.fetchall()
-    
-    logger.info(f"load_pdu_devices.... rows = cursor.fetchall() is: {rows}")
-    
-    devices = []
-    for row in rows:
-        host_address = row[1]
-        username = row[2]
-        password = row[3]
-        driver_path = row[4]
-        
-        new_pdu = DeviceController(host_address, username, password, driver_path)
-        
-        try:
-            new_pdu.connect()
-            devices.append(new_pdu)
-        except Exception as e:
-            pass
-            
-    conn.close()
-    
-    logger.info(f"load_pdu_devices.... devices is: {devices}")
-    
-    return devices
-	
-# Load PC host devices when the Flask app starts
-@app.before_first_request
-def load_pdu():
-    #app.config['pdu_data'] = load_pdu_devices()
-    #logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}")
-    app.config['pdu_data'] = get_or_create_devices()
-    #logger.info(f"load_pdu.... object_cache['pdu_data'] is: {object_cache['pdu_data']}")
-    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
-
-# Helper function to load devices from the text file
-def load_devices():
-    with open('pdu_devices.txt', 'r') as file:
-        lines = file.readlines()
-    devices = []
-    for line in lines:
-        host_address, username, password, driver_path = line.strip().split(',')
-        devices.append(DeviceController(host_address, username, password, driver_path))
-    return devices
-
-# Helper function to save devices to the text file
-def save_devices(devices):
-    with open('pdu_devices.txt', 'w') as file:
-        for device in devices:
-            file.write(device.hostAddress, device.username, device.password, device.chromedriver_path + '\n')
-
-# add device function for init
-def initial_add_device(host_address, master_username, master_password, chrome_driver_path):
-    #current_directory = os.path.dirname(os.path.abspath(__file__))
-    #chrome_driver_path = os.path.join(current_directory, 'chromedriver')
-
-    new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-
-    try:
-        new_device.connect()
-        return {'success': 'Device added successfully!'}
-    except Exception as e:
-        return {'error': 'Device not reachable...'}
-
-# Load devices when the app starts
-#devices = load_devices()
-#devices = []
-
 # =============
 # MAIN OPTIONS
 # =============	
@@ -1628,16 +1558,6 @@ def initial_add_device(host_address, master_username, master_password, chrome_dr
 def list_devices():    
     logger.info("testing.... in list_devices")
 
-    #pdus = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    pdus = object_cache['pdu_data']
-    #    logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    pdus = get_or_create_devices()
-    #    logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
-        
     pdus = None
     if 'pdu_data' in app.config:
         pdus = app.config['pdu_data']
@@ -1665,17 +1585,6 @@ def list_devices():
 
 @app.route('/pdu/devices/<int:device_number>', methods=['GET'])
 def get_device(device_number):
-    #devices = app.config['pdu_data']
-    #devices = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    pdus = object_cache['pdu_data']
-    #    logger.info(f"testing.... got pdus = object_cache[pdu_data] <--- here!")
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    pdus = get_or_create_devices()
-    #    logger.info(f"testing.... got pdus = get_or_create_devices() <--- here!")
-        
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -1697,290 +1606,117 @@ def get_device(device_number):
 
     return jsonify(device_info)
 
-@app.route('/pdu/add_device', methods=['POST'])
-def add_device():
-    data = request.json
-    host_address = data.get('host_address')
-    logger.info(f"testing.... add_device {host_address}")
-    logger.info(f"testing.... chrome_driver_path {chrome_driver_path}")
+# # Route to add a new PDU
+#### ====================================================
+#### ====================================================
+####  NEW DATABASE PDU ADD ROUTE - TESTING?
+@app.route('/add_pdu/<string:room_code>', methods=['POST'])
+def add_pdu(room_code):
+    data = request.get_json()
 
-    if host_address is None:
+    # Check if the required fields are present in the JSON data
+    required_fields = ['pdu_address', 'username', 'password']
+    if not all(key in data for key in required_fields):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    #devices = None        
-    #if 'pdu_data' in object_cache:
-    #    devices = object_cache['pdu_data']
-    #    logger.info(f"testing.... got devices = object_cache[pdu_data] <--- here!")
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    devices = get_or_create_devices()
-    #    logger.info(f"testing.... got devices = get_or_create_devices() <--- here!")
-        
-    devices = None
-    if 'pdu_data' in app.config:
-        devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
-    else:
-        devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
-        
-    #if device_number <= 0 or device_number > len(devices):
-    #    return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-    
-    logger.info(f"testing.... load devices {devices}")
+    pdu_address = data.get('pdu_address')
+    username = data.get('username')
+    password = data.get('password')
 
-    # Check if a device already exists with the same host address
-    for device in devices:
-        if device.hostAddress == host_address:
-            return jsonify({'error': f'Device with host address {host_address} already exists.'}), 200
-
-    new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-
-    try:
-        new_device.connect()
-        devices.append(new_device)  # Add the new device to the list
-
-        # Save the devices to the database
-        conn = sqlite3.connect('pdu_devices.db')
-        cursor = conn.cursor()
-        cursor.execute(
-            'INSERT INTO pdu_devices (host_address, username, password, driver_path) VALUES (?, ?, ?, ?)',
-            (new_device.hostAddress, new_device.username, new_device.password, new_device.chromedriver_path)
-        )
-        conn.commit()
-        conn.close()
-
-        # Cache the updated devices
-        #object_cache['pdu_data'] = devices
-        app.config['pdu_data'] = devices
-
-        return jsonify({'success': 'Device added successfully!'})
-    except Exception as e:
-        return jsonify({'error': 'Device not reachable...'}), 200
-
-
-# @app.route('/pdu/add_device', methods=['POST'])
-# def add_device():
-    # data = request.json
-    # host_address = data.get('host_address')
-    # logger.info(f"testing.... add_device {host_address}")
-    # logger.info(f"testing.... chrome_driver_path {chrome_driver_path}")
-
-    # if host_address is None:
-        # return jsonify({'error': 'Missing required field(s)'}), 400
-
-    # devices = app.config['pdu_data']
-    # logger.info(f"testing.... load devices {devices}")
-
-    # # Check if a device already exists with the same host address
-    # for device in devices:
-        # if device.hostAddress == host_address:
-            # return jsonify({'error': f'Device with host address {host_address} already exists.'}), 200
-
-    # new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-
-    # try:
-        # new_device.connect()
-        # #devices.append(new_device)
-        # app.config['pdu_data'].append(new_device)
-
-        # # Save the devices to the text file
-        # with open('pdu_devices.txt', 'a') as file:
-            # file.write(f"{host_address},{master_username},{master_password},{chrome_driver_path}\n")
-
-        # return jsonify({'success': 'Device added successfully!'})
-    # except Exception as e:
-        # return jsonify({'error': 'Device not reachable...'}), 200
-        
-# @app.route('/pdu/add_device', methods=['POST'])
-# def add_device():
-    # data = request.json
-    # host_address = data.get('host_address')
-    # logger.info(f"testing.... add_device {host_address}")
-    # logger.info(f"testing.... chrome_driver_path {chrome_driver_path}")
-
-    # if host_address is None:
-        # return jsonify({'error': 'Missing required field(s)'}), 400
-
-    # devices = get_or_create_devices()  # Use get_or_create_devices() to get devices
-    # logger.info(f"testing.... load devices {devices}")
-
-    # # Check if a device already exists with the same host address
-    # for device in devices:
-        # if device.hostAddress == host_address:
-            # return jsonify({'error': f'Device with host address {host_address} already exists.'}), 200
-
-    # new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-
-    # try:
-        # new_device.connect()
-        # devices.append(new_device)  # Add the new device to the list
-
-        # # Save the devices to the text file (if needed)
-        # with open('pdu_devices.txt', 'a') as file:
-            # file.write(f"{host_address},{master_username},{master_password},{chrome_driver_path}\n")
-
-        # return jsonify({'success': 'Device added successfully!'})
-    # except Exception as e:
-        # return jsonify({'error': 'Device not reachable...'}), 200
-
-# @app.route('/pdu/add_device', methods=['POST'])
-# def add_device():
-    # data = request.json
-    # host_address = data.get('host_address')
-
-    # if host_address is None:
-        # return jsonify({'error': 'Missing required field(s)'}), 400
-
-    # conn = get_db_connection('pdu_devices.db')
-    # cursor = conn.cursor()
-
-    # # Check if a device already exists with the same host address in the database
-    # cursor.execute('SELECT id FROM pdu_devices WHERE host_address = ?', (host_address,))
-    # existing_device = cursor.fetchone()
-
-    # if existing_device:
-        # conn.close()
-        # return jsonify({'error': f'Device with host address {host_address} already exists.'}), 200
-
-    # username = data.get('username')
-    # password = data.get('password')
-    # driver_path = data.get('driver_path')
-    
-    # new_device = DeviceController(host_address, master_username, master_password, chrome_driver_path)
-    
-    # logger.info(f"/pdu/add_device.... devices is: {host_address}")
-    
-    # try:
-        # new_device.connect()
-        # logger.info(f"/pdu/add_device.... new_device.connected")
-        # app.config['pdu_data'].append(new_device)
-        
-        # logger.info(f"/pdu/add_device.... appending device to pdu_data app.config array: {app.config['pdu_data'].append(new_device)}")
-
-        # # Insert the new device information into the database
-        # cursor.execute('INSERT INTO pdu_devices (host_address, username, password, driver_path) VALUES (?, ?, ?, ?)',
-                       # (host_address, username, password, driver_path))
-        # conn.commit()
-        # conn.close()
-        
-        # logger.info(f"added device to sql db: {host_address}")
-
-        # return jsonify({'success': 'Device added successfully!'})
-    # except Exception as e:
-        # return jsonify({'error': 'Device not reachable...'}), 200
-
-
-# @app.route('/pdu/remove_device/<int:device_choice>', methods=['POST'])
-# def remove_device(device_choice):
-    # logger.info(f"testing.... in remove_device, passed variable: {device_choice}")
-
-    # if not app.config['pdu_data']:
-        # return jsonify({'error': 'No devices added yet. Please add a device first.'}), 200
-
-    # if device_choice <= 0 or device_choice > len(app.config['pdu_data']):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # device_to_remove = app.config['pdu_data'][device_choice - 1]
-    # device_to_remove.disconnect()
-    # app.config['pdu_data'].pop(device_choice - 1)
-
-    # # Remove the device information from the database
-    # conn = get_db_connection('pdu_devices.db')
-    # cursor = conn.cursor()
-
-    # host_address_to_remove = device_to_remove.hostAddress
-    # cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (host_address_to_remove,))
-    # conn.commit()
-    # conn.close()
-
-    # return jsonify({'success': 'Device removed successfully!'})
-    
-
-# Function to remove a device from the cache
-#def remove_device_from_cache(device):
-#    logger.error(f"Removing {device} from the cache")
-#    if 'pdu_data' in object_cache:
-#        devices_cache = object_cache['pdu_data']
-#        devices_cache.remove(device)
-#        object_cache['pdu_data'] = devices_cache
-#        logger.error(f" object_cache[pdu_data] {devices_cache}")
-
-def remove_device_from_config(device):
-    logger.error(f"Removing {device} from app.config['pdu_data']")
-    pdu_data = app.config.get('pdu_data', [])
-    
-    if device in pdu_data:
-        pdu_data.remove(device)
-        app.config['pdu_data'] = pdu_data
-        logger.error(f"app.config['pdu_data']: {pdu_data}")
-
-# Modify your remove_device function to use the cache management functions
-@app.route('/pdu/remove_device/<int:device_choice>', methods=['POST'])
-def remove_device(device_choice):
-    logger.info(f"testing.... in remove_device, device choice: {device_choice}")
-
-    #devices = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    devices = object_cache['pdu_data']
-    #    logger.info(f"testing.... in remove_device, devices = object_cache[pdu_data]")
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    devices = get_or_create_devices()
-    #    logger.info(f"testing.... in remove_device, devices = get_or_create_devices()")
-        
-    devices = None
-    if 'pdu_data' in app.config:
-        devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
-    else:
-        devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
-
-    if not devices:
-        return jsonify({'error': 'No devices added yet. Please add a device first.'}), 200
-
-    if device_choice <= 0 or device_choice > len(devices):
-        return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    device_to_remove = devices[device_choice - 1]
-    logger.info(f"testing.... in remove_device, device_to_remove: {device_to_remove}")
-    device_to_remove.disconnect()
-
-    # Remove the device information from the database
-    conn = sqlite3.connect('pdu_devices.db')
+    conn = get_db_connection()
     cursor = conn.cursor()
 
-    host_address_to_remove = device_to_remove.hostAddress
-    logger.info(f"testing.... in remove_device, host_address_to_remove: {host_address_to_remove}")
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
 
+    if not existing_room:
+        conn.close()
+        return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
+
+    # Check if the PDU address already exists in the database for the given room
+    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    existing_pdu = cursor.fetchone()
+
+    if existing_pdu:
+        conn.close()
+        return jsonify({'message': 'PDU with the same address already exists in the room'}), 200
+
+    # Additional code to instantiate DeviceController objects and store them
+    new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
     try:
-        cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (host_address_to_remove,))
+        new_pdu.connect()
+
+        # Insert the PDU data into the database after a successful connection
+        cursor.execute('INSERT INTO pdus (pdu_address, username, password, driver_path, room_code) VALUES (?, ?, ?, ?, ?)',
+                       (pdu_address, username, password, chrome_driver_path, room_code))
         conn.commit()
-        logger.info("Device removed from the database.")
-    except sqlite3.Error as e:
-        logger.error(f"Error removing device from the database: {str(e)}")
+
+        # Add the new PDU object to the app.config list
+        if 'pdu_data' in app.config:
+            app.config['pdu_data'].append(new_pdu)
+        else:
+            app.config['pdu_data'] = [new_pdu]
+
+        return jsonify({'message': 'PDU added successfully'}), 200
+    except Exception as e:
+        return jsonify({'error': 'PDU not reachable...'}), 200
     finally:
         conn.close()
 
-    # Remove the device from the cache
-    remove_device_from_config(device_to_remove)
 
-    return jsonify({'success': f"Device removed successfully!{device_to_remove} {host_address_to_remove}"})
+@app.route('/remove_pdu/<string:room_code>/<string:pdu_address>', methods=['DELETE'])
+def remove_device(room_code, pdu_address):        
+    print("Received DELETE request for room_code:", room_code, "and pdu_address:", pdu_address)
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+    
+    print("Existing room:", dict(existing_room) if existing_room else "None")
+
+    if not existing_room:
+        conn.close()
+        print("Room not found.")
+        return jsonify({'error': 'Room not found'}), 404
+
+    # Check if the PDU with the provided pdu_address exists in the specified room
+    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    existing_host = cursor.fetchone()
+
+    print("Existing host:", dict(existing_host) if existing_host else "None")
+
+    if not existing_host:
+        conn.close()
+        print("Host not found in the specified room.")
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+
+    # Remove the host from the database
+    cursor.execute('DELETE FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    conn.commit()
+    conn.close()
+    
+    print("Host removed from the database.")
+
+    # Now, remove the device from the app.config
+    devices = app.config.get('pdu_data', [])
+
+    for device in devices:
+        if device.hostAddress == pdu_address:
+            device.disconnect()
+            devices.remove(device)
+            app.config['pdu_data'] = devices
+            print("Device removed from app.config.")
+
+    return jsonify({'message': 'PDU removed successfully'}), 200
 
 
 @app.route('/pdu/remove_device_by_address/<string:host_address>', methods=['POST'])
 def remove_device_by_address(host_address):
     logger.info(f"testing.... in remove_device, host_address: {host_address}")
-
-    #devices = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    devices = object_cache['pdu_data']
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    devices = get_or_create_devices()
         
     devices = None
     if 'pdu_data' in app.config:
@@ -2021,17 +1757,100 @@ def remove_device_by_address(host_address):
 
     return jsonify({'success': 'Device removed successfully!'})
 
-@app.route('/pdu/view_outlet_settings_all', methods=['GET'])
+@app.route('/view_pdu_outlet_settings_all/<string:room_code>', methods=['GET'])
+def view_outlet_settings(room_code):
+    pdus = None
+    if 'pdu_data' in app.config:
+        pdus = app.config['pdu_data']
+    else:
+        pdus = get_or_create_devices()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the room with the provided room_code exists
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    existing_room = cursor.fetchone()
+
+    if not existing_room:
+        conn.close()
+        return jsonify({'message': f'No room found with room code: {room_code}.'}), 404
+
+    # Fetch the devices (PDUs) for the specified room_code from the pdus table
+    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    pdus_indb = cursor.fetchall()
+
+    conn.close()
+
+    if not pdus_indb:
+        return jsonify({'message': f'No PDUs added to the room with room code: {room_code}.'}), 200
+
+    pdu_outlet_settings_all = []
+    
+    for index, pdu in enumerate(pdus):
+        pdu_address = pdu.hostAddress
+        # Fetch outlet settings or other information about the device if needed
+        # Replace the following line with your actual implementation
+        pdu_outlet_info = pdu.get_outlet_info()
+        pdu_outlet_settings = {
+            'device_number': index + 1,
+            'pdu_address': pdu_address,
+            'outlet_settings': pdu_outlet_info
+        }
+        pdu_outlet_settings_all.append(pdu_outlet_settings)
+
+    return jsonify(pdu_outlet_settings)
+
+@app.route('/view_pdu_outlet_settings_all/', methods=['GET'])
 def view_outlet_settings_all():
-    #devices = app.config['pdu_data']
-    #devices = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    devices = object_cache['pdu_data']
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    devices = get_or_create_devices()
+    pdus = None
+    if 'pdu_data' in app.config:
+        pdus = app.config['pdu_data']
+    else:
+        pdus = get_or_create_devices()
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Get a list of all room codes from the database
+    cursor.execute('SELECT room_code FROM rooms')
+    room_codes = [row['room_code'] for row in cursor.fetchall()]
+
+    pdu_outlet_settings_all = []
+
+    for room_code in room_codes:
+        room_pdus = [pdu for pdu in pdus if pdu.room_code == room_code]
         
+        # Check if there are any PDUs for this room
+        if not room_pdus:
+            # Skip rooms with no PDUs
+            continue
+
+        room_outlet_settings = []
+        
+        for pdu in room_pdus:
+            pdu_address = pdu.hostAddress
+            # Fetch outlet settings or other information about the device if needed
+            # Replace the following line with your actual implementation
+            pdu_outlet_info = pdu.get_outlet_info()
+            pdu_outlet_settings = {
+                'pdu_address': pdu_address,
+                'outlet_settings': pdu_outlet_info
+            }
+            room_outlet_settings.append(pdu_outlet_settings)
+
+        # Add room outlet settings to the main list
+        pdu_outlet_settings_all.append({
+            'room_code': room_code,
+            'pdus': room_outlet_settings
+        })
+
+    conn.close()
+    
+    return jsonify(pdu_outlet_settings_all)
+
+@app.route('/pdu/view_outlet_settings_all', methods=['GET'])
+def view_outlet_settings_all_old():
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2058,96 +1877,35 @@ def view_outlet_settings_all():
 
     return jsonify(outlet_settings_all)
 
-# =====================
-# DEVICE LEVEL OPTIONS
-# =====================
-#@app.route('/pdu/devices/<int:device_number>/view_all_settings', methods=['GET'])
-#def view_system_settings(device_number):
-    #devices = app.config['pdu_data']
-    #devices = None
-    #pdus = app.config['pdu_data']
-    #if 'pdu_data' in object_cache:
-    #    devices = object_cache['pdu_data']
-    #else:
-        # If the cache doesn't exist, you might want to create it
-    #    devices = get_or_create_devices()
-    #if device_number <= 0 or device_number > len(devices):
-    #    return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-        
-#    devices = None
-#    if 'pdu_data' in app.config:
-#        devices = app.config['pdu_data']
-#        logger.info("Testing: got pdus from app.config['pdu_data']")
-#    else:
-#        devices = get_or_create_devices()
-#        logger.info("Testing: got pdus from get_or_create_devices()")
 
-#    selected_device = devices[device_number - 1]
-#    system_settings = selected_device.get_all_info()
-
-#    return jsonify(system_settings)
-    
-@app.route('/pdu/devices/<string:host_address>/view_all_settings', methods=['GET'])
-def view_system_settings(host_address):
+@app.route('/view_all_pdu_settings/<string:room_code>/<string:pdu_address>', methods=['GET'])
+def view_all_pdu_settings(room_code, pdu_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
-        
-    logger.info(f"Testing: in view_all_settings: device info: {device.hostAddress, device.username, device.password, device.chromedriver_path}")
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
+    # You can use the selected_device to retrieve system settings or other information
+    # Here you can customize the response based on your requirements
     system_settings = selected_device.get_all_info()
 
     return jsonify(system_settings)
+
     
-
-
-# @app.route('/pdu/devices/<int:device_number>/change_system_settings', methods=['PUT'])
-# def change_system_settings(device_number):
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # #devices = app.config['pdu_data']
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # selected_device = devices[device_number - 1]
-    # new_system_settings = request.get_json()
-
-    # # Explicitly extract parameters from the JSON data
-    # system_name = new_system_settings.get('system_name', None)
-    # system_contact = new_system_settings.get('system_contact', None)
-    # location = new_system_settings.get('location', None)
-    # driver = new_system_settings.get('driver', None)
-
-    # selected_device.change_system_settings(
-        # system_name=system_name,
-        # system_contact=system_contact,
-        # location=location,
-        # driver=driver
-    # )
-
-    # return jsonify({'message': 'System settings updated successfully.'})
-    
-@app.route('/pdu/devices/<string:host_address>/change_system_settings', methods=['PUT'])
-def change_system_settings(host_address):
+#@app.route('/pdu/devices/<string:host_address>/change_system_settings', methods=['PUT'])
+@app.route('/change_pdu_system_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_system_settings(room_code, pdu_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2155,16 +1913,16 @@ def change_system_settings(host_address):
     else:
         devices = get_or_create_devices()
         logger.info("Testing: got pdus from get_or_create_devices()")
-
+        
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     new_system_settings = request.get_json()
 
@@ -2184,38 +1942,70 @@ def change_system_settings(host_address):
     )
 
     return jsonify({'message': 'System settings updated successfully.'})
+    
+#@app.route('/pdu/devices/<string:host_address>/change_user_settings', methods=['PUT'])
+@app.route('/change_pdu_user_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_user_settings(room_code, pdu_address):
+    # Check for required fields in the JSON data
+    required_fields = ['new_username', 'new_password']
+    if not request.is_json or not all(field in request.json for field in required_fields):
+        return jsonify({'error': 'Missing required field(s)'}), 400
 
-# @app.route('/pdu/devices/<int:device_number>/change_user_settings', methods=['PUT'])
-# def change_user_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
+    devices = None
+    if 'pdu_data' in app.config:
+        devices = app.config['pdu_data']
+        logger.info("Testing: got pdus from app.config['pdu_data']")
+    else:
+        devices = get_or_create_devices()
+        logger.info("Testing: got pdus from get_or_create_devices()")
 
-    # selected_device = devices[device_number - 1]
-    # new_user_settings = request.get_json()
+    selected_device = None
 
-    # # Explicitly extract parameters from the JSON data
-    # new_username = new_user_settings.get('new_username', None)
-    # new_password = new_user_settings.get('new_password', None)
+    for device in devices:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
+            selected_device = device
+            break
+
+    if selected_device is None:
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
+
+    new_user_settings = request.get_json()
+
+    # Explicitly extract parameters from the JSON data
+    new_username = new_user_settings.get('new_username')
+    new_password = new_user_settings.get('new_password')
     # driver = new_user_settings.get('driver', None)
 
-    # selected_device.change_user_settings(
-        # new_username=new_username,
-        # new_password=new_password,
+    # Update the selected device's settings
+    selected_device.change_user_settings(
+        new_username=new_username,
+        new_password=new_password,
         # driver=driver
-    # )
+    )
 
-    # return jsonify({'message': 'User settings updated successfully.'})
-    
+    # Update the device settings in the SQLite database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE pdus SET username=?, password=? WHERE pdu_address=? AND room_code=?',
+        (new_username, new_password, pdu_address, room_code)
+    )
+    conn.commit()
+    conn.close()
+
+    # Update the device in the app.config['pdu_data']
+    for index, device in enumerate(devices):
+        if device.hostAddress == pdu_address:
+            devices[index] = selected_device
+            break
+
+    # Update the cached devices in app.config
+    app.config['pdu_data'] = devices
+
+    return jsonify({'message': 'User settings updated successfully.'})
+
 @app.route('/pdu/devices/<string:host_address>/change_user_settings', methods=['PUT'])
-def change_user_settings(host_address):
+def change_user_settings_old(host_address):
     # Check for required fields in the JSON data
     required_fields = ['new_username', 'new_password']
     if not request.is_json or not all(field in request.json for field in required_fields):
@@ -2274,43 +2064,10 @@ def change_user_settings(host_address):
 
     return jsonify({'message': 'User settings updated successfully.'})
 
-# @app.route('/pdu/devices/<int:device_number>/change_ping_action_settings', methods=['PUT'])
-# def change_ping_action_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    # selected_device = devices[device_number - 1]
-    # new_ping_action_settings = request.get_json()
-
-    # # Explicitly extract parameters from the JSON data
-    # outletA_IP = new_ping_action_settings.get('outletA_IP', None)
-    # outletA_action = new_ping_action_settings.get('outletA_action', None)
-    # outletA_active = new_ping_action_settings.get('outletA_active', None)
-    # outletB_IP = new_ping_action_settings.get('outletB_IP', None)
-    # outletB_action = new_ping_action_settings.get('outletB_action', None)
-    # outletB_active = new_ping_action_settings.get('outletB_active', None)
-
-    # selected_device.change_ping_action_settings(
-        # outletA_IP=outletA_IP,
-        # outletA_action=outletA_action,
-        # outletA_active=outletA_active,
-        # outletB_IP=outletB_IP,
-        # outletB_action=outletB_action,
-        # outletB_active=outletB_active
-    # )
-
-    # return jsonify({'message': 'Ping action settings updated successfully.'})
-    
-@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings', methods=['PUT'])
-def change_ping_action_settings(host_address):
+#@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings', methods=['PUT'])
+@app.route('/change_pdu_ping_action_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_ping_action_settings(room_code, host_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2322,12 +2079,12 @@ def change_ping_action_settings(host_address):
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     new_ping_action_settings = request.get_json()
 
@@ -2350,9 +2107,10 @@ def change_ping_action_settings(host_address):
 
     return jsonify({'message': 'Ping action settings updated successfully.'})
 
-### not tested
-@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings_dynamic', methods=['PUT'])
-def change_ping_action_settings_dynamic(host_address):
+
+#@app.route('/pdu/devices/<string:host_address>/set_outlet_power_state', methods=['PUT'])
+@app.route('/change_pdu_outlet_power_state/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_outlet_settings(room_code, pdu_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2364,98 +2122,18 @@ def change_ping_action_settings_dynamic(host_address):
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
-
-    new_ping_action_settings = request.get_json()
-
-    # Extract the device's IP address from the JSON data
-    device_IP = new_ping_action_settings.get('device_IP', None)
-
-    if device_IP is None:
-        return jsonify({'error': 'Device IP address is missing in the request.'}), 400
-
-    # Iterate through the outlets list and update settings
-    outlets = new_ping_action_settings.get('outlets', [])
-
-    for outlet in outlets:
-        outlet_name = outlet.get('outlet_name', None)
-        outlet_action = outlet.get('outlet_action', None)
-        outlet_active = outlet.get('outlet_active', None)
-
-        # Perform actions for each outlet based on device_IP
-        # Example: selected_device.change_ping_action_settings(device_IP, outlet_name, outlet_action, outlet_active)
-
-    return jsonify({'message': 'Ping action settings updated successfully.'})
-
-# @app.route('/pdu/devices/<int:device_number>/set_outlet_power_state', methods=['PUT'])
-# def change_outlet_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # #devices = None
-    # #pdus = app.config['pdu_data']
-    # #if 'pdu_data' in object_cache:
-    # #    devices = object_cache['pdu_data']
-    # #else:
-        # # If the cache doesn't exist, you might want to create it
-    # #    devices = get_or_create_devices()
-    
-    # devices = None
-    # if 'pdu_data' in app.config:
-        # devices = app.config['pdu_data']
-        # logger.info("Testing: got pdus from app.config['pdu_data']")
-    # else:
-        # devices = get_or_create_devices()
-        # logger.info("Testing: got pdus from get_or_create_devices()")
-    
-    # logger.info(f"testing change_outlet_settings... device_number): {device_number}")
-    # logger.info(f"testing change_outlet_settings... len(devices): {len(devices)}")
-    
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # selected_device = devices[device_number - 1]
-    # new_outlet_settings = request.get_json()
-
-    # # Explicitly extract parameters from the JSON data
-    # outlet_name = new_outlet_settings.get('outlet_name', None)
-    # action = new_outlet_settings.get('action', None)
-
-    # selected_device.change_power_action(
-        # outlet_name=outlet_name,
-        # action=action
-    # )
-
-    # return jsonify({'message': 'Outlet settings updated successfully.'})
-    
-@app.route('/pdu/devices/<string:host_address>/set_outlet_power_state', methods=['PUT'])
-def change_outlet_settings(host_address):
-    devices = None
-    if 'pdu_data' in app.config:
-        devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
-    else:
-        devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
-
-    selected_device = None
-
-    for device in devices:
-        if device.hostAddress == host_address:
-            selected_device = device
-            break
-
-    if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     new_outlet_settings = request.get_json()
 
     # Explicitly extract parameters from the JSON data
-    outlet_name = new_outlet_settings.get('outlet_name', None)
-    action = new_outlet_settings.get('action', None)
+    outlet_name = new_outlet_settings.get('outlet_name')
+    action = new_outlet_settings.get('action')
 
     selected_device.change_power_action(
         outlet_name=outlet_name,
@@ -2463,44 +2141,10 @@ def change_outlet_settings(host_address):
     )
 
     return jsonify({'message': 'Outlet settings updated successfully.'})
-	
-# @app.route('/pdu/devices/<int:device_number>/change_pdu_settings', methods=['PUT'])
-# def change_pdu_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # selected_device = devices[device_number - 1]
-    # new_pdu_settings = request.get_json()
-
-    # # Explicitly extract parameters from the JSON data
-    # outletA_name = new_pdu_settings.get('outletA_name', None)
-    # outletA_onDelay = new_pdu_settings.get('outletA_onDelay', None)
-    # outletA_offDelay = new_pdu_settings.get('outletA_offDelay', None)
-    # outletB_name = new_pdu_settings.get('outletB_name', None)
-    # outletB_onDelay = new_pdu_settings.get('outletB_onDelay', None)
-    # outletB_offDelay = new_pdu_settings.get('outletB_offDelay', None)
-
-    # selected_device.change_pdu_settings(
-        # outletA_name=outletA_name,
-        # outletA_onDelay=outletA_onDelay,
-        # outletA_offDelay=outletA_offDelay,
-        # outletB_name=outletB_name,
-        # outletB_onDelay=outletB_onDelay,
-        # outletB_offDelay=outletB_offDelay
-    # )
-
-    # return jsonify({'message': 'PDU settings updated successfully.'})
-    
-@app.route('/pdu/devices/<string:host_address>/change_pdu_settings', methods=['PUT'])
-def change_pdu_settings(host_address):
+	    
+#@app.route('/pdu/devices/<string:host_address>/change_pdu_settings', methods=['PUT'])
+@app.route('/change_pdu_pdu_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_pdu_settings(room_code, host_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2512,12 +2156,12 @@ def change_pdu_settings(host_address):
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     new_pdu_settings = request.get_json()
 
@@ -2539,44 +2183,10 @@ def change_pdu_settings(host_address):
     )
 
     return jsonify({'message': 'PDU settings updated successfully.'})
-
-# @app.route('/pdu/devices/<int:device_number>/change_network_settings', methods=['PUT'])
-# def change_network_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # selected_device = devices[device_number - 1]
-    # new_network_settings = request.get_json()
-
-    # # Explicitly extract parameters from the JSON data
-    # dhcp = new_network_settings.get('dhcp', None)
-    # IP = new_network_settings.get('IP', None)
-    # subnet = new_network_settings.get('subnet', None)
-    # gateway = new_network_settings.get('gateway', None)
-    # DNS1 = new_network_settings.get('DNS1', None)
-    # DNS2 = new_network_settings.get('DNS2', None)
-
-    # selected_device.change_network_settings(
-        # dhcp=dhcp,
-        # IP=IP,
-        # subnet=subnet,
-        # gateway=gateway,
-        # DNS1=DNS1,
-        # DNS2=DNS2
-    # )
-
-    # return jsonify({'message': 'Network settings updated successfully.'})
     
-@app.route('/pdu/devices/<string:host_address>/change_network_settings', methods=['PUT'])
-def change_network_settings(host_address):
+#@app.route('/pdu/devices/<string:host_address>/change_network_settings', methods=['PUT'])
+@app.route('/change_pdu_network_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def change_network_settings(room_code, pdu_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2588,12 +2198,12 @@ def change_network_settings(host_address):
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     new_network_settings = request.get_json()
 
@@ -2616,27 +2226,9 @@ def change_network_settings(host_address):
 
     return jsonify({'message': 'Network settings updated successfully.'})
     
-# @app.route('/pdu/devices/<int:device_number>/enable_disable_dhcp', methods=['PUT'])
-# def enable_disable_dhcp(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
-
-    # selected_device = devices[device_number - 1]
-    # dhcp_option = request.get_json().get('dhcp_option')
-
-    # selected_device.change_dhcp_setting(dhcp=dhcp_option)
-    # return jsonify({'message': 'DHCP settings updated successfully.'})
-    
-@app.route('/pdu/devices/<string:host_address>/enable_disable_dhcp', methods=['PUT'])
-def enable_disable_dhcp(host_address):
+#@app.route('/pdu/devices/<string:host_address>/enable_disable_dhcp', methods=['PUT'])
+@app.route('/change_pdu_dhcp_setting/<string:room_code>/<string:pdu_address>', methods=['PUT'])
+def enable_disable_dhcp(room_code, pdu_address):
     devices = None
     if 'pdu_data' in app.config:
         devices = app.config['pdu_data']
@@ -2646,40 +2238,23 @@ def enable_disable_dhcp(host_address):
         logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
-    
+
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     dhcp_option = request.get_json().get('dhcp_option')
 
     selected_device.change_dhcp_setting(dhcp=dhcp_option)
     return jsonify({'message': 'DHCP settings updated successfully.'})
     
-# @app.route('/pdu/devices/<int:device_number>/change_time_settings', methods=['PUT'])
-# def change_time_settings(device_number):
-    # #devices = app.config['pdu_data']
-    # devices = None
-    # #pdus = app.config['pdu_data']
-    # if 'pdu_data' in object_cache:
-        # devices = object_cache['pdu_data']
-    # else:
-        # # If the cache doesn't exist, you might want to create it
-        # devices = get_or_create_devices()
-    # if device_number <= 0 or device_number > len(devices):
-        # return jsonify({'error': 'Invalid device number. Please try again.'}), 200
 
-    # selected_device = devices[device_number - 1]
-    # internet_time_option = request.get_json().get('internet_time_option')
-
-    # selected_device.change_time_settings(internet_time=internet_time_option)
-    # return jsonify({'message': 'Time settings updated successfully.'})
-
-@app.route('/pdu/devices/<string:host_address>/change_time_settings', methods=['PUT'])
+#@app.route('/pdu/devices/<string:host_address>/change_time_settings', methods=['PUT'])
+@app.route('/change_pdu_time_setting/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_time_settings(host_address):
     devices = None
     if 'pdu_data' in app.config:
@@ -2692,12 +2267,12 @@ def change_time_settings(host_address):
     selected_device = None
 
     for device in devices:
-        if device.hostAddress == host_address:
+        if device.room_code == room_code and device.hostAddress == pdu_address:
             selected_device = device
             break
 
     if selected_device is None:
-        return jsonify({'error': f'Device with host address {host_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} in room {room_code} not found.'}), 200
 
     internet_time_option = request.get_json().get('internet_time_option')
 
@@ -2886,39 +2461,5 @@ def ping():
 # =========================================================================
 #  START API
 # =========================================================================
-if __name__ == '__main__':
-    #chrome_driver_path = download_chromedriver()
-    
-    #if chrome_driver_path is None:
-    #    print(f"ChromeDriver file download failed... exiting.")
-    #    exit()
-
-    #app.run(debug=True)
-    
-    # Load PC host devices from the text file
-    #pc_hosts = load_pc_hosts()
-    #print(pc_hosts)
-    
-    # load device list from text file
-    #devices = load_devices()
-    #print(devices)
-    
-    # Iterate through the array and call the add_device function for each device
-    # for device in devices:
-        # result = initial_add_device(
-            # device.hostAddress,
-            # device.username,  # Use the correct attribute name for username
-            # device.password,  # Use the correct attribute name for password
-            # device.chromedriver_path,  # Use the correct attribute name for chromedriver_path
-        # )
-
-        # # Handle the result as needed
-        # if 'error' in result:
-            # print(f"Error: {result['error']}")
-        # elif 'success' in result:
-            # print(f"Success: {result['success']}")
-        # else:
-            # print("Unknown result")
-    
-
+if __name__ == '__main__':    
     app.run(host="0.0.0.0", port=conf.APP_PORT, debug=True, use_reloader=True)

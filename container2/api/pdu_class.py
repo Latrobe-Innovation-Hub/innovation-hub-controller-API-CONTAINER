@@ -58,7 +58,7 @@ else:
     logger.setLevel(logging.INFO)
 
 class DeviceController:
-    def __init__(self, hostAddress, username, password, chromedriver_path):   
+    def __init__(self, hostAddress, username, password, chromedriver_path, room_code):   
         # device credentials
         self.username = username
         self.password = password
@@ -81,7 +81,7 @@ class DeviceController:
         ###  IS ASSOCIATED TO. WOULD NEED TO UPDATE INIT PARAMS
         ###
         ###  AND ALSO WHERE PDUS ARE BEING ADDED IN API.PY
-        #self.room_code = room_code
+        self.room_code = room_code
         
         # system info
         self.model_num = None

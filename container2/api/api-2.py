@@ -425,7 +425,7 @@ def run_nircmd(hostname, username, password, cmd):
 # single database init - need to test and integrate
 def init_db():
     print("initialising the database...")
-    conn = sqlite3.connect('IH_device_database.db')
+    conn = sqlite3.connect('/home/innovation-hub-api/persistent/db/container2/IH_device_database.db')
     cursor = conn.cursor()
 
     print("initialising table rooms...")
@@ -1015,17 +1015,78 @@ def remove_display(room_code, display_address):
 
     return jsonify({'message': 'Display removed successfully'}), 200
 
-init_db()
+#init_db()
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+chrome_driver_path = os.path.join(current_directory, 'chromedriver')
+
+# Initialize an empty list to store host data
+app.config['pdu_data'] = None
 
 @app.before_first_request
 def before_first_request():
     print("on first run...")
     init_db()
+    
+    # load and init any pdus from db
+    app.config['pdu_data'] = get_or_create_devices()
+    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
 
 def get_db_connection(database='IH_device_database.db'):
     conn = sqlite3.connect(database)
     conn.row_factory = sqlite3.Row
     return conn
+
+# Helper function to create and cache devices
+def get_or_create_devices():
+    pdu_data = app.config.get('pdu_data')
+
+    if pdu_data is not None:
+        return pdu_data
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
+    rows = cursor.fetchall()
+    
+    print("here!!!") 
+    print(rows)
+    for row in rows:
+        print(len(row))
+        for r in row:
+            print(r)
+    print("and here!!!")
+
+    devices = []
+    for row in rows:
+        print(len(row))
+        pdu_address = row[0]
+        username = row[1]
+        password = row[2]
+        driver_path = row[3]
+        room_code = row[4]
+        print(pdu_address, username, password, driver_path, room_code)
+
+        new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
+
+        try:
+            new_pdu.connect()
+            devices.append(new_pdu)
+        except Exception as e:
+            pass
+
+    conn.close()
+
+    app.config['pdu_data'] = devices
+    return devices
+	
+app.config['pdu_data'] = get_or_create_devices()
+
+# Load PC host devices when the Flask app starts
+#@app.before_first_request
+#def load_pdu():
+#    app.config['pdu_data'] = get_or_create_devices()
+#    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
 
 # =========================================================================
 #  API - endpoints
@@ -1475,63 +1536,6 @@ import requests
 import platform
 from zipfile import ZipFile
 from flask import Flask
-
-current_directory = os.path.dirname(os.path.abspath(__file__))
-chrome_driver_path = os.path.join(current_directory, 'chromedriver')
-
-# Initialize an empty list to store host data
-app.config['pdu_data'] = None
-
-# Helper function to create and cache devices
-def get_or_create_devices():
-    pdu_data = app.config.get('pdu_data')
-
-    if pdu_data is not None:
-        return pdu_data
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
-    rows = cursor.fetchall()
-    
-    print("here!!!") 
-    print(rows)
-    for row in rows:
-        print(len(row))
-        for r in row:
-            print(r)
-    print("and here!!!")
-
-    devices = []
-    for row in rows:
-        print(len(row))
-        pdu_address = row[0]
-        username = row[1]
-        password = row[2]
-        driver_path = row[3]
-        room_code = row[4]
-        print(pdu_address, username, password, driver_path, room_code)
-
-        new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
-
-        try:
-            new_pdu.connect()
-            devices.append(new_pdu)
-        except Exception as e:
-            pass
-
-    conn.close()
-
-    app.config['pdu_data'] = devices
-    return devices
-	
-app.config['pdu_data'] = get_or_create_devices()
-
-# Load PC host devices when the Flask app starts
-@app.before_first_request
-def load_pdu():
-    app.config['pdu_data'] = get_or_create_devices()
-    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
 
 # =============
 # MAIN OPTIONS
