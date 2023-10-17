@@ -20,12 +20,14 @@ case $1 in
 
                 #echo $! > ${PIDFILE} # save spawned backround process' PID to PIDFILE
                 #cat ${PIDFILE};;
-
+        ;;
         stop)
                 cat ${PIDFILE}
                 kill `cat ${PIDFILE}`
-                rm ${PIDFILE};;
+                rm ${PIDFILE}
+        ;;
         *)
-                echo "usage: $0 {start|stop}" ;;
+                echo "usage: $0 {start|stop}"
+        ;;
 esac
 exit 0
