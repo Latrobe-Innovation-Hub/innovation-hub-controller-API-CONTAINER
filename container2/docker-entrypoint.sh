@@ -9,7 +9,6 @@
 set -e
 
 # get container choices - with defaults
-START="${START_TYPE:-Warm_Start}"
 user=$(whoami)
 cores=$(nproc --all)
 workers="${APP_WORKERS:-$cores}"
@@ -35,7 +34,6 @@ if [[ ! -d /home/innovation-hub-api/persistent/logs/container2 ]]
     then
       mkdir -p /home/innovation-hub-api/persistent/logs/container2
 fi
-
 
 # if persistent db location doesn't exist, make it!
 if [[ ! -d /home/innovation-hub-api/persistent/db/container2 ]]
@@ -81,7 +79,6 @@ install_chromedriver() {
 
     # Display a success message
     echo "Chromedriver has been downloaded and installed to $chromedriver_dir"
-	
 }
 
 
@@ -100,8 +97,8 @@ start_api() {
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
       pip3 install -r requirements.txt --no-warn-script-location --break-system-packages
 	  
-	  # install the chrome web driver for selenium
-	  install_chromedriver
+      # install the chrome web driver for selenium
+      install_chromedriver
 
       # start api via wsgi (gunicorn)
       echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
@@ -125,32 +122,6 @@ start_api() {
   fi
 }
 
-#build_local_database() {
-#  if [[ ! -d /home/innovation-hub-api/persistent/db ]]
-#    then
-#      mkdir -p /home/innovation-hub-api/persistent/db
-#  fi
-#
-#  # build local db from remote source
-#  if [[ ! -f $local_database ]]
-#    then
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] building database..." | tee -a $container_log
-#
-#      # no local database found, do initial build from remote db
-#      touch $local_database
-#      python3 startup_update_db.py
-#
-#    else
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] database found!" | tee -a $container_log
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] checking for database updates..." | tee -a $container_log
-#
-#      # local database found, check for updates from remote db
-#      db_update_status=$(python3 update_db.py)
-#
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] "$db_update_status | tee -a $container_log
-#  fi
-#}
-
 tail_logs () {
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setup tailing of api log" | tee -a $container_log
   if [[ "$1" == "async" ]]
@@ -172,14 +143,6 @@ touch_logs () {
   touch $monit_log
 }
 
-#clear_storage () {
-#  # make sure the file exists, to prevent error when del a non-existent file
-#  touch $local_database
-#
-#  echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] deleting database file" | tee -a $container_log
-#  rm $local_database
-#}
-
 start_watchdog() {
   # reset the gunicorn config file in case of gunicorn port changes - replaces ln 12 back to original
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] resetting gunicorn3.conf..." | tee -a $container_log
@@ -199,35 +162,7 @@ start_watchdog() {
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] changing to dir: /home/innovation-hub-api/api" | tee -a $container_log
 cd /home/innovation-hub-api/api/
 
-#if [[ "$START" == "Cold_Start" ]]
-#  then
-#    # start container, flush dns, clear storage, retain logs, start application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Cold_Start..." | tee -a $container_log
-#    clear_storage
-#    touch_logs
-#    tail_logs "async"
-#    start_watchdog
-#    start_application
-#elif [[ "$START" == "Warm_Start" ]]
-#  then
-#    # start container, start application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Warm_Start..." | tee -a $container_log
-#    touch_logs
-#    tail_logs "async"
-#    build_local_database
-#    start_watchdog
-#    start_application
-#elif [[ "$START" == "Init_only" ]]
-# then
-#    # start container, not application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Init_only..." | tee -a $container_log
-#    clear_storage
-#    touch_logs
-#    tail_logs "async"
-#fi
-
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Cold_Start..." | tee -a $container_log
-#clear_storage
 touch_logs
 tail_logs "async"
 start_watchdog
