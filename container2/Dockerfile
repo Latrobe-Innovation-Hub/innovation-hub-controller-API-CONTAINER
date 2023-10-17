@@ -34,9 +34,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     gunicorn3 \
     procps \
     curl \
-	wget \
-	unzip \
-	jq \
+    wget \
+    unzip \
+    jq \
     lsof \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
