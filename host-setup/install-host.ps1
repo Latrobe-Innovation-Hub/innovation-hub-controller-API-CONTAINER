@@ -375,13 +375,57 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	try {
 	    # Set the screen turn off time to "Never" when plugged in
 	    powercfg -x -monitor-timeout-ac 0
-	    
-	    Write-Host "Windows power and sleep settings updated: Screen turns off after 'Never' when plugged in."
+		Write-Host "Windows power and sleep settings updated: Screen turns off after 'Never' when plugged in."
+		
+		# Set the computer to never enter sleep mode when on battery
+		powercfg -x -standby-timeout-ac 0    
+	    Write-Host "Windows power and sleep settings updated: Standby set to 'Never' when plugged in."
 	} catch {
 	    $step9Success = $false
 	}
 	ConfirmStepSuccess "Set Windows Power and Sleep Settings" $step9Success
 	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power and Sleep Settings"; Success = $step9Success}
+	
+	# Step 10: Install Google Chrome
+	$step10Success = $true
+	try {
+		# Define the URL for the Google Chrome offline installer
+		$chromeInstallerUrl = "https://dl.google.com/tag/s/appguid%3D%7B8A69D345-D564-463C-AFF1-A69D9E530F96%7D%26iid%3D%7BCD63C8A9-CE05-2063-361D-1A77FFBBB7F2%7D%26lang%3Den%26browser%3D3%26usagestats%3D0%26appname%3DGoogle%2520Chrome%26needsadmin%3Dtrue%26ap%3Dx64-stable-statsdef_0_0_1%26installdataindex%3Ddefaultbrowser/chrome/install/ChromeStandaloneSetup64.exe"
+		
+		# Set the download path to a temporary directory
+		$downloadPath = Join-Path $env:TEMP "ChromeStandaloneSetup64.exe"
+		
+		# Download the Chrome installer
+		Invoke-WebRequest -Uri $chromeInstallerUrl -OutFile $downloadPath
+		
+		# Install Chrome silently
+		Start-Process -FilePath $downloadPath -ArgumentList "/silent", "/install" -Wait
+	} catch {
+		$step10Success = $false
+	}
+	ConfirmStepSuccess "Install Google Chrome" $step10Success
+	$stepsStatus += [PSCustomObject]@{Step = "Install Google Chrome"; Success = $step10Success}
+
+	# Step 11: Install Python 3.7 and Add to PATH
+	$step11Success = $true
+	try {
+		# Define the Python installer URL (adjust the URL to the desired version)
+		$pythonInstallerUrl = "https://www.python.org/ftp/python/3.7.11/python-3.7.11-amd64.exe"
+		
+		# Set the download path to a temporary directory
+		$downloadPath = Join-Path $env:TEMP "PythonInstaller.exe"
+		
+		# Download the Python installer
+		Invoke-WebRequest -Uri $pythonInstallerUrl -OutFile $downloadPath
+		
+		# Install Python and add to PATH
+		Start-Process -Wait -FilePath $downloadPath -ArgumentList "/quiet", "PrependPath=1"
+	} catch {
+		$step11Success = $false
+	}
+	ConfirmStepSuccess "Install Python 3.7 and Add to PATH" $step11Success
+	$stepsStatus += [PSCustomObject]@{Step = "Install Python 3.7 and Add to PATH"; Success = $step11Success}
+
 
 	# Display status of each step
    	Write-Host

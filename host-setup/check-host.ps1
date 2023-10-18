@@ -104,6 +104,14 @@ $displayNeverSleep = ($displaySleepSettings.ACSettingIndex -eq 0)
 # Display the status using ShowStatus
 ShowStatus "Is display sleep set to 'Never' when plugged in?" $displayNeverSleep
 
+# Check if Windows 10 standby timeout settings are set to "Never" when on AC power - testing
+$standbyTimeoutSettings = Get-ItemProperty -Path "HKCU:\Control Panel\PowerCfg" -Name "ACSettingIndex" -ErrorAction SilentlyContinue
+$standbyNeverSleep = ($standbyTimeoutSettings.ACSettingIndex -eq 0)
+
+# Display the status using ShowStatus
+ShowStatus "Is standby timeout set to 'Never' when on AC power?" $standbyNeverSleep
+
+
 # Ask the user to press any key to exit
 Write-Host
 Write-Host "Press any key to continue..."
