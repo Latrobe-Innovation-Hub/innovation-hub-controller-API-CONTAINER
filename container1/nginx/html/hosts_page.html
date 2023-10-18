@@ -105,6 +105,7 @@
                             ' <button class="webBrowserButton" data-host-address="' + host.host_id + '">Web Browser</button>' +
                             ' <button class="configButton" data-host-address="' + host.host_id + '">Config</button>' +
                             ' <button class="rebootButton" data-host-address="' + host.host_id + '">Reboot</button>' +
+                            ' <button class="WOLButton" data-host-address="' + host.host_id + '">Reboot</button>' +
                             '</li>';
                     });
                 } else {
@@ -145,12 +146,36 @@
                     // Send the reboot request via the API
                     rebootHost(roomCode, hostAddress);
                 });
+
+                $('.WolButton').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked Reboot Button for hostAddress:', hostAddress);
+                    // Send the reboot request via the API
+                    WakeHost(roomCode, hostAddress);
+                });
             }
 
             // Function to open a new page with query parameters
             function openNewPage(pageName, roomCode, hostAddress) {
                 var url = pageName + '?room_code=' + roomCode + '&host_id=' + hostAddress;
-                window.open(url, '_blank');
+                window.open(url, '_self');
+            }
+
+            // Function to send WOL request
+            function WakeHost(roomCode, hostAddress) {
+                $.ajax({
+                    url: '/api/wake-on-lan/' + roomCode + '/' + hostAddress,
+                    method: 'GET', // You can adjust the method as needed
+                    success: function (response) {
+                        console.log('Reboot host response:', response); // Debugging console print
+                        // Handle the response if needed
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error rebooting host:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        // Handle the error if needed
+                    }
+                });
             }
 
             // Function to send a reboot request
@@ -223,11 +248,14 @@
                 var roomCode = getRoomCodeFromURL();
                 console.log('Adding host roomCode is:', roomCode);
 
-                var hostAddress = $('#host_address').val(); // Use 'host_address'
-                console.log('Host Address:', hostAddress);
+                var host_address = $('#host_address').val(); // Use 'host_address'
+                console.log('Host IP:', host_address);
 
-                var hostName = $('#host_name').val(); // Use 'host_name'
-                console.log('Host Name:', hostName);
+                var host_mac = $('#host_mac').val(); // Use 'host_address'
+                console.log('Host MAC:', host_mac);
+
+                var host_name = $('#host_name').val(); // Use 'host_name'
+                console.log('Host Name:', host_name);
 
                 var description = $('#description').val();
                 console.log('Description:', description);
@@ -242,8 +270,9 @@
                 console.log('Platform:', platform);
 
                 var dataToSend = {
-                    'host_address': hostAddress, // Use 'hostAddress'
-                    'host_name': hostName, // Use 'hostName'
+                    'host_address': host_address, // Use 'hostAddress'
+                    'host_mac': host_mac,
+                    'host_name': host_name, // Use 'hostName'
                     'description': description,
                     'username': username,
                     'password': password,
@@ -305,8 +334,10 @@
     <div class="dropdown">
         <h2>Add Host:</h2>
         <form id="addHostForm">
-            <label for="host_address">Host Address:</label>
+            <label for="host_address">Host IP:</label>
             <input type="text" id="host_address" required><br>
+            <label for="host_mac">Host MAC:</label>
+            <input type="text" id="host_mac" required><br>
             <label for="host_name">Host Name:</label>
             <input type="text" id="host_name" required><br>
             <label for="description">Description:</label>
@@ -315,7 +346,7 @@
             <input type="text" id="username" required><br>
             <label for="password">Password:</label>
             <input type="password" id="password" required><br>
-            <label for="platform">Platform (optional):</label>
+            <label for="platform">Platform (windows, mac, debian, etc):</label>
             <input type="text" id="platform"><br>
 
             <button type="submit">Add Host</button>

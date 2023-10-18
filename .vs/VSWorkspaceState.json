@@ -1,0 +1,12 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\container1",
+    "\\container1\\nginx",
+    "\\container1\\nginx\\html",
+    "\\container2",
+    "\\container2\\api"
+  ],
+  "SelectedNode": "\\container1\\nginx\\html\\pdus_page.html",
+  "PreviewInSolutionExplorer": false
+}

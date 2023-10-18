@@ -5,7 +5,8 @@
 # version: 0.9
 
 # get base image
-FROM debian:buster-slim
+#FROM debian:buster-slim
+FROM python:3.7-slim-buster
 
 # set container maintainer
 LABEL maintainer="andrew mcdonald <andrew.mcdonald@latrobe.edu.au>"
@@ -20,23 +21,39 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y -t buster-backports monit
 
 # installations and clean up 
+#RUN export DEBIAN_FRONTEND=noninteractive && \
+#    apt-get install -y \
+#    python3 \
+#    rustc \
+#    python3-venv \
+#    python3-pip \
+#    build-essential \
+#    libssl-dev \
+#    python-dev \
+#    libffi-dev \
+#    python3-pymysql \
+#    gunicorn3 \
+#    procps \
+#    curl \
+#    wget \
+#    unzip \
+#    jq \
+#    lsof \
+#    tzdata \
+#    && rm -rf /var/lib/apt/lists/*
+
+# Other installations and cleanup as needed
 RUN export DEBIAN_FRONTEND=noninteractive && \
     apt-get install -y \
-    python3 \
     rustc \
+    gnupg \
     python3-venv \
-    python3-pip \
-    build-essential \
-    libssl-dev \
-    python-dev \
-    libffi-dev \
-    python3-pymysql \
     gunicorn3 \
     procps \
     curl \
-	wget \
-	unzip \
-	jq \
+    wget \
+    unzip \
+    jq \
     lsof \
     tzdata \
     && rm -rf /var/lib/apt/lists/*

@@ -274,35 +274,8 @@ def run_browser(hostname, username, password, url=None):
                     return pid
                 else:
                     return f"{output}, {error}"
-
-                # send powerpoint on chronme command
-                #_, stdout, stderr = client.exec_command(command)
-                
-                # Capture the exit status and PID
-                #exit_status = stdout.channel.recv_exit_status()
-                #output = stdout.read().decode().strip()
-
-                # Extract the PID from the output
-                #pid_match = re.search(r"PID (\d+)", output)
-                #pid = pid_match.group(1) if pid_match else None
-
-                #if exit_status == 0:
-                #    return {'pid': pid} if pid else {'error': 'Failed to retrieve PID'}
-                #else:
-                #    return {'error': f'PowerPoint failed with exit status: {exit_status}'}
-                
-
-                # capture exit status, on success exist status is PID for chrome
-                # Need to check what exit status is when fails... does it ever fail?
-                #exit_status = stdout.channel.recv_exit_status()
-                #if exit_status == 0:
-                #return int(exit_status)
             else:
                 return f"No active session found for {username}."
-
-            #else:
-            #    return f"powerpoint failed with exit status: {exit_status}."
-
         except Exception as e:
             return {'error': str(e)}
 
@@ -503,6 +476,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS hosts (
             host_address TEXT PRIMARY KEY,
+            host_mac TEXT,       
             host_name TEXT,
             description TEXT,
             username TEXT,
@@ -523,6 +497,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS displays (
             display_address TEXT PRIMARY KEY,
+            display_mac TEXT,       
             display_name TEXT,
             display_type TEXT,
             username TEXT,
@@ -538,6 +513,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS pdus (
             pdu_address TEXT PRIMARY KEY,
+            pdu_mac TEXT,
             username TEXT,
             password TEXT,
             driver_path TEXT,
@@ -572,6 +548,7 @@ def get_hosts():
     for host in hosts:
         host_list.append({
             'host_id': host['host_address'],
+            'host_mac' : host['host_mac'],
             'host_name': host['host_name'],
             'description': host['description'],
             'username': host['username'],
@@ -619,6 +596,7 @@ def get_hosts_for_room(room_code):
     for host in hosts:
         host_list.append({
             'host_id': host['host_address'],
+            'host_mac' : host['host_mac'],
             'host_name': host['host_name'],
             'description': host['description'],
             'username': host['username'],
@@ -646,6 +624,7 @@ def get_displays():
     for display in displays:
         display_list.append({
             'display_address': display['display_address'],
+            'display_mac' : display['display_mac'],
             'display_name': display['display_name'],
             'display_type': display['display_type'],
             'username': display['username'],
@@ -671,6 +650,7 @@ def get_displays_for_room(room_code):
     for display in displays:
         display_list.append({
             'display_address': display['display_address'],
+            'display_mac' : display['display_mac'],
             'display_name': display['display_name'],
             'display_type': display['display_type'],
             'username': display['username'],
@@ -698,6 +678,7 @@ def get_pdus():
     for pdu in pdus:
         pdu_list.append({
             'pdu_address': pdu['pdu_address'],
+            'pdu_mac' : pdu['pdu_mac'],
             'username': pdu['username'],
             'password': pdu['password'],
             'room_code': pdu['room_code']
@@ -721,6 +702,7 @@ def get_pdus_for_room(room_code):
     for pdu in pdus:
         pdu_list.append({
             'pdu_address': pdu['pdu_address'],
+            'pdu_mac' : pdu['pdu_mac'],
             'username': pdu['username'],
             'password': pdu['password'],
             'room_code': pdu['room_code']
@@ -748,6 +730,7 @@ def get_room(room_code):
     for host in hosts:
         host_list.append({
             'host_id': host['host_address'],
+            'host_mac' : host['host_mac'],
             'host_name': host['host_name'],
             'description': host['description'],
             'username': host['username'],
@@ -766,6 +749,7 @@ def get_room(room_code):
     for display in displays:
         display_list.append({
             'display_address': display['display_address'],
+            'display_mac' : display['display_mac'],
             'display_name': display['display_name'],
             'display_type': display['display_type'],
             'username': display['username'],
@@ -780,6 +764,7 @@ def get_room(room_code):
     for pdu in pdus:
         pdu_list.append({
             'pdu_address': pdu['pdu_address'],
+            'pdu_mac' : pdu['pdu_mac'],
             'username': pdu['username'],
             'password': pdu['password'],
             'room_code': pdu['room_code']
@@ -880,6 +865,7 @@ def add_host(room_code):
 
     host_address = data.get('host_address')
     host_name = data.get('host_name')
+    host_mac = data.get('host_mac')
     description = data.get('description')
     username = data.get('username')
     password = data.get('password')
@@ -908,8 +894,8 @@ def add_host(room_code):
         return jsonify({'message': 'Host with the same address already exists in the room'}), 200
 
     # Insert the host data into the database
-    cursor.execute('INSERT INTO hosts (host_address, host_name, description, username, password, platform, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                       (host_address, host_name, description, username, password, platform, room_code))
+    cursor.execute('INSERT INTO hosts (host_address, host_mac, host_name, description, username, password, platform, room_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                       (host_address, host_mac, host_name, description, username, password, platform, room_code))
 
     conn.commit()
     conn.close()
@@ -1079,6 +1065,7 @@ def add_display(room_code):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
     display_address = data.get('display_address')
+    display_mac = data.get('display_mac')
     display_name = data.get('display_name')
     display_type = data.get('display_type')
     username = data.get('username')
@@ -1108,8 +1095,8 @@ def add_display(room_code):
         return jsonify({'message': 'Display with the same address already exists in the room'}), 200
 
     # Insert the display data into the database
-    cursor.execute('INSERT INTO displays (display_address, display_name, display_type, username, password, room_code) VALUES (?, ?, ?, ?, ?, ?)',
-                   (display_address, display_name, display_type, username, password, room_code))
+    cursor.execute('INSERT INTO displays (display_address, display_mac, display_name, display_type, username, password, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                   (display_address, display_mac, display_name, display_type, username, password, room_code))
 
     conn.commit()
     conn.close()
@@ -1414,12 +1401,6 @@ def get_or_create_devices():
 	
 app.config['pdu_data'] = None
 
-# Load PC host devices when the Flask app starts
-#@app.before_first_request
-#def load_pdu():
-#    app.config['pdu_data'] = get_or_create_devices()
-#    logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
-
 @app.before_first_request
 def before_first_request():
     print("on first run...")
@@ -1551,6 +1532,65 @@ def connect_samba_share_route():
 
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+import socket
+
+def send_magic_packet(mac_address, broadcast_address):
+    # Create a Magic Packet
+    mac_bytes = bytes.fromhex(mac_address.replace(':', ''))
+    magic_packet = b'\xFF' * 6 + mac_bytes * 16
+
+    # Send the Magic Packet to the broadcast address
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            s.sendto(magic_packet, (broadcast_address, 9))  # Replace with the actual broadcast address
+        return True
+    except Exception as e:
+        print(f"Error sending Magic Packet: {str(e)}")
+        return False
+
+from ipaddress import IPv4Network
+
+@app.route('/wake-on-lan/<string:room_code>/<string:host_address>', methods=['GET'])
+def wake_on_lan(room_code, host_address):
+    # Calculate the broadcast address based on the host_address
+    try:
+        host_ip = IPv4Network(f'{host_address}/24', strict=False)
+        broadcast_address = str(host_ip.broadcast_address)
+    except ValueError:
+        return jsonify({'error': 'Invalid host address'}), 400    
+
+    # Check if the room, host, and host_mac exist in a single query
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT r.room_code, h.host_mac, h.host_name
+        FROM rooms r
+        LEFT JOIN hosts h ON r.room_code = h.room_code AND h.host_address = ?
+        WHERE r.room_code = ?
+    ''', (host_address, room_code))
+    result = cursor.fetchone()
+    conn.close()
+
+    if result is None:
+        return jsonify({'error': 'Room not found or host not found in the specified room'}), 404
+
+    room_code_result, host_mac, host_name = result
+
+    if room_code_result is None:
+        return jsonify({'error': 'Room not found'}), 404
+
+    if host_mac is None:
+        return jsonify({'error': f'Mac not found for {host_name} in the room {room_code})'}), 404
+
+    #broadcast_address = '192.168.3.255'
+
+    # Send the Magic Packet
+    if send_magic_packet(host_mac, broadcast_address):
+        return jsonify({'status': 'Magic Packet sent successfully'}), 200
+    else:
+        return jsonify({'error': 'Failed to send Magic Packet'}), 500
 
 
 @app.route('/reboot/<string:room_code>/<string:host_address>', methods=['GET'])
@@ -1829,6 +1869,8 @@ def normalize_windows_path(path):
 @app.route('/open_vlc_video/<string:room_code>/<string:host_address>', methods=['POST'])
 def open_vlc_video(room_code, host_address):
     data = request.get_json()
+    logger.info(f"testing.... in open_vlc_video, request.get_json(): {data}")
+
     if not all(key in data for key in ['application', 'video_path']):
         return jsonify({'error': 'Missing required field(s)'}), 400
     

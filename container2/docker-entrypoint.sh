@@ -86,70 +86,37 @@ install_chromedriver() {
 
 
 start_api() {
-  # check if files exist and have content
+  # Create and activate a virtual environment
+  python3 -m venv venv
+  source venv/bin/activate
+
+  # Check if files exist and have content
   if [ -s /home/innovation-hub-api/api/api.py ]
-    then
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
-      cd /home/innovation-hub-api/api/
+  then
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
+    cd /home/innovation-hub-api/api/
 
-      # update pip
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] updating python setuptools, wheels..." | tee -a $container_log
-      python3 -m pip install --upgrade pip setuptools wheel --no-warn-script-location
+    # Update pip (within the virtual environment)
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] updating python setuptools, wheels..." | tee -a $container_log
+    pip install --upgrade pip setuptools wheel
 
-      # install app requirements
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
-      pip3 install -r requirements.txt --no-warn-script-location --break-system-packages
-	  
-	  # install the chrome web driver for selenium
-	  install_chromedriver
+    # Install app requirements (within the virtual environment)
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
+    pip install -r requirements.txt
 
-      # start api via wsgi (gunicorn)
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
-      # gunicorn3 hivekeepers_app:server \
-      # --bind 0.0.0.0:$port \
-      # --workers $workers \
-      # --worker-tmp-dir /dev/shm \
-      # --threads $threads \
-      # --log-level=$log_level_lower \
-      # --access-logfile=- \
-      # --log-file=$gunicorn_log \
-      # --error-logfile=$gunicorn_error_log \
-      # --access-logfile=$gunicorn_access_log
+    # Install the Chrome WebDriver for Selenium (within the virtual environment)
+    install_chromedriver
 
-      # using config for gunicorn allows for easier monit monitoring via PID file and dash_app/start_app.sh
-      gunicorn3 -c gunicorn_config.py api:app
+    # Start the API via WSGI (gunicorn) (within the virtual environment)
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
+    gunicorn -c gunicorn_config.py api:app
 
-    else
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] [ERROR] api.py is NOT populated!" | tee -a $container_log
-      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] NOT starting api!" | tee -a $container_log
+  else
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] [ERROR] api.py is NOT populated!" | tee -a $container_log
+    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] NOT starting API!" | tee -a $container_log
   fi
 }
 
-#build_local_database() {
-#  if [[ ! -d /home/innovation-hub-api/persistent/db ]]
-#    then
-#      mkdir -p /home/innovation-hub-api/persistent/db
-#  fi
-#
-#  # build local db from remote source
-#  if [[ ! -f $local_database ]]
-#    then
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] building database..." | tee -a $container_log
-#
-#      # no local database found, do initial build from remote db
-#      touch $local_database
-#      python3 startup_update_db.py
-#
-#    else
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] database found!" | tee -a $container_log
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] checking for database updates..." | tee -a $container_log
-#
-#      # local database found, check for updates from remote db
-#      db_update_status=$(python3 update_db.py)
-#
-#      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] "$db_update_status | tee -a $container_log
-#  fi
-#}
 
 tail_logs () {
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setup tailing of api log" | tee -a $container_log
@@ -172,14 +139,6 @@ touch_logs () {
   touch $monit_log
 }
 
-#clear_storage () {
-#  # make sure the file exists, to prevent error when del a non-existent file
-#  touch $local_database
-#
-#  echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] deleting database file" | tee -a $container_log
-#  rm $local_database
-#}
-
 start_watchdog() {
   # reset the gunicorn config file in case of gunicorn port changes - replaces ln 12 back to original
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] resetting gunicorn3.conf..." | tee -a $container_log
@@ -198,33 +157,6 @@ start_watchdog() {
 # cd into app dir
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] changing to dir: /home/innovation-hub-api/api" | tee -a $container_log
 cd /home/innovation-hub-api/api/
-
-#if [[ "$START" == "Cold_Start" ]]
-#  then
-#    # start container, flush dns, clear storage, retain logs, start application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Cold_Start..." | tee -a $container_log
-#    clear_storage
-#    touch_logs
-#    tail_logs "async"
-#    start_watchdog
-#    start_application
-#elif [[ "$START" == "Warm_Start" ]]
-#  then
-#    # start container, start application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Warm_Start..." | tee -a $container_log
-#    touch_logs
-#    tail_logs "async"
-#    build_local_database
-#    start_watchdog
-#    start_application
-#elif [[ "$START" == "Init_only" ]]
-# then
-#    # start container, not application
-#    echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Init_only..." | tee -a $container_log
-#    clear_storage
-#    touch_logs
-#    tail_logs "async"
-#fi
 
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Cold_Start..." | tee -a $container_log
 #clear_storage
