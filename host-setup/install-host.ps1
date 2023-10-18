@@ -50,6 +50,8 @@ Write-Host $comment
 $response = Read-Host "Do you wish to continue? Type 'yes' to proceed."
 
 if ($response -eq 'YES' -or $response -eq 'yes') {
+	# Save the current working directory
+	$originalWorkingDirectory = Get-Location
 	
 	# Required for displaying message box
 	Add-Type -AssemblyName PresentationFramework
@@ -390,7 +392,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Set Windows Power and Sleep Settings" $step9Success
 	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power and Sleep Settings"; Success = $step9Success}
 	
-	# Step 10: Install Google Chrome
+	<# # Step 10: Install Google Chrome
 	$step10Success = $true
 	try {
 		# Define the URL for the Google Chrome offline installer
@@ -471,7 +473,10 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 				$stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $false}
 			}
 		}
-	}
+	} #>
+	
+	# Restore the original working directory
+	Set-Location $originalWorkingDirectory
 	
 	# Step 11: Install Python 3.7 and Add to PATH
 	$step12Success = $true
@@ -485,6 +490,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 
 		# Define the source file path (CWD in this case)
 		$sourceFilePath = Join-Path (Get-Location) "browser-youtube.py"
+		
 
 		# Define the destination directory path (Documents directory)
 		$destinationDirectory = "C:\Users\$Username\Documents"
