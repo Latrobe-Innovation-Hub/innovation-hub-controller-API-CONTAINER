@@ -19,7 +19,11 @@ case $1 in
                 exec gunicorn3 -c gunicorn_config.py api:server > /dev/null 2>&1 &
 
                 #echo $! > ${PIDFILE} # save spawned backround process' PID to PIDFILE
+<<<<<<< HEAD
                 #cat ${PIDFILE}
+=======
+                #cat ${PIDFILE};;
+>>>>>>> 2566b849e1d4d2804f6e31c05114651db1a20d8a
         ;;
         stop)
                 cat ${PIDFILE}

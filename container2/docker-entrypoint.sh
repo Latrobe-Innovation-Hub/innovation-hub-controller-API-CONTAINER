@@ -9,7 +9,6 @@
 set -e
 
 # get container choices - with defaults
-START="${START_TYPE:-Warm_Start}"
 user=$(whoami)
 cores=$(nproc --all)
 workers="${APP_WORKERS:-$cores}"
@@ -35,7 +34,6 @@ if [[ ! -d /home/innovation-hub-api/persistent/logs/container2 ]]
     then
       mkdir -p /home/innovation-hub-api/persistent/logs/container2
 fi
-
 
 # if persistent db location doesn't exist, make it!
 if [[ ! -d /home/innovation-hub-api/persistent/db/container2 ]]
@@ -81,7 +79,6 @@ install_chromedriver() {
 
     # Display a success message
     echo "Chromedriver has been downloaded and installed to $chromedriver_dir"
-	
 }
 
 
@@ -92,9 +89,42 @@ start_api() {
 
   # Check if files exist and have content
   if [ -s /home/innovation-hub-api/api/api.py ]
+<<<<<<< HEAD
   then
     echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
     cd /home/innovation-hub-api/api/
+=======
+    then
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] api.py is populated!" | tee -a $container_log
+      cd /home/innovation-hub-api/api/
+
+      # update pip
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] updating python setuptools, wheels..." | tee -a $container_log
+      python3 -m pip install --upgrade pip setuptools wheel --no-warn-script-location
+
+      # install app requirements
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] installing python requirements..." | tee -a $container_log
+      pip3 install -r requirements.txt --no-warn-script-location --break-system-packages
+	  
+      # install the chrome web driver for selenium
+      install_chromedriver
+
+      # start api via wsgi (gunicorn)
+      echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting application dashboard..." | tee -a $container_log
+      # gunicorn3 hivekeepers_app:server \
+      # --bind 0.0.0.0:$port \
+      # --workers $workers \
+      # --worker-tmp-dir /dev/shm \
+      # --threads $threads \
+      # --log-level=$log_level_lower \
+      # --access-logfile=- \
+      # --log-file=$gunicorn_log \
+      # --error-logfile=$gunicorn_error_log \
+      # --access-logfile=$gunicorn_access_log
+
+      # using config for gunicorn allows for easier monit monitoring via PID file and dash_app/start_app.sh
+      gunicorn3 -c gunicorn_config.py api:app
+>>>>>>> 2566b849e1d4d2804f6e31c05114651db1a20d8a
 
     # Update pip (within the virtual environment)
     echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] updating python setuptools, wheels..." | tee -a $container_log
@@ -117,7 +147,10 @@ start_api() {
   fi
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 2566b849e1d4d2804f6e31c05114651db1a20d8a
 tail_logs () {
   echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setup tailing of api log" | tee -a $container_log
   if [[ "$1" == "async" ]]
@@ -159,7 +192,6 @@ echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] changing to dir: /home/innovatio
 cd /home/innovation-hub-api/api/
 
 echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] starting Cold_Start..." | tee -a $container_log
-#clear_storage
 touch_logs
 tail_logs "async"
 start_watchdog
