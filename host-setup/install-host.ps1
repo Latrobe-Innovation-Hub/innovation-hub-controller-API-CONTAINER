@@ -461,18 +461,16 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 			$packageName = "selenium"
 
 			# Run pip to install the package using the full Python path
-			$pipProcess = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru
+			$pipProcess = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru	
 			if ($pipProcess.ExitCode -eq 0) {
 				Write-Host "Selenium successfully installed."
+				$stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $true}
 			} else {
 				Write-Host "Selenium installation failed with exit code $($pipProcess.ExitCode)."
+				$stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $false}
 			}
 		}
 	}
-
-
-
-
 
 	# Display status of each step
    	Write-Host
