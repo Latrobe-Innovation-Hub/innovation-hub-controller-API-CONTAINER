@@ -97,7 +97,7 @@ ShowStatus "Is Auto-Login enabled?" $autoLoginStatus
 $nircmdInstalled = (Test-Path "C:\NirCmd\nircmd.exe" -PathType Leaf)
 ShowStatus "Is NirCmd installed?" $nircmdInstalled
 
-# Check if the screen turns off time is set to "Never" when plugged in
+<# # Check if the screen turns off time is set to "Never" when plugged in
 $monitorTimeoutSettings = powercfg -q SCHEME_CURRENT | Select-String "Monitor (Plugged In)"
 $screenNeverTurnsOff = $monitorTimeoutSettings -match "Never"
 ShowStatus "Is the screen set to turn off 'Never' when plugged in?" $screenNeverTurnsOff
@@ -124,7 +124,6 @@ $scriptsInPath = $existingPath -like "*$scriptsDirectory*"
 ShowStatus "Is Python 3.7 in PATH?" $pythonInPath
 ShowStatus "Are Python Scripts in PATH?" $scriptsInPath
 
-
 # Step 12: Check if Selenium is installed
 $seleniumPackage = "selenium"
 $seleniumInstalled = Test-Path -Path "$pythonDirectory\Lib\site-packages\$seleniumPackage"
@@ -133,7 +132,7 @@ ShowStatus "Is Selenium installed?" $seleniumInstalled
 # Step 13: Check if 'browser-youtube.py' is in the user's Documents folder
 $sourceFilePath = Join-Path $destinationDirectory "browser-youtube.py"
 $browserScriptExists = Test-Path $sourceFilePath -PathType Leaf
-ShowStatus "Is 'browser-youtube.py' in the user's Documents folder?" $browserScriptExists
+ShowStatus "Is 'browser-youtube.py' in the user's Documents folder?" $browserScriptExists #>
 
 
 # Ask the user to press any key to exit
