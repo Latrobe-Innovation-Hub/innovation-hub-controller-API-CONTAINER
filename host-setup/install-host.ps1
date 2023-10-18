@@ -392,7 +392,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Set Windows Power and Sleep Settings" $step9Success
 	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power and Sleep Settings"; Success = $step9Success}
 	
-	<# # Step 10: Install Google Chrome
+	# Step 10: Install Google Chrome
 	$step10Success = $true
 	try {
 		# Define the URL for the Google Chrome offline installer
@@ -473,7 +473,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 				$stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $false}
 			}
 		}
-	} #>
+	}
 	
 	# Restore the original working directory
 	Set-Location $originalWorkingDirectory
