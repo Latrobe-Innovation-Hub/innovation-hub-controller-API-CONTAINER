@@ -360,10 +360,14 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	    # Extract NirCmd to the destination path
 	    Expand-Archive -Path $downloadPath -DestinationPath $extractPath -Force
 	
-	    # Add the NirCmd directory to the system's PATH environment variable
-	    $pathEnv = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)
-	    $newPath = "$pathEnv;$extractPath"
-	    [System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
+	    # Check if the NirCmd directory is already in the system's PATH
+		$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)
+
+		if ($existingPath -notlike "*$extractPath*") {
+			# The directory is not in the PATH, so add it
+			$newPath = "$existingPath;$extractPath"
+			[System.Environment]::SetEnvironmentVariable('PATH', $newPath, [System.EnvironmentVariableTarget]::Machine)
+		}
 	} catch {
 	    $step8Success = $false
 	}
