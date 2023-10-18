@@ -431,26 +431,47 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Install Python 3.7" $step11Success
 	$stepsStatus += [PSCustomObject]@{Step = "Install Python 3.7"; Success = $step11Success}
 	
-	# Check if Python and Scripts directories are in the system's PATH
-	# Get the full domain-qualified username
-	$FullUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-	
-	# Split the username to extract the part after the backslash (domain\username format)
-	$UsernameParts = $FullUsername -split '\\'
-	$Username = $UsernameParts[1]
-	
-	$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
-	$pythonDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37"
-	$scriptsDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts"
+	if ($step11Success) {
+		# Check if Python and Scripts directories are in the user's PATH
+		# Get the full domain-qualified username
+		$FullUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
 
-	$pythonInPath = $existingPath -like "*$pythonDirectory*"
-	$scriptsInPath = $existingPath -like "*$scriptsDirectory*"
+		# Split the username to extract the part after the backslash (domain\username format)
+		$UsernameParts = $FullUsername -split '\\'
+		$Username = $UsernameParts[1]
 
-	$step11aSuccess = $pythonInPath -and $scriptsInPath
+		$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
+		$pythonDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37"
+		$scriptsDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts"
 
-	# Step 11: Is Python 3.7 and Scripts added to PATH?
-	ConfirmStepSuccess "Python 3.7 and Scripts directory added to PATH" $step11aSuccess
-	$stepsStatus += [PSCustomObject]@{Step = "Python 3.7 and Scripts added to PATH"; Success = $step11aSuccess}
+		$pythonInPath = $existingPath -like "*$pythonDirectory*"
+		$scriptsInPath = $existingPath -like "*$scriptsDirectory*"
+
+		$step11aSuccess = $pythonInPath -and $scriptsInPath
+
+		# Step 11: Is Python 3.7 and Scripts added to PATH?
+		ConfirmStepSuccess "Python 3.7 and Scripts directory added to PATH" $step11aSuccess
+		$stepsStatus += [PSCustomObject]@{Step = "Python 3.7 and Scripts added to PATH"; Success = $step11aSuccess}
+
+		if ($step11aSuccess) {
+			# Define the full path to the Python interpreter
+			$pythonPath = "$pythonDirectory\python.exe"
+
+			# Define the package you want to install (e.g., Selenium)
+			$packageName = "selenium"
+
+			# Run pip to install the package using the full Python path
+			$pipProcess = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru
+			if ($pipProcess.ExitCode -eq 0) {
+				Write-Host "Selenium successfully installed."
+			} else {
+				Write-Host "Selenium installation failed with exit code $($pipProcess.ExitCode)."
+			}
+		}
+	}
+
+
+
 
 
 	# Display status of each step
