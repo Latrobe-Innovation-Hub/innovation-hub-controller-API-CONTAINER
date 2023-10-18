@@ -111,6 +111,29 @@ $standbyNeverSleep = ($standbyTimeoutSettings.ACSettingIndex -eq 0)
 # Display the status using ShowStatus
 ShowStatus "Is standby timeout set to 'Never' when on AC power?" $standbyNeverSleep
 
+# Step 9: Check if standby is set to 'Never'
+$standbyNeverSet = ($standbyTimeoutSettings.ACSettingIndex -eq 0)
+ShowStatus "Is standby timeout set to 'Never' when on AC power?" $standbyNeverSet
+
+# Step 10: Check if Google Chrome is installed
+$chromeInstalled = Test-Path "C:\Program Files\Google\Chrome\Application\chrome.exe" -PathType Leaf
+ShowStatus "Is Google Chrome installed?" $chromeInstalled
+
+# Step 11: Check if Python is installed and added to PATH
+$pythonInstalled = Test-Path "C:\Users\$Username\AppData\Local\Programs\Python\Python37\python.exe" -PathType Leaf
+$pythonInPath = $existingPath -like "*C:\Users\$Username\AppData\Local\Programs\Python\Python37*"
+$scriptsInPath = $existingPath -like "*C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts*"
+ShowStatus "Is Python 3.7 installed?" $pythonInstalled
+ShowStatus "Is Python 3.7 in PATH?" $pythonInPath
+ShowStatus "Are Python Scripts in PATH?" $scriptsInPath
+
+# Step 12: Check if Selenium is installed
+$seleniumInstalled = (Test-Path "$pythonDirectory\Scripts\selenium.exe" -PathType Leaf)
+ShowStatus "Is Selenium installed?" $seleniumInstalled
+
+# Step 13: Check if 'browser-youtube.py' is in the user's Documents folder
+$browserScriptInDocuments = Test-Path "C:\Users\$Username\Documents\browser-youtube.py" -PathType Leaf
+ShowStatus "Is 'browser-youtube.py' in the user's Documents folder?" $browserScriptInDocuments
 
 # Ask the user to press any key to exit
 Write-Host
