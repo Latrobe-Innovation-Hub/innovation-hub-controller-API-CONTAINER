@@ -411,15 +411,23 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	try {
 		# Define the Python installer URL (adjust the URL to the desired version)
 		$pythonInstallerUrl = "https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64.exe"
-		
+
 		# Set the download path to a temporary directory
 		$downloadPath = Join-Path $env:TEMP "PythonInstaller.exe"
-		
+
 		# Download the Python installer
 		Invoke-WebRequest -Uri $pythonInstallerUrl -OutFile $downloadPath
+
+		# Install Python and add to PATH
+		$pythonInstallResult = Start-Process -Wait -FilePath $downloadPath -ArgumentList "/quiet", "PrependPath=1"
 		
-		# Install Python and add to PATH using /quiet and PrependPath=1
-		Start-Process -Wait -FilePath $downloadPath -ArgumentList "/quiet", "PrependPath=1"
+		if ($pythonInstallResult.ExitCode -eq 0) {
+			# Successful installation
+			$step11Success = $true
+		} else {
+			# Installation failed
+			$step11Success = $false
+		}
 	} catch {
 		$step11Success = $false
 	}
