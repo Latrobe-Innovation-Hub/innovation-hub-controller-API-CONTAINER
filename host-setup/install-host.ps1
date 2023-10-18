@@ -439,7 +439,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	$UsernameParts = $FullUsername -split '\\'
 	$Username = $UsernameParts[1]
 	
-	$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::Machine)
+	$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
 	$pythonDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37"
 	$scriptsDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts"
 
