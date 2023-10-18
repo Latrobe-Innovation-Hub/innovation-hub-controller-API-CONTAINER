@@ -410,7 +410,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	$step11Success = $true
 	try {
 		# Define the Python installer URL (adjust the URL to the desired version)
-		$pythonInstallerUrl = "https://www.python.org/ftp/python/3.7.11/python-3.7.11-amd64.exe"
+		$pythonInstallerUrl = "https://www.python.org/ftp/python/3.7.9/python-3.7.9-amd64.exe"
 		
 		# Set the download path to a temporary directory
 		$downloadPath = Join-Path $env:TEMP "PythonInstaller.exe"
@@ -418,13 +418,15 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		# Download the Python installer
 		Invoke-WebRequest -Uri $pythonInstallerUrl -OutFile $downloadPath
 		
-		# Install Python and add to PATH
+		# Install Python and add to PATH using /quiet and PrependPath=1
 		Start-Process -Wait -FilePath $downloadPath -ArgumentList "/quiet", "PrependPath=1"
 	} catch {
 		$step11Success = $false
 	}
+
 	ConfirmStepSuccess "Install Python 3.7 and Add to PATH" $step11Success
 	$stepsStatus += [PSCustomObject]@{Step = "Install Python 3.7 and Add to PATH"; Success = $step11Success}
+
 
 
 	# Display status of each step
