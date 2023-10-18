@@ -449,10 +449,11 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 
 		$step11aSuccess = $pythonInPath -and $scriptsInPath
 
-		# Step 11: Is Python 3.7 and Scripts added to PATH?
+		# Step 11a: Is Python 3.7 and Scripts added to PATH?
 		ConfirmStepSuccess "Python 3.7 and Scripts directory added to PATH" $step11aSuccess
 		$stepsStatus += [PSCustomObject]@{Step = "Python 3.7 and Scripts added to PATH"; Success = $step11aSuccess}
-
+		
+		# Step 11b: Install Selenium
 		if ($step11aSuccess) {
 			# Define the full path to the Python interpreter
 			$pythonPath = "$pythonDirectory\python.exe"
@@ -471,6 +472,31 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 			}
 		}
 	}
+	
+	# Step 11: Install Python 3.7 and Add to PATH
+	$step12Success = $true
+	try {
+		# Get the full domain-qualified username
+		$FullUsername = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+
+		# Split the username to extract the part after the backslash (domain\username format)
+		$UsernameParts = $FullUsername -split '\\'
+		$Username = $UsernameParts[1]
+
+		# Define the source file path (CWD in this case)
+		$sourceFilePath = Join-Path (Get-Location) "browser-youtube.py"
+
+		# Define the destination directory path (Documents directory)
+		$destinationDirectory = "C:\Users\$Username\Documents"
+
+		# Use Copy-Item to copy the file to the destination
+		Copy-Item -Path $sourceFilePath -Destination $destinationDirectory
+	} catch {
+		$step12Success = $false
+	}
+	ConfirmStepSuccess "Moved browser-youtube.py to $destinationDirectory" $step12Success
+
+	$stepsStatus += [PSCustomObject]@{Step = "Moved browser-youtube.py to destinationDirectory"; Success = $step12Success}
 
 	# Display status of each step
    	Write-Host
