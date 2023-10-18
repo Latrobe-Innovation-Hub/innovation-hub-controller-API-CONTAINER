@@ -97,43 +97,44 @@ ShowStatus "Is Auto-Login enabled?" $autoLoginStatus
 $nircmdInstalled = (Test-Path "C:\NirCmd\nircmd.exe" -PathType Leaf)
 ShowStatus "Is NirCmd installed?" $nircmdInstalled
 
-# Check if Windows 10 display sleep settings are set to "Never" when plugged in - testing
-$displaySleepSettings = Get-ItemProperty -Path "HKCU:\Control Panel\PowerCfg" -Name "ACSettingIndex" -ErrorAction SilentlyContinue
-$displayNeverSleep = ($displaySleepSettings.ACSettingIndex -eq 0)
+# Check if the screen turns off time is set to "Never" when plugged in
+$monitorTimeoutSettings = powercfg -q SCHEME_CURRENT | Select-String "Monitor (Plugged In)"
+$screenNeverTurnsOff = $monitorTimeoutSettings -match "Never"
+ShowStatus "Is the screen set to turn off 'Never' when plugged in?" $screenNeverTurnsOff
 
-# Display the status using ShowStatus
-ShowStatus "Is display sleep set to 'Never' when plugged in?" $displayNeverSleep
-
-# Check if Windows 10 standby timeout settings are set to "Never" when on AC power - testing
-$standbyTimeoutSettings = Get-ItemProperty -Path "HKCU:\Control Panel\PowerCfg" -Name "ACSettingIndex" -ErrorAction SilentlyContinue
-$standbyNeverSleep = ($standbyTimeoutSettings.ACSettingIndex -eq 0)
-
-# Display the status using ShowStatus
-ShowStatus "Is standby timeout set to 'Never' when on AC power?" $standbyNeverSleep
-
-# Step 9: Check if standby is set to 'Never'
-$standbyNeverSet = ($standbyTimeoutSettings.ACSettingIndex -eq 0)
-ShowStatus "Is standby timeout set to 'Never' when on AC power?" $standbyNeverSet
+# Check if the computer is set to never enter sleep mode when plugged in
+$standbyTimeoutSettings = powercfg -q SCHEME_CURRENT | Select-String "Standby (Plugged In)"
+$standbyNever = $standbyTimeoutSettings -match "Never"
+ShowStatus "Is standby set to 'Never' when plugged in?" $standbyNever
 
 # Step 10: Check if Google Chrome is installed
 $chromeInstalled = Test-Path "C:\Program Files\Google\Chrome\Application\chrome.exe" -PathType Leaf
 ShowStatus "Is Google Chrome installed?" $chromeInstalled
 
 # Step 11: Check if Python is installed and added to PATH
-$pythonInstalled = Test-Path "C:\Users\$Username\AppData\Local\Programs\Python\Python37\python.exe" -PathType Leaf
-$pythonInPath = $existingPath -like "*C:\Users\$Username\AppData\Local\Programs\Python\Python37*"
-$scriptsInPath = $existingPath -like "*C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts*"
+$pythonPath = "C:\Users\$Username\AppData\Local\Programs\Python\Python37\python.exe"
+$pythonInstalled = Test-Path $pythonPath -PathType Leaf
 ShowStatus "Is Python 3.7 installed?" $pythonInstalled
+
+$existingPath = [System.Environment]::GetEnvironmentVariable('PATH', [System.EnvironmentVariableTarget]::User)
+$pythonDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37"
+$scriptsDirectory = "C:\Users\$Username\AppData\Local\Programs\Python\Python37\Scripts"
+$pythonInPath = $existingPath -like "*$pythonDirectory*"
+$scriptsInPath = $existingPath -like "*$scriptsDirectory*"
 ShowStatus "Is Python 3.7 in PATH?" $pythonInPath
 ShowStatus "Are Python Scripts in PATH?" $scriptsInPath
 
+
 # Step 12: Check if Selenium is installed
-$seleniumInstalled = (Test-Path "$pythonDirectory\Scripts\selenium.exe" -PathType Leaf)
+$seleniumPackage = "selenium"
+$seleniumInstalled = Test-Path -Path "$pythonDirectory\Lib\site-packages\$seleniumPackage"
 ShowStatus "Is Selenium installed?" $seleniumInstalled
 
 # Step 13: Check if 'browser-youtube.py' is in the user's Documents folder
-$browserScriptInDocuments = Test-Path "C:\Users\$Username\Documents\browser-youtube.py" -PathType Leaf
-ShowStatus "Is 'browser-youtube.py' in the user's Documents folder?" $browserScriptInDocuments
+$sourceFilePath = Join-Path $destinationDirectory "browser-youtube.py"
+$browserScriptExists = Test-Path $sourceFilePath -PathType Leaf
+ShowStatus "Is 'browser-youtube.py' in the user's Documents folder?" $browserScriptExists
+
 
 # Ask the user to press any key to exit
 Write-Host
