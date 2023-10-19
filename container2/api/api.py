@@ -1259,10 +1259,15 @@ async def turn_on_projector(room_code, display_address):
                 await asyncio.sleep(5)
                 
                 # Check the current power state to confirm it's on
-                power_state = await projector.get_property("PWR")
-
-                if power_state == POWER_ON:
-                    return jsonify({'message': 'Projector turned on successfully'}), 200
+                max_retries = 15
+                for retry in range(1, max_retries + 1):
+                    power_state = await projector.get_property("PWR")
+			
+                    if power_state == POWER_ON:
+                        return jsonify({'message': 'Projector turned on successfully'}), 200
+			    
+	            # Wait before retrying (you can adjust the duration)
+                    await asyncio.sleep(5)	
                 else:
                     return jsonify({'error': 'Failed to turn on the projector'}), 500
             else:
@@ -1335,17 +1340,22 @@ async def turn_off_projector(room_code, display_address):
                 
                     # Wait for the projector to power off
                     await asyncio.sleep(5)
-                
-                    # Check the current power state to confirm it's off
-                    power_state = await projector.get_property("PWR")
 
-                    if power_state == POWER_OFF:
-                        return jsonify({'message': 'Projector turned off successfully'}), 200
+		    # Check the current power state to confirm it's off
+                    max_retries = 15
+                    for retry in range(1, max_retries + 1):
+                        # Check the current power state to confirm it's off
+                        power_state = await projector.get_property("PWR")
+
+                        if power_state == POWER_OFF:
+                            return jsonify({'message': 'Projector turned off successfully'}), 200
+
+		        # Wait before retrying (you can adjust the duration)
+                        await asyncio.sleep(5)
                     else:
                         return jsonify({'error': 'Failed to turn off the projector'}), 500
                 elif power_state == POWER_OFF:
                     return jsonify({'message': 'Projector is already off'}), 200
-
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
