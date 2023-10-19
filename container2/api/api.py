@@ -37,7 +37,6 @@
 #       NirCmd can be found here: https://www.nirsoft.net/utils/nircmd.html
 # ======================================================================================================================================================
 
-
 from calendar import c
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS, cross_origin
