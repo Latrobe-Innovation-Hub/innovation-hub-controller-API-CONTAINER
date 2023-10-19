@@ -64,7 +64,6 @@ logger = logging.getLogger()
 handler_stdout = logging.StreamHandler()
 handler_file = logging.FileHandler('/home/innovation-hub-api/persistent/logs/container2/gunicorn.log')
 
-
 # set log format
 formatter = logging.Formatter('%(asctime)s [PYTHON] [%(levelname)s] %(filename)s: %(message)s')
 
@@ -232,7 +231,6 @@ def run_reboot_device(hostname, username, password, platformInput="windows"):
         except Exception as e:
             return {'error': str(e)}
 
-
 # open powerpoint slide file/url on remote windows pc in google chrome
 def run_browser(hostname, username, password, url=None):
     # Create an SSH client
@@ -278,7 +276,6 @@ def run_browser(hostname, username, password, url=None):
                 return f"No active session found for {username}."
         except Exception as e:
             return {'error': str(e)}
-
 
 # close process running on remote windows pc
 def kill_process(hostname, username, password, pid):
@@ -416,7 +413,6 @@ def run_vlc_application(hostname, username, password, application=None, argument
         except Exception as e:
             return {'error': str(e)}
 
-
 # send nircmd commands to a remote PC
 def run_nircmd(hostname, username, password, cmd):
     # Create a new SSH client object
@@ -452,7 +448,6 @@ def run_nircmd(hostname, username, password, cmd):
         except Exception as e:
             return {'error': str(e)}
             
-
 # single database init - need to test and integrate
 def init_db():
     print("initialising the database...")
@@ -660,7 +655,6 @@ def get_displays_for_room(room_code):
 
     return jsonify({'displays': display_list}), 200
 
-
 # Route to get all PDUs
 @app.route('/get_pdus', methods=['GET'])
 def get_pdus():
@@ -709,7 +703,6 @@ def get_pdus_for_room(room_code):
         })
 
     return jsonify({'pdus': pdu_list}), 200
-
 
 @app.route('/get_room/<room_code>', methods=['GET'])
 def get_room(room_code):
@@ -782,7 +775,6 @@ def get_room(room_code):
 
     return jsonify({'room_info': room_info}), 200
 
-
 # Route to add a new room
 @app.route('/add_room', methods=['POST'])
 def add_room():
@@ -850,7 +842,6 @@ def remove_room(room_code):
     app.config['pdu_data'] = devices
 
     return jsonify({'message': 'Room and associated devices removed successfully'}), 200
-
 
 #Route to add a new host
 #@app.route('/add_host', methods=['POST'])
@@ -1193,7 +1184,6 @@ async def get_projector_state(room_code, display_address):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
 @app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['POST'])
 async def turn_on_projector(room_code, display_address):
     # Define constants for power states
@@ -1276,7 +1266,6 @@ async def turn_on_projector(room_code, display_address):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
-
 @app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
 async def turn_off_projector(room_code, display_address):
     # Define constants for power states
@@ -1358,7 +1347,6 @@ async def turn_off_projector(room_code, display_address):
                     return jsonify({'message': 'Projector is already off'}), 200
         except Exception as e:
             return jsonify({'error': str(e)}), 500
-
 
 #init_db()
 
@@ -1604,7 +1592,6 @@ def wake_on_lan(room_code, host_address):
     else:
         return jsonify({'error': 'Failed to send Magic Packet'}), 500
 
-
 @app.route('/reboot/<string:room_code>/<string:host_address>', methods=['GET'])
 def reboot_device(room_code, host_address):
     # Query the database to retrieve the username and password based on the host_address and room_code
@@ -1655,7 +1642,6 @@ def open_browser(room_code, host_address):
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
-
 
 @app.route('/get_user_session_id', methods=['POST'])
 def get_user_session_id_old():
@@ -1841,7 +1827,6 @@ def open_application_route_old():
     else:
         return jsonify({'response': result}), 200
 
-
 @app.route('/open_application/<string:room_code>/<string:host_address>', methods=['POST'])
 def open_application(room_code, host_address):
     data = request.get_json()
@@ -1956,8 +1941,6 @@ def open_vlc_video(room_code, host_address):
     else:
         return jsonify({'error': 'Unsupported application'}), 400
 
-
-
 @app.route('/send_nircmd', methods=['POST'])
 def send_nircmd_old():
     data = request.get_json()
@@ -1988,7 +1971,6 @@ def send_nircmd_old():
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
-
 
 @app.route('/send_nircmd/<string:room_code>/<string:host_address>', methods=['POST'])
 def send_nircmd(room_code, host_address):
@@ -2061,7 +2043,6 @@ def list_devices():
         
     logger.info(f"testing.... device_list is: {pdu_list}")
     return jsonify({'devices': pdu_list})
-
 
 @app.route('/pdu/devices/<int:device_number>', methods=['GET'])
 def get_device(device_number):
@@ -2143,7 +2124,6 @@ def add_pdu(room_code):
         return jsonify({'error': 'PDU not reachable...'}), 200
     finally:
         conn.close()
-
 
 @app.route('/remove_pdu/<string:room_code>/<string:pdu_address>', methods=['DELETE'])
 def remove_device(room_code, pdu_address):        
@@ -2389,7 +2369,6 @@ def view_all_pdu_settings(room_code, pdu_address):
 
     return jsonify(system_settings)
 
-    
 #@app.route('/pdu/devices/<string:host_address>/change_system_settings', methods=['PUT'])
 @app.route('/change_pdu_system_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_system_settings(room_code, pdu_address):
@@ -2551,7 +2530,6 @@ def change_user_settings_old(host_address):
 
     return jsonify({'message': 'User settings updated successfully.'})
 
-
 #@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings', methods=['PUT'])
 @app.route('/change_pdu_ping_action_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_ping_action_settings(room_code, host_address):
@@ -2593,7 +2571,6 @@ def change_ping_action_settings(room_code, host_address):
     )
 
     return jsonify({'message': 'Ping action settings updated successfully.'})
-
 
 #@app.route('/pdu/devices/<string:host_address>/set_outlet_power_state', methods=['PUT'])
 @app.route('/change_pdu_outlet_power_state/<string:room_code>/<string:pdu_address>', methods=['PUT'])
@@ -2738,7 +2715,6 @@ def enable_disable_dhcp(room_code, pdu_address):
 
     selected_device.change_dhcp_setting(dhcp=dhcp_option)
     return jsonify({'message': 'DHCP settings updated successfully.'})
-    
 
 #@app.route('/pdu/devices/<string:host_address>/change_time_settings', methods=['PUT'])
 @app.route('/change_pdu_time_setting/<string:room_code>/<string:pdu_address>', methods=['PUT'])
@@ -2831,7 +2807,6 @@ def upload_images():
 
     return jsonify({'message': 'Images uploaded successfully.'}), 200
 
-
 # turn down volume using paramiko
 def turn_down_volume(hostname, username, password):
     # Create an SSH client
@@ -2858,7 +2833,6 @@ def turn_down_volume(hostname, username, password):
     finally:
         # Close the SSH connection
         client.close()
-
 
 # set/change volume using paramiko
 # to use: change_volume('hostname', 'username', 'password', 'mute')
@@ -2899,7 +2873,6 @@ def change_volume(hostname, username, password, action, step=2000):
         # Close the SSH connection
         client.close()
 
-
 # To use this API route, you can send a POST request to http://your-server-url/change_volume with
 # a JSON body containing the hostname, username, password, action, and step parameters.
 # For example:
@@ -2938,7 +2911,6 @@ def initial_add_device(host_address, master_username, master_password, chrome_dr
         return {'success': 'Device added successfully!'}
     except Exception as e:
         return {'error': 'Device not reachable...'}
-
 
 ## CONTAINER health-check
 @app.route("/ping")
