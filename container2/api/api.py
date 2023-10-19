@@ -246,6 +246,7 @@ def run_browser(hostname, username, password, url=None):
 
             # Set Chrome browser application path
             #chrome = "C:\Google\Chrome\Application\chrome.exe"
+	    #chrome = "C:\Program Files\Google\Chrome\Applicationchrome.exe"
 
             # Execute the qwinsta command to retrieve session information for the target user
             session_id = get_session_id(client, username)
