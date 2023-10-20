@@ -81,6 +81,9 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            //var base_url = 'http://admin:admin@192.168.20.26/';
+            var base_url = '/';
+
             // Function to update the host list
             function updateHostList(hosts) {
                 var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
@@ -100,12 +103,12 @@
                     console.log('updating device list greater than 0'); // Debugging console print
                     $.each(hosts, function (index, host) {
                         hostListHtml += '<li>Host ' + host.host_id + ': ' + host.host_name +
-                            ' <button class="removeButton" data-host-address="' + host.host_id + '">Remove</button>' +
                             ' <button class="vlcButton" data-host-address="' + host.host_id + '">VLC</button>' +
                             ' <button class="webBrowserButton" data-host-address="' + host.host_id + '">Web Browser</button>' +
                             ' <button class="configButton" data-host-address="' + host.host_id + '">Config</button>' +
                             ' <button class="rebootButton" data-host-address="' + host.host_id + '">Reboot</button>' +
-                            ' <button class="WOLButton" data-host-address="' + host.host_id + '">Reboot</button>' +
+                            ' <button class="WOLButton" data-host-address="' + host.host_id + '">WoL</button>' +
+                            ' <button class="removeButton" data-host-address="' + host.host_id + '">Remove</button>' +
                             '</li>';
                     });
                 } else {
@@ -134,12 +137,6 @@
                     openNewPage('host_web_browser.html', roomCode, hostAddress);
                 });
 
-                $('.configButton').click(function () {
-                    var hostAddress = $(this).data('host-address');
-                    console.log('Clicked Config Button for hostAddress:', hostAddress);
-                    openNewPage('host_config.html', roomCode, hostAddress);
-                });
-
                 $('.rebootButton').click(function () {
                     var hostAddress = $(this).data('host-address');
                     console.log('Clicked Reboot Button for hostAddress:', hostAddress);
@@ -147,11 +144,35 @@
                     rebootHost(roomCode, hostAddress);
                 });
 
-                $('.WolButton').click(function () {
+                $('.WOLButton').click(function () {
                     var hostAddress = $(this).data('host-address');
                     console.log('Clicked Reboot Button for hostAddress:', hostAddress);
                     // Send the reboot request via the API
                     WakeHost(roomCode, hostAddress);
+                });
+
+                $('.configButton').click(function () {
+                    var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                    var hostAddress = $(this).data('host-address')
+
+                    console.log('Info button clicked for room code:', roomCode); // Add this line
+
+                    $.ajax({
+                        url: base_url + 'api/get_host_config/' + roomCode + "/" + hostAddress,
+                        method: 'GET',
+                        contentType: 'application/json',
+                        success: function (response) {
+                            console.log('API request successful. Response:', response); // Add this line
+
+                            // Display the information received from the API
+                            $('#response').text(JSON.stringify(response, null, 2));
+                        },
+                        error: function (xhr, status, error) {
+                            console.log('API request error:', error); // Add this line
+
+                            $('#response').text('Error: ' + error);
+                        }
+                    });
                 });
             }
 
@@ -164,16 +185,18 @@
             // Function to send WOL request
             function WakeHost(roomCode, hostAddress) {
                 $.ajax({
-                    url: '/api/wake-on-lan/' + roomCode + '/' + hostAddress,
-                    method: 'GET', // You can adjust the method as needed
+                    url: base_url + 'api/wake-on-lan/' + roomCode + '/' + hostAddress,
+                    method: 'GET',
                     success: function (response) {
-                        console.log('Reboot host response:', response); // Debugging console print
+                        console.log('Wake host response:', response);
                         // Handle the response if needed
+                        $('#response').text(JSON.stringify(response, null, 2));
                     },
                     error: function (xhr, status, error) {
-                        console.log('Error rebooting host:', error); // Debugging console print
-                        console.log(xhr.responseText); // Log the error response for further inspection
+                        console.log('Error waking host:', error);
+                        console.log(xhr.responseText);
                         // Handle the error if needed
+                        $('#response').text(xhr.responseText);
                     }
                 });
             }
@@ -181,16 +204,18 @@
             // Function to send a reboot request
             function rebootHost(roomCode, hostAddress) {
                 $.ajax({
-                    url: '/api/reboot/' + roomCode + '/' + hostAddress,
-                    method: 'GET', // You can adjust the method as needed
+                    url: base_url + 'api/reboot/' + roomCode + '/' + hostAddress,
+                    method: 'GET',
                     success: function (response) {
-                        console.log('Reboot host response:', response); // Debugging console print
+                        console.log('Reboot host response:', response);
                         // Handle the response if needed
+                        $('#response').text(JSON.stringify(response, null, 2));
                     },
                     error: function (xhr, status, error) {
-                        console.log('Error rebooting host:', error); // Debugging console print
-                        console.log(xhr.responseText); // Log the error response for further inspection
+                        console.log('Error rebooting host:', error);
+                        console.log(xhr.responseText);
                         // Handle the error if needed
+                        $('#response').text(xhr.responseText);
                     }
                 });
             }
@@ -201,7 +226,7 @@
                 console.log('Removing host with address:', hostAddress); // Debugging console print
 
                 $.ajax({
-                    url: '/api/remove_host/' + roomCode + '/' + hostAddress,
+                    url: base_url + 'api/remove_host/' + roomCode + '/' + hostAddress,
                     method: 'DELETE',
                     success: function (response) {
                         console.log('Remove host response:', response); // Debugging console print
@@ -222,7 +247,7 @@
                 console.log('Fetching initial host list for room:', roomCode); // Debugging console print
 
                 $.ajax({
-                    url: '/api/get_hosts/' + roomCode,
+                    url: base_url + 'api/get_hosts/' + roomCode,
                     method: 'GET',
                     success: function (response) {
                         console.log('Fetch initial host list response:', response); // Debugging console print
@@ -282,7 +307,7 @@
                 console.log('Adding host with data:', dataToSend);
 
                 $.ajax({
-                    url: '/api/add_host/' + roomCode, // Updated endpoint
+                    url: base_url + 'api/add_host/' + roomCode, // Updated endpoint
                     method: 'POST',
                     data: JSON.stringify(dataToSend),
                     contentType: 'application/json',
@@ -336,16 +361,22 @@
         <form id="addHostForm">
             <label for="host_address">Host IP:</label>
             <input type="text" id="host_address" required><br>
+			
             <label for="host_mac">Host MAC:</label>
             <input type="text" id="host_mac" required><br>
+			
             <label for="host_name">Host Name:</label>
             <input type="text" id="host_name" required><br>
+
             <label for="description">Description:</label>
             <input type="text" id="description" required><br>
+			
             <label for="username">Username:</label>
-            <input type="text" id="username" required><br>
-            <label for="password">Password:</label>
-            <input type="password" id="password" required><br>
+			<input type="text" id="username" required autocomplete="username"><br>
+
+			<label for="password">Password:</label>
+			<input type="password" id="password" required autocomplete="new-password"><br>
+
             <label for="platform">Platform (windows, mac, debian, etc):</label>
             <input type="text" id="platform"><br>
 

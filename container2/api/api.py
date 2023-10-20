@@ -1820,6 +1820,22 @@ def connect_samba_share_route():
         return jsonify({'error': str(e)}), 500
 
 import socket
+from ipaddress import IPv4Network
+
+def is_valid_mac_address(mac_address):
+    # A simple validation function for MAC addresses
+    if not mac_address:
+        return False
+
+    parts = mac_address.split(':')
+    if len(parts) != 6:
+        return False
+
+    for part in parts:
+        if not len(part) == 2 or not all(c in '0123456789ABCDEF' for c in part):
+            return False
+
+    return True
 
 def send_magic_packet(mac_address, broadcast_address):
     # Create a Magic Packet
@@ -1840,14 +1856,6 @@ from ipaddress import IPv4Network
 
 @app.route('/wake-on-lan/<string:room_code>/<string:host_address>', methods=['GET'])
 def wake_on_lan(room_code, host_address):
-    # Calculate the broadcast address based on the host_address
-    try:
-        host_ip = IPv4Network(f'{host_address}/24', strict=False)
-        broadcast_address = str(host_ip.broadcast_address)
-        logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
-    except ValueError:
-        return jsonify({'error': 'Invalid host address'}), 400    
-
     # Check if the room, host, and host_mac exist in a single query
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -1872,6 +1880,18 @@ def wake_on_lan(room_code, host_address):
         return jsonify({'error': f'Mac not found for {host_name} in the room {room_code})'}), 404
 
     #broadcast_address = '192.168.3.255'
+    
+    # Validate the MAC address
+    if not is_valid_mac_address(host_mac):
+        return jsonify({'error': f'Invalid MAC address: {host_mac}'}), 400
+        
+    # Calculate the broadcast address based on the host_address
+    try:
+        host_ip = IPv4Network(f'{host_address}/24', strict=False)
+        broadcast_address = str(host_ip.broadcast_address)
+        logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
+    except ValueError:
+        return jsonify({'error': 'Invalid host address'}), 400
 
     # Send the Magic Packet
     if send_magic_packet(host_mac, broadcast_address):

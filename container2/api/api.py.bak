@@ -1238,9 +1238,9 @@ def get_host_config(room_code, host_address):
 
     # Access tuple elements using indices with comments specifying the column names
     host_config = {
-        'config_default':   host_data[0],    # Assuming 'config_default' is the first column in the SELECT query
-        'config_cisco':     host_data[1],    # Assuming 'config_cisco' is the second column in the SELECT query
-        'config_optus':     host_data[2]     # Assuming 'config_optus' is the third column in the SELECT query
+        'config_default':   host[0],    # Assuming 'config_default' is the first column in the SELECT query
+        'config_cisco':     host[1],    # Assuming 'config_cisco' is the second column in the SELECT query
+        'config_optus':     host[2]     # Assuming 'config_optus' is the third column in the SELECT query
     }
 
     return jsonify({'host_config': host_config}), 200

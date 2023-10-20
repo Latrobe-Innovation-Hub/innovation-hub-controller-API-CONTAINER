@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Page Title</title>
+    <title>Open Web Browser</title>
     <style>
         body {
             background-color: #f2f2f2;
@@ -65,10 +65,6 @@
             width: fit-content;
         }
 
-        .dropdown {
-            display: none; /* Initially hidden */
-        }
-
         #returnButton {
             background-color: #333333;
             color: #ffffff;
@@ -78,38 +74,138 @@
                 background-color: #555555;
             }
     </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+            //var base_url = 'http://admin:admin@192.168.20.26/';
+            var base_url = '/';
+            var pid = null; // Variable to store the PID
+
+            // Function to get roomCode and hostAddress from URL
+            function getRoomCodeAndHostAddressFromURL() {
+                var urlParams = new URLSearchParams(window.location.search);
+                var roomCode = urlParams.get('room_code');
+                var hostAddress = urlParams.get('host_id'); // Assuming 'host_address' is the URL parameter name
+
+                console.log('Fetching initial roomCode from url:', roomCode); // Debugging console print
+                console.log('Fetching initial hostAddress from url:', hostAddress); // Debugging console print
+
+                return { roomCode, hostAddress };
+            }
+
+            // Function to open web URL in browser
+            $('form').submit(function (event) {
+                event.preventDefault();
+
+                var urlParameters = getRoomCodeAndHostAddressFromURL();
+
+                // Now you can access roomCode and hostAddress from the urlParameters object.
+                var roomCode = urlParameters.roomCode;
+                var hostAddress = urlParameters.hostAddress;
+
+                console.log('Confirming roomCode from url in form:', roomCode); // Debugging console print
+                console.log('Confirming hostAddress from url in form:', hostAddress); // Debugging console print
+
+                var url = $('#url').val(); // Get video path from input
+
+                var payload = {
+                    'url': url,
+                };
+
+                console.log('Confirming payload from form:', payload); // Debugging console print
+
+                $.ajax({
+                    url: base_url + 'api/open_browser/' + roomCode + '/' + hostAddress,
+                    method: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+
+                    success: function (response) {
+                        // Handle the response as needed
+                        console.log('Response:', response);
+
+                        if ('response' in response) {
+                            pid = response.response;
+                            console.log('PID:', pid);
+
+                            // Display the response in the HTML
+                            $('#response').text(JSON.stringify(response, null, 2));
+
+                            if (pid) {
+                                $('#killProcessButton').prop('disabled', false);
+                            }
+                        } else {
+                            console.log('Invalid response format:', response);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        // Handle errors
+                        console.log('Error: ' + error);
+                    }
+                });
+            });
+
             $('#returnMainButton').click(function () {
-                window.location.href = 'index.html';
+                window.location.href = 'index.html'; // Return to the main menu
             });
 
             $('#returnPreviousButton').click(function () {
-                history.back(); // This will take the user to the previous page in the browsing history.
+                window.history.back();
+            });
+
+            // Function to kill VLC video process
+            $('#killProcessButton').click(function () {
+                if (pid === null) {
+                    console.log('Error: No valid PID available.');
+                    return;
+                }
+
+                var urlParameters = getRoomCodeAndHostAddressFromURL();
+
+                // Now you can access roomCode and hostAddress from the urlParameters object.
+                var roomCode = urlParameters.roomCode;
+                var hostAddress = urlParameters.hostAddress;
+
+                console.log('Kill PID:', pid);
+
+                var hostname = $('#hostname').val(); // If you need a hostname
+
+                var payload = {
+                    'hostname': hostname,
+                    'pid': pid
+                };
+
+                $.ajax({
+                    url: base_url + 'api/close_process/' + roomCode + '/' + hostAddress, // Adjust the API endpoint
+                    method: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        $('#response').text(JSON.stringify(response, null, 2));
+                        pid = null;
+                        $('#killProcessButton').prop('disabled', true);
+                    },
+                    error: function (xhr, status, error) {
+                        $('#response').text('Error: ' + error);
+                    }
+                });
             });
         });
     </script>
 </head>
 <body>
-    <h1>Page Title</h1>
+    <h1>Open Web Browser</h1>
+    <form>
+        <label for="url">URL:</label>
+        <input type="text" id="url" required><br>
 
-    <h2>Add Something:</h2>
-    <form id="addSomethingForm">
-        <label for="somethingName">Something Name:</label>
-        <input type="text" id="somethingName" required><br>
-        <!-- Add your additional input fields here as needed -->
-        <button type="submit">Add Something</button>
+        <button type="submit">Send Request</button>
     </form>
-
-    <!-- Refresh Something List Button -->
-    <button id="refreshSomethingListButton">Refresh Something List</button>
-
-    <!-- Something List Container -->
-    <div id="somethingList" class="dropdown"></div>
 
     <h2>API Response:</h2>
     <pre id="response"></pre>
 
+    <button id="killProcessButton" disabled>Kill VLC Video Process</button>
     <button id="returnPreviousButton">Return to Previous Page</button>
     <button id="returnMainButton">Return to Main Menu</button>
 </body>

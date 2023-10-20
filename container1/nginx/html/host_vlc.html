@@ -76,6 +76,10 @@
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        //var base_url = 'http://admin:admin@192.168.20.26/';
+        var base_url = '/';
+        var pid = null; // Variable to store the PID
+
         $(document).ready(function () {
             // Function to get roomCode and hostAddress from URL
             function getRoomCodeAndHostAddressFromURL() {
@@ -114,7 +118,7 @@
                 console.log('Confirming payload from form:', payload); // Debugging console print
 
                 $.ajax({
-                    url: 'api/open_vlc_video/' + roomCode + '/' + hostAddress,
+                    url: base_url + 'api/open_vlc_video/' + roomCode + '/' + hostAddress,
                     method: 'POST',
                     data: JSON.stringify(payload),
                     contentType: 'application/json',
@@ -122,6 +126,20 @@
                     success: function (response) {
                         // Handle the response as needed
                         console.log('Response:', response);
+
+                        if ('response' in response) {
+                            pid = response.response;
+                            console.log('PID:', pid);
+
+                            // Display the response in the HTML
+                            $('#response').text(JSON.stringify(response, null, 2));
+
+                            if (pid) {
+                                $('#killProcessButton').prop('disabled', false);
+                            }
+                        } else {
+                            console.log('Invalid response format:', response);
+                        }
                     },
                     error: function (xhr, status, error) {
                         // Handle errors
@@ -134,8 +152,50 @@
                 window.location.href = 'index.html'; // Return to the main menu
             });
 
+            //$('#returnPreviousButton').click(function () {
+            //    window.location.href = 'hosts_page.html'; // Return to the hosts page
+            //});
+
             $('#returnPreviousButton').click(function () {
-                window.location.href = 'hosts_page.html'; // Return to the hosts page
+                window.history.back();
+            });
+
+            // Function to kill VLC video process
+            $('#killProcessButton').click(function () {
+                if (pid === null) {
+                    console.log('Error: No valid PID available.');
+                    return;
+                }
+
+                var urlParameters = getRoomCodeAndHostAddressFromURL();
+
+                // Now you can access roomCode and hostAddress from the urlParameters object.
+                var roomCode = urlParameters.roomCode;
+                var hostAddress = urlParameters.hostAddress;
+
+                console.log('Kill PID:', pid);
+
+                var hostname = $('#hostname').val(); // If you need a hostname
+
+                var payload = {
+                    'hostname': hostname,
+                    'pid': pid
+                };
+
+                $.ajax({
+                    url: base_url + 'api/close_process/' + roomCode + '/' + hostAddress, // Adjust the API endpoint
+                    method: 'POST',
+                    data: JSON.stringify(payload),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        $('#response').text(JSON.stringify(response, null, 2));
+                        pid = null;
+                        $('#killProcessButton').prop('disabled', true);
+                    },
+                    error: function (xhr, status, error) {
+                        $('#response').text('Error: ' + error);
+                    }
+                });
             });
         });
     </script>
@@ -152,6 +212,10 @@
         <button type="submit">Send Request</button>
     </form>
 
+    <h2>API Response:</h2>
+    <pre id="response"></pre>
+
+    <button id="killProcessButton" disabled>Kill VLC Video Process</button>
     <button id="returnPreviousButton">Return to Previous Page</button>
     <button id="returnMainButton">Return to Main Menu</button>
 </body>

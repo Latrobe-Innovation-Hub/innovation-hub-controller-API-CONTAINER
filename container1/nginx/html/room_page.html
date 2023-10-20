@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()">
     <title>Room Management</title>
     <style>
         body {
@@ -80,6 +81,9 @@
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
+        //var base_url = 'http://admin:admin@192.168.20.26/';
+        var base_url = '/';
+
         $(document).ready(function () {
             // Function to update the room list
             function updateRoomList(rooms) {
@@ -91,7 +95,7 @@
                             '<button class="removeRoomButton" data-room-code="' + room.room_code + '">Remove</button>' +
                             '<button class="pduButton" data-room-code="' + room.room_code + '">PDUs</button>' +
                             '<button class="hostButton" data-room-code="' + room.room_code + '">Hosts</button>' +
-                            '<button class="displayButton" data-room-code="' + room.room_code + '">Displays</button></li>';
+                            '<button class="infoButton" data-room-code="' + room.room_code + '">Info</button></li>';
                     });
                     roomListHtml += '</ul>';
                 } else {
@@ -124,12 +128,36 @@
                     // Redirect to the Displays page for the selected room
                     window.location.href = 'displays_page.html?room_code=' + roomCode;
                 });
+
+
+                $('.infoButton').click(function () {
+                    var roomCode = $(this).data('room-code');
+
+                    console.log('Info button clicked for room code:', roomCode); // Add this line
+
+                    $.ajax({
+                        url: base_url + 'api/get_room/' + roomCode,
+                        method: 'GET',
+                        contentType: 'application/json',
+                        success: function (response) {
+                            console.log('API request successful. Response:', response); // Add this line
+
+                            // Display the information received from the API
+                            $('#response').text(JSON.stringify(response, null, 2));
+                        },
+                        error: function (xhr, status, error) {
+                            console.log('API request error:', error); // Add this line
+
+                            $('#response').text('Error: ' + error);
+                        }
+                    });
+                });
             }
 
             // Function to remove a room by room code
             function removeRoom(roomCode) {
                 $.ajax({
-                    url: 'api/remove_room/' + roomCode,
+                    url: base_url + 'api/remove_room/' + roomCode,
                     method: 'DELETE',
                     success: function (response) {
                         console.log(response);
@@ -146,8 +174,10 @@
 
             // Function to fetch the initial room list
             function fetchInitialRoomList() {
+                var apiUrl = base_url + 'api/get_rooms';
+                console.log('Request URL:', apiUrl); 
                 $.ajax({
-                    url: 'api/get_rooms',
+                    url: apiUrl,
                     method: 'GET',
                     success: function (response) {
                         updateRoomList(response.rooms);
@@ -177,7 +207,7 @@
                 };
 
                 $.ajax({
-                    url: 'api/add_room',
+                    url: base_url + 'api/add_room',
                     method: 'POST',
                     data: JSON.stringify(dataToSend),
                     contentType: 'application/json',
