@@ -230,6 +230,108 @@ def run_reboot_device(hostname, username, password, platformInput="windows"):
         except Exception as e:
             return {'error': str(e)}
 
+import paramiko
+import re
+
+def run_youtube_script(hostname, username, password, youtube_url, loop=None, captions=None):
+    # Create an SSH client
+    client = paramiko.SSHClient()
+
+    # Automatically add the remote host key (not recommended for production use)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+            session_id = get_session_id(client, username)
+
+            if session_id:
+                command_arg = fr"cmd /c python C:\Users\{username}\Documents\browser-youtube.py"
+                command_full = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} {command_arg} "{youtube_url}"'
+                logger.info(f"testing =  run_youtube_script, command: {command_full}")
+
+                if loop:
+                    command_full += " --loop"
+                    logger.info(f"testing =  run_youtube_script, command: {command_full}")
+                    
+                if captions:
+                    command_full += " --captions"
+                    logger.info(f"testing =  run_youtube_script, command: {command_full}")
+
+                _, stdout, stderr = client.exec_command(command_full)
+
+                # Retrieve the output and error of the command
+                output = stdout.read().decode('utf-8')
+                error = stderr.read().decode('utf-8')
+
+                # Extract the PID from the error output
+                pid_match = re.search(r"process ID (\d+)", error)
+
+                if pid_match:
+                    pid = pid_match.group(1)
+                    return pid
+                else:
+                    return f"{output}, {error}"
+            else:
+                return f"No active session found for {username}."
+        except Exception as e:
+            return {'error': str(e), 'pid': None}
+
+
+
+@app.route('/open_youtube/<string:room_code>/<string:host_address>', methods=['POST'])
+def open_youtube(room_code, host_address):
+    data = request.get_json()
+    if not all(key in data for key in ['url', 'loop', 'captions']):
+        return jsonify({'error': 'Missing required field(s)'}), 400
+
+    # Query the database to retrieve the username and password based on the host_address and room_code
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
+
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    # Extract the username and password from the retrieved data
+    username, password = host_data
+    #username = host_data['username']
+    #password = host_data['password']
+    url = data.get('url')
+    loop = data.get('loop')
+    captions = data.get('captions')
+    
+    # Initialize the arguments list with the mandatory ones
+    args = [host_address, username, password, url]
+
+    # Conditionally add loop and captions to the arguments list
+    if loop.lower() == "true":
+        args.append(loop)
+    if captions.lower() == "true":
+        args.append(captions)
+
+    # Call the function with the arguments
+    result = run_youtube_script(*args)
+    
+    # if loop.lower() == "true" and captions.lower() == "true":
+        # # Open PowerPoint on the remote device using the retrieved credentials and URL
+        # result = run_youtube_script(host_address, username, password, url, loop, captions)
+    # elif loop.lower() == "true" and not captions.lower() == "true":
+        # result = run_youtube_script(host_address, username, password, url, loop)
+    # elif notloop.lower() == "true" and captions.lower() == "true":
+        # result = run_youtube_script(host_address, username, password, url, captions)
+    # else:
+        # result = run_youtube_script(host_address, username, password, url)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+
 # open powerpoint slide file/url on remote windows pc in google chrome
 def run_browser(hostname, username, password, url=None):
     # Create an SSH client
@@ -245,8 +347,9 @@ def run_browser(hostname, username, password, url=None):
             client.connect(hostname, username=username, password=password)
 
             # Set Chrome browser application path
-            #chrome = "C:\Google\Chrome\Application\chrome.exe"
-	    #chrome = "C:\Program Files\Google\Chrome\Applicationchrome.exe"
+            #edge = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+            chrome = "C:\Program Files\Google\Chrome\Application\chrome.exe"
+            logger.info(f"the chrome location is: {chrome}")
 
             # Execute the qwinsta command to retrieve session information for the target user
             session_id = get_session_id(client, username)
@@ -254,7 +357,11 @@ def run_browser(hostname, username, password, url=None):
             if session_id:
                 # Build psexec command string to open chrome in kiosk mode, at url
                 #command = f"psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{chrome}\"  \"--kiosk --disable-pinch --no-user-gesture-required\" \"{url}\""
-                command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" --kiosk --edge-kiosk-type=fullscreen "{url}\"'
+                #command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} {edge} --kiosk --edge-kiosk-type=fullscreen "{url}\"'
+                #command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} \"{chrome}\" \"--kiosk --no-user-gesture-required\" \"{url}\"'
+                command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{chrome}" --kiosk "{url}"'
+
+                logger.info(f"the command sent is: {command}")
 
                 logger.info(f"testing.... in run_browser, command: {command}")
                 
@@ -379,7 +486,7 @@ def run_vlc_application(hostname, username, password, application=None, argument
                     video = f'{video}'
                 else:
                     # It's a local file path, surround it with quotes
-                    arguments = f'"{video}"'
+                    video = f'"{video}"'
                 
                 command = None
                 if arguments and video:
@@ -449,36 +556,125 @@ def run_nircmd(hostname, username, password, cmd):
             return {'error': str(e)}
             
 # single database init - need to test and integrate
+# def init_db():
+    # print("initialising the database...")
+    # logger.info("testing.... IN init_db function.")
+    # conn = sqlite3.connect('/home/innovation-hub-api/persistent/db/container2/IH_device_database.db')
+    # cursor = conn.cursor()
+
+    # print("initialising table rooms...")
+    # logger.info("testing.... init_db, initialising table rooms..")
+    # # Create a table for rooms
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS rooms (
+            # room_code TEXT PRIMARY KEY,
+            # description TEXT
+        # )
+    # ''')
+    
+    # print("initialising table hosts...")
+    # logger.info("testing.... init_db, initialising table hosts..")
+    # # Create a table for hosts
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS hosts (
+            # host_address TEXT PRIMARY KEY,
+            # host_mac TEXT,       
+            # host_name TEXT,
+            # description TEXT,
+            # username TEXT,
+            # password TEXT,
+            # platform TEXT,
+            # room_code TEXT,
+            
+            # config_default TEXT,
+            # config_cisco TEXT,
+            # config_optus TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+
+    # print("initialising table displays...")
+    # logger.info("testing.... init_db, initialising table displays..")
+    # # Create a table for displays
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS displays (
+            # display_address TEXT PRIMARY KEY,
+            # display_mac TEXT,       
+            # display_name TEXT,
+            # display_type TEXT,
+            # username TEXT,
+            # password TEXT,
+            # room_code TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+    
+    # print("initialising table pdus...")
+    # logger.info("testing.... init_db, initialising table pdus..")
+    # # Create a table for pdus
+    # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS pdus (
+            # pdu_address TEXT PRIMARY KEY,
+            # pdu_mac TEXT,
+            # username TEXT,
+            # password TEXT,
+            # driver_path TEXT,
+            # room_code TEXT,
+            # FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        # )
+    # ''')
+
+    # logger.info("testing.... init_db, committting tables..")
+    # try:
+        # conn.commit()
+        # logger.info("testing.... init_db, committting successful!")
+    # except:
+        # logger.info("testing.... init_db, committting failed!")
+    # finally:
+        # conn.close()
+
+
+import mysql.connector
+
 def init_db():
-    print("initialising the database...")
+    print("initializing the database...")
     logger.info("testing.... IN init_db function.")
-    conn = sqlite3.connect('/home/innovation-hub-api/persistent/db/container2/IH_device_database.db')
+
+    # Establish a connection to your MySQL server.
+    #conn = mysql.connector.connect(
+    #    host='mysql',
+    #    user='root',  # Use 'root' for the root user
+    #    password='digital2023',
+    #    database='innovation-hub-api-db'  # Specify the database name you want to connect to
+    #)
+    
+    conn = get_db_connection()
+    
     cursor = conn.cursor()
 
-    print("initialising table rooms...")
-    logger.info("testing.... init_db, initialising table rooms..")
+    print("initializing table rooms...")
+    logger.info("testing.... init_db, initializing table rooms..")
     # Create a table for rooms
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rooms (
-            room_code TEXT PRIMARY KEY,
+            room_code VARCHAR(255) PRIMARY KEY,
             description TEXT
         )
     ''')
-    
-    print("initialising table hosts...")
-    logger.info("testing.... init_db, initialising table hosts..")
+
+    print("initializing table hosts...")
+    logger.info("testing.... init_db, initializing table hosts..")
     # Create a table for hosts
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS hosts (
-            host_address TEXT PRIMARY KEY,
-            host_mac TEXT,       
+            host_address VARCHAR(255) PRIMARY KEY,
+            host_mac VARCHAR(255),
             host_name TEXT,
             description TEXT,
-            username TEXT,
-            password TEXT,
+            username VARCHAR(255),
+            password VARCHAR(255),
             platform TEXT,
-            room_code TEXT,
-            
+            room_code VARCHAR(255),
             config_default TEXT,
             config_cisco TEXT,
             config_optus TEXT,
@@ -486,45 +682,53 @@ def init_db():
         )
     ''')
 
-    print("initialising table displays...")
-    logger.info("testing.... init_db, initialising table displays..")
+    print("initializing table displays...")
+    logger.info("testing.... init_db, initializing table displays..")
     # Create a table for displays
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS displays (
-            display_address TEXT PRIMARY KEY,
-            display_mac TEXT,       
+            display_address VARCHAR(255) PRIMARY KEY,
+            display_mac VARCHAR(255),
             display_name TEXT,
             display_type TEXT,
-            username TEXT,
-            password TEXT,
-            room_code TEXT,
-            FOREIGN KEY (room_code) REFERENCES rooms (room_code)
-        )
-    ''')
-    
-    print("initialising table pdus...")
-    logger.info("testing.... init_db, initialising table pdus..")
-    # Create a table for pdus
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS pdus (
-            pdu_address TEXT PRIMARY KEY,
-            pdu_mac TEXT,
-            username TEXT,
-            password TEXT,
-            driver_path TEXT,
-            room_code TEXT,
+            username VARCHAR(255),
+            password VARCHAR(255),
+            room_code VARCHAR(255),
             FOREIGN KEY (room_code) REFERENCES rooms (room_code)
         )
     ''')
 
-    logger.info("testing.... init_db, committting tables..")
-    try:
-        conn.commit()
-        logger.info("testing.... init_db, committting successful!")
-    except:
-        logger.info("testing.... init_db, committting failed!")
-    finally:
-        conn.close()
+    print("initializing table pdus...")
+    logger.info("testing.... init_db, initializing table pdus..")
+    # Create a table for pdus
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS pdus (
+            pdu_address VARCHAR(255) PRIMARY KEY,
+            pdu_mac VARCHAR(255),
+            username VARCHAR(255),
+            password VARCHAR(255),
+            driver_path TEXT,
+            room_code VARCHAR(255),
+            FOREIGN KEY (room_code) REFERENCES rooms (room_code)
+        )
+    ''')
+
+    logger.info("testing.... init_db, committing tables..")
+    conn.commit()
+    logger.info("testing.... init_db, committing successful!")
+
+    cursor.close()
+    conn.close()
+
+
+def get_db_connection():
+    conn = mysql.connector.connect(
+        host='mysql',
+        user='root',  # Use 'root' for the root user
+        password='digital2023',
+        database='innovation-hub-api-db'  # Specify the database name you want to connect to
+    )
+    return conn
 
 # # Route to get all hosts
 @app.route('/get_hosts', methods=['GET'])
@@ -542,14 +746,14 @@ def get_hosts():
     host_list = []
     for host in hosts:
         host_list.append({
-            'host_id': host['host_address'],
-            'host_mac' : host['host_mac'],
-            'host_name': host['host_name'],
-            'description': host['description'],
-            'username': host['username'],
-            'password': host['password'],
-            'platform': host['platform'],
-            'room_code': host['room_code']
+            'host_id':      host[0], # host['host_address'],
+            'host_mac' :    host[1], #host['host_mac'],
+            'host_name':    host[2], #host['host_name'],
+            'description':  host[3], #host['description'],
+            'username':     host[4], #host['username'],
+            'password':     host[5], #host['password'],
+            'platform':     host[6], #host['platform'],
+            'room_code':    host[7], #host['room_code']
         })
 
     return jsonify({'hosts': host_list}), 200
@@ -569,8 +773,8 @@ def get_rooms():
     room_list = []
     for room in rooms:
         room_list.append({
-            'room_code': room['room_code'],
-            'description': room['description']
+            'room_code':    room[0],
+            'description':  room[1],
         })
 
     return jsonify({'rooms': room_list}), 200
@@ -580,7 +784,7 @@ def get_hosts_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM hosts WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     conn.close()
 
@@ -590,14 +794,17 @@ def get_hosts_for_room(room_code):
     host_list = []
     for host in hosts:
         host_list.append({
-            'host_id': host['host_address'],
-            'host_mac' : host['host_mac'],
-            'host_name': host['host_name'],
-            'description': host['description'],
-            'username': host['username'],
-            'password': host['password'],
-            'platform': host['platform'],
-            'room_code': host['room_code']
+            'host_id':          host[0], # host['host_address'],
+            'host_mac' :        host[1], # host['host_mac'],
+            'host_name':        host[2], # host['host_name'],
+            'description':      host[3], # host['description'],
+            'username':         host[4], # host['username'],
+            'password':         host[5], # host['password'],
+            'platform':         host[6], # host['platform'],
+            'room_code':        host[7], # host['room_code']
+            'config_default':   host[8], # host['config_default'],
+            'config_cisco':     host[9], # host['config_cisco'],
+            'config_optus':     host[10], # host['config_optus']
         })
 
     return jsonify({'hosts': host_list}), 200
@@ -618,13 +825,13 @@ def get_displays():
     display_list = []
     for display in displays:
         display_list.append({
-            'display_address': display['display_address'],
-            'display_mac' : display['display_mac'],
-            'display_name': display['display_name'],
-            'display_type': display['display_type'],
-            'username': display['username'],
-            'password': display['password'],
-            'room_code': display['room_code']
+            'display_address':  display[0], #display['display_address'],
+            'display_mac' :     display[1], #display['display_mac'],
+            'display_name':     display[2], #display['display_name'],
+            'display_type':     display[3], #display['display_type'],
+            'username':         display[4], #display['username'],
+            'password':         display[5], #display['password'],
+            'room_code':        display[6], #display['room_code']
         })
 
     return jsonify({'displays': display_list}), 200
@@ -634,7 +841,7 @@ def get_displays_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM displays WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     conn.close()
 
@@ -644,13 +851,13 @@ def get_displays_for_room(room_code):
     display_list = []
     for display in displays:
         display_list.append({
-            'display_address': display['display_address'],
-            'display_mac' : display['display_mac'],
-            'display_name': display['display_name'],
-            'display_type': display['display_type'],
-            'username': display['username'],
-            'password': display['password'],
-            'room_code': display['room_code']
+            'display_address':  display[0], #display['display_address'],
+            'display_mac' :     display[1], #display['display_mac'],
+            'display_name':     display[2], #display['display_name'],
+            'display_type':     display[3], #display['display_type'],
+            'username':         display[4], #display['username'],
+            'password':         display[5], #display['password'],
+            'room_code':        display[6], #display['room_code']
         })
 
     return jsonify({'displays': display_list}), 200
@@ -671,11 +878,11 @@ def get_pdus():
     pdu_list = []
     for pdu in pdus:
         pdu_list.append({
-            'pdu_address': pdu['pdu_address'],
-            'pdu_mac' : pdu['pdu_mac'],
-            'username': pdu['username'],
-            'password': pdu['password'],
-            'room_code': pdu['room_code']
+            'pdu_address':  pdu[0], # pdu['pdu_address'],
+            'pdu_mac' :     pdu[1], # pdu['pdu_mac'],
+            'username':     pdu[2], # pdu['username'],
+            'password':     pdu[3], # pdu['password'],
+            'room_code':    pdu[4], # pdu['room_code']
         })
 
     return jsonify({'pdus': pdu_list}), 200
@@ -685,7 +892,7 @@ def get_pdus_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
     pdus = cursor.fetchall()
     conn.close()
 
@@ -695,11 +902,11 @@ def get_pdus_for_room(room_code):
     pdu_list = []
     for pdu in pdus:
         pdu_list.append({
-            'pdu_address': pdu['pdu_address'],
-            'pdu_mac' : pdu['pdu_mac'],
-            'username': pdu['username'],
-            'password': pdu['password'],
-            'room_code': pdu['room_code']
+            'pdu_address':  pdu[0], # pdu['pdu_address'],
+            'pdu_mac' :     pdu[1], # pdu['pdu_mac'],
+            'username':     pdu[2], # pdu['username'],
+            'password':     pdu[3], # pdu['password'],
+            'room_code':    pdu[4], # pdu['room_code']
         })
 
     return jsonify({'pdus': pdu_list}), 200
@@ -709,68 +916,68 @@ def get_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT room_code, description FROM rooms WHERE room_code = %s", (room_code,))
     room = cursor.fetchone()
 
     if room is None:
         conn.close()
         return jsonify({'message': f'Room with room_code {room_code} not found.'}), 404
 
-    cursor.execute('SELECT * FROM hosts WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     
     host_list = []
     for host in hosts:
         host_list.append({
-            'host_id': host['host_address'],
-            'host_mac' : host['host_mac'],
-            'host_name': host['host_name'],
-            'description': host['description'],
-            'username': host['username'],
-            'password': host['password'],
-            'platform': host['platform'],
-            'room_code': host['room_code'],
-            'config_default': host['config_default'],
-            'config_cisco': host['config_cisco'],
-            'config_optus': host['config_optus']
+            'host_id':          host[0], # host['host_address'],
+            'host_mac' :        host[1], # host['host_mac'],
+            'host_name':        host[2], # host['host_name'],
+            'description':      host[3], # host['description'],
+            'username':         host[4], # host['username'],
+            'password':         host[5], # host['password'],
+            'platform':         host[6], # host['platform'],
+            'room_code':        host[7], # host['room_code']
+            'config_default':   host[8], # host['config_default'],
+            'config_cisco':     host[9], # host['config_cisco'],
+            'config_optus':     host[10], # host['config_optus']
         })
 
-    cursor.execute('SELECT * FROM displays WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     
     display_list = []
     for display in displays:
         display_list.append({
-            'display_address': display['display_address'],
-            'display_mac' : display['display_mac'],
-            'display_name': display['display_name'],
-            'display_type': display['display_type'],
-            'username': display['username'],
-            'password': display['password'],
-            'room_code': display['room_code']
+            'display_address':  display[0], #display['display_address'],
+            'display_mac' :     display[1], #display['display_mac'],
+            'display_name':     display[2], #display['display_name'],
+            'display_type':     display[3], #display['display_type'],
+            'username':         display[4], #display['username'],
+            'password':         display[5], #display['password'],
+            'room_code':        display[6], #display['room_code']
         })
 
-    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
     pdus = cursor.fetchall()
     
     pdu_list = []
     for pdu in pdus:
         pdu_list.append({
-            'pdu_address': pdu['pdu_address'],
-            'pdu_mac' : pdu['pdu_mac'],
-            'username': pdu['username'],
-            'password': pdu['password'],
-            'room_code': pdu['room_code']
+            'pdu_address':  pdu[0], # pdu['pdu_address'],
+            'pdu_mac' :     pdu[1], # pdu['pdu_mac'],
+            'username':     pdu[2], # pdu['username'],
+            'password':     pdu[3], # pdu['password'],
+            'room_code':    pdu[4], # pdu['room_code']
         })
 
     conn.close()
     
     room_info = {
-        'room_code': room['room_code'],
-        'description': room['description'],
-        'hosts': host_list,
-        'displays': display_list,
-        'pdus': pdu_list
+        'room_code':    room[0], # room['room_code'],
+        'description':  room[1], #room['description'],
+        'hosts':        host_list,
+        'displays':     display_list,
+        'pdus':         pdu_list
     }
 
     return jsonify({'room_info': room_info}), 200
@@ -787,23 +994,73 @@ def add_room():
 
     room_code = data.get('room_code')
     description = data.get('description')
+    
+    logger.info(f"testing.... in add_room, room_code: {room_code}")
+    logger.info(f"testing.... in add_room, description: {description}")
 
     conn = get_db_connection()
     cursor = conn.cursor()
+    
+    # Show tables in the database
+    # cursor.execute('SHOW TABLES')
+    # tables = [table[0] for table in cursor.fetchall()]
+
+    # # Log the list of tables
+    # logger.info('List of tables in the database:')
+    # for table in tables:
+        # logger.info(f'Table: {table}')
+
+    # # Describe each table
+    # for table in tables:
+        # cursor.execute(f'DESCRIBE {table}')
+        # columns = [column[0] for column in cursor.fetchall()]
+
+        # # Log the table name and its columns
+        # logger.info(f'Table: {table}')
+        # logger.info('Columns:')
+        # for column in columns:
+            # logger.info(f'  {column}')
+    
+    logger.info(f"testing.... in add_room, database SELECT exec...")
+    try:
+        #cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+        cursor.execute("SELECT room_code FROM rooms WHERE room_code = %s", (room_code,))
+        existing_room = cursor.fetchone()
+        #cursor.close()
+    except Exception as e:
+        logger.error(f"Database error: {str(e)}")
+        conn.close()
+        return jsonify({'error': 'Database error'}), 500  # Return a 500 Internal Server Error response
 
     # Check if the room with the provided room_code already exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
-    existing_room = cursor.fetchone()
+    #cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    #existing_room = cursor.fetchone()
+    
+    logger.info(f"testing.... in add_room, existing_room: {existing_room}")
 
     if existing_room:
         conn.close()
         return jsonify({'error': 'Room with the same room_code already exists'}), 400
+    
+    logger.info(f"testing.... in add_room, database INSERT INTO exec...")
+    try:
+        #cursor.execute('INSERT INTO rooms (room_code, description) VALUES (?, ?)', (room_code, description))
+        cursor.execute("INSERT INTO rooms (room_code, description) VALUES (%s, %s)", (room_code, description))
+        conn.commit()
+        #conn.close()
+    except Exception as e:
+        logger.error(f"Database error: {str(e)}")
+        return jsonify({'error': 'Database error'}), 500  # Return a 500 Internal Server Error response
+    finally:
+        cursor.close()
+        conn.close()
+
 
     # Insert the room data into the database
-    cursor.execute('INSERT INTO rooms (room_code, description) VALUES (?, ?)', (room_code, description))
+    #cursor.execute('INSERT INTO rooms (room_code, description) VALUES (?, ?)', (room_code, description))
 
-    conn.commit()
-    conn.close()
+    #conn.commit()
+    #conn.close()
 
     return jsonify({'message': 'Room added successfully'}), 200
 
@@ -813,7 +1070,7 @@ def remove_room(room_code):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT room_code FROM rooms WHERE room_code = %s", (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -821,12 +1078,18 @@ def remove_room(room_code):
         return jsonify({'error': 'Room not found'}), 404
 
     # Delete the room from the database
-    cursor.execute('DELETE FROM rooms WHERE room_code = ?', (room_code,))
+    #cursor.execute('DELETE FROM rooms WHERE room_code = ?', (room_code,))
+    #cursor.execute('DELETE FROM rooms WHERE room_code = %s', (room_code,))
+
     
     # Delete associated PDUs, displays, and hosts from the database
-    cursor.execute('DELETE FROM pdus WHERE room_code = ?', (room_code,))
-    cursor.execute('DELETE FROM displays WHERE room_code = ?', (room_code,))
-    cursor.execute('DELETE FROM hosts WHERE room_code = ?', (room_code,))
+    #cursor.execute('DELETE FROM pdus WHERE room_code = ?', (room_code,))
+    #cursor.execute('DELETE FROM displays WHERE room_code = ?', (room_code,))
+    #cursor.execute('DELETE FROM hosts WHERE room_code = ?', (room_code,))
+    cursor.execute('DELETE FROM pdus WHERE room_code = %s', (room_code,))
+    cursor.execute('DELETE FROM displays WHERE room_code = %s', (room_code,))
+    cursor.execute('DELETE FROM hosts WHERE room_code = %s', (room_code,))
+    cursor.execute('DELETE FROM rooms WHERE room_code = %s', (room_code,))
     
     conn.commit()
     conn.close()
@@ -869,7 +1132,7 @@ def add_host(room_code):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT room_code FROM rooms WHERE room_code = %s", (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -877,7 +1140,8 @@ def add_host(room_code):
         return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
 
     # Check if the host address already exists in the database for the given room
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    #cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     existing_host = cursor.fetchone()
 
     if existing_host:
@@ -885,8 +1149,10 @@ def add_host(room_code):
         return jsonify({'message': 'Host with the same address already exists in the room'}), 200
 
     # Insert the host data into the database
-    cursor.execute('INSERT INTO hosts (host_address, host_mac, host_name, description, username, password, platform, room_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                       (host_address, host_mac, host_name, description, username, password, platform, room_code))
+    #cursor.execute('INSERT INTO hosts (host_address, host_mac, host_name, description, username, password, platform, room_code) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    #                   (host_address, host_mac, host_name, description, username, password, platform, room_code))
+    cursor.execute('INSERT INTO hosts (host_address, host_mac, host_name, description, username, password, platform, room_code) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)',
+               (host_address, host_mac, host_name, description, username, password, platform, room_code))
 
     conn.commit()
     conn.close()
@@ -899,7 +1165,8 @@ def remove_host(room_code, host_address):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    #cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute("SELECT room_code FROM rooms WHERE room_code = %s", (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -907,7 +1174,7 @@ def remove_host(room_code, host_address):
         return jsonify({'error': 'Room not found'}), 404
 
     # Check if the host with the provided host_address exists
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     existing_host = cursor.fetchone()
 
     if not existing_host:
@@ -915,7 +1182,7 @@ def remove_host(room_code, host_address):
         return jsonify({'error': 'Host not found in the specified room'}), 404
 
     # Delete the host from the database
-    cursor.execute('DELETE FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('DELETE FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     conn.commit()
     conn.close()
 
@@ -938,7 +1205,7 @@ def update_host_config(room_code, host_address):
     cursor = conn.cursor()
 
     # Check if the host with the provided `host_address` exists in the database for the given `room_code`
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     existing_host = cursor.fetchone()
 
     if not existing_host:
@@ -947,7 +1214,7 @@ def update_host_config(room_code, host_address):
 
     # Update the configuration attributes in the database
     cursor.execute(
-        'UPDATE hosts SET config_default=?, config_cisco=?, config_optus=? WHERE host_address=? AND room_code=?',
+        'UPDATE hosts SET config_default=%s, config_cisco=%s, config_optus=%s WHERE host_address=%s AND room_code=%s',
         (config_default, config_cisco, config_optus, host_address, room_code)
     )
 
@@ -961,22 +1228,20 @@ def get_host_config(room_code, host_address):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
-    cursor.execute('SELECT * FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`    
+    cursor.execute('SELECT config_default, config_cisco, config_optus FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host = cursor.fetchone()
+    conn.close()
 
     if not host:
-        conn.close()
         return jsonify({'error': 'Host not found in the specified room'}), 404
 
-    # Construct a dictionary containing the configuration attributes
+    # Access tuple elements using indices with comments specifying the column names
     host_config = {
-        'config_default': host['config_default'],
-        'config_cisco': host['config_cisco'],
-        'config_optus': host['config_optus']
+        'config_default':   host[0],    # Assuming 'config_default' is the first column in the SELECT query
+        'config_cisco':     host[1],    # Assuming 'config_cisco' is the second column in the SELECT query
+        'config_optus':     host[2]     # Assuming 'config_optus' is the third column in the SELECT query
     }
-
-    conn.close()
 
     return jsonify({'host_config': host_config}), 200
 
@@ -999,7 +1264,7 @@ def set_host_config_attribute(room_code, host_address, attribute_name):
     cursor = conn.cursor()
 
     # Check if the host with the provided `host_address` exists in the database for the given `room_code`
-    cursor.execute('SELECT host_address FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT host_address FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     existing_host = cursor.fetchone()
 
     if not existing_host:
@@ -1007,10 +1272,20 @@ def set_host_config_attribute(room_code, host_address, attribute_name):
         return jsonify({'error': 'Host not found in the specified room'}), 404
 
     # Update the specific attribute in the database
-    cursor.execute(
-        f'UPDATE hosts SET {attribute_name}=? WHERE host_address=? AND room_code=?',
-        (attribute_value, host_address, room_code)
-    )
+    #cursor.execute(
+    #    f'UPDATE hosts SET {attribute_name}=? WHERE host_address=? AND room_code=?',
+    #    (attribute_value, host_address, room_code)
+    #)
+    
+    # Assuming attribute_name, attribute_value, host_address, and room_code are properly defined
+    # Construct the SQL query as a string with placeholders
+    query = f'UPDATE hosts SET {attribute_name} = %s WHERE host_address = %s AND room_code = %s'
+
+    # Pass the values separately as a tuple
+    values = (attribute_value, host_address, room_code)
+
+    # Execute the query
+    cursor.execute(query, values)
 
     conn.commit()
     conn.close()
@@ -1019,26 +1294,35 @@ def set_host_config_attribute(room_code, host_address, attribute_name):
     
 @app.route('/get_host_config/<string:room_code>/<string:host_address>/<string:attribute_name>', methods=['GET'])
 def get_host_config_attribute(room_code, host_address, attribute_name):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
-    cursor.execute('SELECT * FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
-    host = cursor.fetchone()
-
-    if not host:
-        conn.close()
-        return jsonify({'error': 'Host not found in the specified room'}), 404
-
     # Check if the requested attribute name is valid
     valid_attribute_names = ['config_default', 'config_cisco', 'config_optus']
     if attribute_name not in valid_attribute_names:
         conn.close()
         return jsonify({'error': f'Invalid attribute name.  Must be one of: {valid_attribute_names}'}), 400
 
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute('SELECT * FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host = cursor.fetchone()
+
+    if not host:
+        conn.close()
+        return jsonify({'error': 'Host not found in the specified room'}), 404
+        
+        
+    # Check if the host with the provided `host_address` exists in the database for the given `room_code`
+    cursor.execute(f'SELECT {attribute_name} FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_attribute = cursor.fetchone()
+
+    if not host_attribute:
+        conn.close()
+        return jsonify({'error': f'{attribute_name} not found in the specified room'}), 404
+
     # Construct a dictionary containing the requested configuration attribute
     host_config = {
-        attribute_name: host[attribute_name]
+        attribute_name: host_attribute[0]
     }
 
     conn.close()
@@ -1070,7 +1354,7 @@ def add_display(room_code):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -1078,7 +1362,7 @@ def add_display(room_code):
         return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
 
     # Check if the display address already exists in the database for the given room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     existing_display = cursor.fetchone()
 
     if existing_display:
@@ -1086,9 +1370,11 @@ def add_display(room_code):
         return jsonify({'message': 'Display with the same address already exists in the room'}), 200
 
     # Insert the display data into the database
-    cursor.execute('INSERT INTO displays (display_address, display_mac, display_name, display_type, username, password, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                   (display_address, display_mac, display_name, display_type, username, password, room_code))
-
+    #cursor.execute('INSERT INTO displays (display_address, display_mac, display_name, display_type, username, password, room_code) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    #               (display_address, display_mac, display_name, display_type, username, password, room_code))
+    cursor.execute('INSERT INTO displays (display_address, display_mac, display_name, display_type, username, password, room_code) VALUES (%s, %s, %s, %s, %s, %s, %s)',
+                  (display_address, display_mac, display_name, display_type, username, password, room_code))    
+               
     conn.commit()
     conn.close()
 
@@ -1100,7 +1386,7 @@ def remove_display(room_code, display_address):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -1108,7 +1394,7 @@ def remove_display(room_code, display_address):
         return jsonify({'error': 'Room not found'}), 404
 
     # Check if the display with the provided display_address exists
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     existing_display = cursor.fetchone()
 
     if not existing_display:
@@ -1116,7 +1402,7 @@ def remove_display(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Delete the display from the database
-    cursor.execute('DELETE FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('DELETE FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     conn.commit()
     conn.close()
 
@@ -1138,7 +1424,7 @@ async def get_projector_state(room_code, display_address):
     cursor = conn.cursor()
 
     # Check if the display exists in the specified room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     existing_display = cursor.fetchone()
 
     if not existing_display:
@@ -1146,7 +1432,7 @@ async def get_projector_state(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = ?', (display_address,))
+    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = %s', (display_address,))
     display_details = cursor.fetchone()
 
     if not display_details:
@@ -1196,7 +1482,7 @@ async def turn_on_projector(room_code, display_address):
     cursor = conn.cursor()
 
     # Check if the display exists in the specified room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     existing_display = cursor.fetchone()
 
     if not existing_display:
@@ -1204,7 +1490,7 @@ async def turn_on_projector(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT username, password FROM displays WHERE display_address = ?', (display_address,))
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
     display_details = cursor.fetchone()
 
     if not display_details:
@@ -1278,7 +1564,7 @@ async def turn_off_projector(room_code, display_address):
     cursor = conn.cursor()
 
     # Check if the display exists in the specified room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = ? AND room_code = ?', (display_address, room_code))
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
     existing_display = cursor.fetchone()
 
     if not existing_display:
@@ -1286,7 +1572,7 @@ async def turn_off_projector(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT username, password FROM displays WHERE display_address = ?', (display_address,))
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
     display_details = cursor.fetchone()
 
     if not display_details:
@@ -1412,10 +1698,10 @@ def before_first_request():
     app.config['pdu_data'] = get_or_create_devices()
     logger.info(f"load_pdu.... app.config[pdu_data] is: {app.config['pdu_data']}") 
 
-def get_db_connection(database='/home/innovation-hub-api/persistent/db/container2/IH_device_database.db'):                    
-    conn = sqlite3.connect(database)
-    conn.row_factory = sqlite3.Row
-    return conn
+#def get_db_connection(database='/home/innovation-hub-api/persistent/db/container2/IH_device_database.db'):                    
+#    conn = sqlite3.connect(database)
+#    conn.row_factory = sqlite3.Row
+#    return conn
 
 def create_app():
     app = Flask(__name__)
@@ -1497,7 +1783,7 @@ def connect_samba_share_route():
         # Retrieve SSH username and password from the SQLite3 database based on hostname
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+        cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s', (hostname,))
         host_data = cursor.fetchone()
         conn.close()
 
@@ -1558,6 +1844,7 @@ def wake_on_lan(room_code, host_address):
     try:
         host_ip = IPv4Network(f'{host_address}/24', strict=False)
         broadcast_address = str(host_ip.broadcast_address)
+        logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
     except ValueError:
         return jsonify({'error': 'Invalid host address'}), 400    
 
@@ -1567,8 +1854,8 @@ def wake_on_lan(room_code, host_address):
     cursor.execute('''
         SELECT r.room_code, h.host_mac, h.host_name
         FROM rooms r
-        LEFT JOIN hosts h ON r.room_code = h.room_code AND h.host_address = ?
-        WHERE r.room_code = ?
+        LEFT JOIN hosts h ON r.room_code = h.room_code AND h.host_address = %s
+        WHERE r.room_code = %s
     ''', (host_address, room_code))
     result = cursor.fetchone()
     conn.close()
@@ -1597,7 +1884,7 @@ def reboot_device(room_code, host_address):
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1623,7 +1910,7 @@ def open_browser(room_code, host_address):
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1631,8 +1918,9 @@ def open_browser(room_code, host_address):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    username, password = host_data
+    #username = host_data['username']
+    #password = host_data['password']
     url = data.get('url')
 
     # Open PowerPoint on the remote device using the retrieved credentials and URL
@@ -1654,7 +1942,7 @@ def get_user_session_id_old():
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (host_address,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s', (host_address,))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1662,13 +1950,17 @@ def get_user_session_id_old():
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
-    target_username = host_data['username']
-
-    # Check for target_username's session ID on the remote host using the retrieved credentials
-    result = run_get_session_id(host_address, username, password, target_username)
-
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
+    target_username = data.get('username')
+    
+    if target_username:
+        # Check for target_username's session ID on the remote host using the retrieved credentials
+        result = run_get_session_id(host_address, username, password, target_username)
+    else:
+        result = run_get_session_id(host_address, username, password, username)
+    
     if result is None:
         return jsonify({'response': f"No user session ID found for {target_username}"}), 200
     else:
@@ -1676,14 +1968,10 @@ def get_user_session_id_old():
 
 @app.route('/get_user_session_id/<string:room_code>/<string:host_address>', methods=['GET'])
 def get_user_session_id(room_code, host_address):
-    #data = request.get_json()
-    #if not all(key in data for key in ['target_username']):
-    #    return jsonify({'error': 'Missing required field(s)'}), 400
-
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1691,12 +1979,9 @@ def get_user_session_id(room_code, host_address):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
-    target_username = host_data['username']
-
-    # Check for target_username's session ID on the remote host using the retrieved credentials
-    result = run_get_session_id(host_address, username, password, target_username)
+    username, password = host_data
+    
+    result = run_get_session_id(host_address, username, password, username)
 
     if result is None:
         return jsonify({'response': f"No user session ID found for {target_username}"}), 200
@@ -1714,7 +1999,7 @@ def close_process_old():
     # Query the database to retrieve the username and password based on the hostname
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (host_address,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s', (host_address,))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1722,8 +2007,9 @@ def close_process_old():
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
     pid = data.get('pid')
 
     print("\n", host_address, username, password, pid, "\n")
@@ -1745,7 +2031,7 @@ def close_process(room_code, host_address):
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1753,8 +2039,9 @@ def close_process(room_code, host_address):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
     pid = data.get('pid')
 
     # Kill the process on the remote host using the retrieved credentials
@@ -1774,7 +2061,7 @@ def close_process2(room_code, host_address, pid):
     # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1782,8 +2069,9 @@ def close_process2(room_code, host_address, pid):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
 
     # Kill the process on the remote host using the retrieved credentials and the 'pid' from the URL
     result = kill_process(host_address, username, password, pid)
@@ -1804,7 +2092,7 @@ def open_application_route_old():
     # Query the database to retrieve the username and password based on the hostname
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s', (hostname,))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1812,8 +2100,9 @@ def open_application_route_old():
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
     application = data.get('application')
     arguments = data.get('arguments')
 
@@ -1836,7 +2125,7 @@ def open_application(room_code, host_address):
     # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1844,8 +2133,9 @@ def open_application(room_code, host_address):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password']
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
     application = data.get('application')
     arguments = data.get('arguments')
 
@@ -1877,7 +2167,7 @@ def open_vlc_video(room_code, host_address):
     # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_data = cursor.fetchone()
     conn.close()
 
@@ -1885,8 +2175,9 @@ def open_vlc_video(room_code, host_address):
         return jsonify({'error': 'Host not found'}), 404
 
     # Extract the username and password from the retrieved data
-    username = host_data['username']
-    password = host_data['password'] 
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
     application = data['application']
     
     logger.info(f"testing.... in open_vlc_video, username: {username}")
@@ -1924,7 +2215,7 @@ def open_vlc_video(room_code, host_address):
     # Open VLC media player in fullscreen and play the specified video
     if application.lower() == 'vlc':
         # Specify the full path to the VLC executable
-        vlc_executable = 'C:\\VLC\\vlc.exe'        
+        vlc_executable = 'C:\\Program Files (x86)\\VideoLan\\VLC\\vlc.exe'
 
         arguments = '--fullscreen'
 
@@ -1953,7 +2244,7 @@ def send_nircmd_old():
     # Fetch the username and password from the database based on the hostname
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ?', (hostname,))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s', (hostname,))
     host_info = cursor.fetchone()
     conn.close()
 
@@ -1981,7 +2272,7 @@ def send_nircmd(room_code, host_address):
     # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT username, password FROM hosts WHERE host_address = ? AND room_code = ?', (host_address, room_code))
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
     host_info = cursor.fetchone()
     conn.close()
 
@@ -2088,7 +2379,7 @@ def add_pdu(room_code):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -2096,7 +2387,7 @@ def add_pdu(room_code):
         return jsonify({'error': 'Room with the provided room_code does not exist'}), 400
 
     # Check if the PDU address already exists in the database for the given room
-    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = %s AND room_code = %s', (pdu_address, room_code))
     existing_pdu = cursor.fetchone()
 
     if existing_pdu:
@@ -2109,7 +2400,7 @@ def add_pdu(room_code):
         new_pdu.connect()
 
         # Insert the PDU data into the database after a successful connection
-        cursor.execute('INSERT INTO pdus (pdu_address, username, password, driver_path, room_code) VALUES (?, ?, ?, ?, ?)',
+        cursor.execute('INSERT INTO pdus (pdu_address, username, password, driver_path, room_code) VALUES (%s, %s, %s, %s, %s)',
                        (pdu_address, username, password, chrome_driver_path, room_code))
         conn.commit()
 
@@ -2133,7 +2424,7 @@ def remove_device(room_code, pdu_address):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
     
     print("Existing room:", dict(existing_room) if existing_room else "None")
@@ -2144,7 +2435,7 @@ def remove_device(room_code, pdu_address):
         return jsonify({'error': 'Room not found'}), 404
 
     # Check if the PDU with the provided pdu_address exists in the specified room
-    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = %s AND room_code = %s', (pdu_address, room_code))
     existing_host = cursor.fetchone()
 
     print("Existing host:", dict(existing_host) if existing_host else "None")
@@ -2155,7 +2446,7 @@ def remove_device(room_code, pdu_address):
         return jsonify({'error': 'Host not found in the specified room'}), 404
 
     # Remove the host from the database
-    cursor.execute('DELETE FROM pdus WHERE pdu_address = ? AND room_code = ?', (pdu_address, room_code))
+    cursor.execute('DELETE FROM pdus WHERE pdu_address = %s AND room_code = %s', (pdu_address, room_code))
     conn.commit()
     conn.close()
     
@@ -2204,7 +2495,7 @@ def remove_device_by_address(pdu_address):
     cursor = conn.cursor()
     
     try:
-        cursor.execute('DELETE FROM pdu_devices WHERE host_address = ?', (pdu_address,))
+        cursor.execute('DELETE FROM pdu_devices WHERE host_address = %s', (pdu_address,))
         conn.commit()
         logger.info("Device removed from the database.")
     except sqlite3.Error as e:
@@ -2236,7 +2527,7 @@ def view_outlet_settings(room_code):
     cursor = conn.cursor()
 
     # Check if the room with the provided room_code exists
-    cursor.execute('SELECT room_code FROM rooms WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
 
     if not existing_room:
@@ -2244,7 +2535,7 @@ def view_outlet_settings(room_code):
         return jsonify({'message': f'No room found with room code: {room_code}.'}), 404
 
     # Fetch the devices (PDUs) for the specified room_code from the pdus table
-    cursor.execute('SELECT * FROM pdus WHERE room_code = ?', (room_code,))
+    cursor.execute('SELECT * FROM pdus WHERE room_code = %s', (room_code,))
     pdus_indb = cursor.fetchall()
 
     conn.close()
@@ -2266,7 +2557,7 @@ def view_outlet_settings(room_code):
         }
         pdu_outlet_settings_all.append(pdu_outlet_settings)
 
-    return jsonify(pdu_outlet_settings)
+    return jsonify(pdu_outlet_settings_all)
 
 @app.route('/view_pdu_outlet_settings_all/', methods=['GET'])
 def view_outlet_settings_all():
@@ -2453,7 +2744,7 @@ def change_user_settings(room_code, pdu_address):
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
-        'UPDATE pdus SET username=?, password=? WHERE pdu_address=? AND room_code=?',
+        'UPDATE pdus SET username=%s, password=%s WHERE pdu_address=%s AND room_code=%s',
         (new_username, new_password, pdu_address, room_code)
     )
     conn.commit()
@@ -2513,7 +2804,7 @@ def change_user_settings_old(host_address):
     conn = sqlite3.connect('pdu_devices.db')
     cursor = conn.cursor()
     cursor.execute(
-        'UPDATE pdu_devices SET username=?, password=? WHERE host_address=?',
+        'UPDATE pdu_devices SET username=?, password=%s WHERE host_address=%s',
         (new_username, new_password, host_address)
     )
     conn.commit()

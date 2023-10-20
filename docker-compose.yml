@@ -18,7 +18,7 @@ services:
       # need to create with 'sudo htpasswd -c container1/nginx/auth/.htpasswd USERNAME
       #- '${PWD}/htpasswd:/etc/nginx/auth/.htpasswd:ro'
       #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs (either)
-      - ${PWD}/logs:/home/innovation-hub-api/persistent/logs            # persistent host-side logs (or)
+      - ~/innovation-hub-api/logs/reverse-proxy:/home/innovation-hub-api/persistent/logs            # persistent host-side logs (or)
     environment:
       - TZ=Australia/Melbourne
       - APP_PORT=8050                 # port must match in both containers
@@ -43,8 +43,8 @@ services:
     container_name: 'innovation-hub-api'
     volumes:
       #- "container_data:/home/innovation-hub-api/persistent/"          # persistent container-side logs (either)
-      - ~/innovation-hub-api/logs:/home/innovation-hub-api/persistent/logs
-      - ~/innovation-hub-api/db:/home/innovation-hub-api/persistent/db/container2
+      - ~/innovation-hub-api/logs/api:/home/innovation-hub-api/persistent/logs
+      #- ~/innovation-hub-api/db:/home/innovation-hub-api/persistent/db/container2
     environment:
       - TZ=Australia/Melbourne
       - APP_WORKERS=4               # gunicorn workers - defaults to number of cores
@@ -54,6 +54,21 @@ services:
     networks:
       container_net:
         ipv4_address: 172.75.0.3
+    restart: 'unless-stopped'
+    
+  mysql:
+    image: mysql:latest
+    container_name: innovation-hub-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: digital2023
+      MYSQL_DATABASE: innovation-hub-api-db
+    volumes:
+      - ~/innovation-hub-api/mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"  # Port binding for MySQL
+    networks:
+      container_net:
+        ipv4_address: 172.75.0.4
     restart: 'unless-stopped'
 
 # build container network to control access to containers
@@ -69,4 +84,5 @@ networks:
 volumes:
   container_data:
     driver: local
+  mysql_data:
 
