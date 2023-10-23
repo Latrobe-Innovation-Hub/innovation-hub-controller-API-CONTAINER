@@ -1432,20 +1432,20 @@ async def get_projector_state(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = %s', (display_address,))
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
     display_details = cursor.fetchone()
 
     if not display_details:
         conn.close()
         return jsonify({'error': 'Display details not found'}), 404
 
-    host_address, username, password = display_details
+    username, password = display_details
 
     conn.close()
 
     # Initialize aiohttp client session
     async with aiohttp.ClientSession() as session:
-        host = host_address
+        host = display_address
         websession = session
         projector = Projector(host, websession)
 
