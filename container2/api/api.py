@@ -736,7 +736,7 @@ def get_hosts():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM hosts')
+    cursor.execute("SELECT host_address, host_mac, host_name, description, username, password, platform, room_code, config_default, config_cisco, config_optus FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     conn.close()
     
@@ -746,14 +746,17 @@ def get_hosts():
     host_list = []
     for host in hosts:
         host_list.append({
-            'host_id':      host[0], # host['host_address'],
-            'host_mac' :    host[1], #host['host_mac'],
-            'host_name':    host[2], #host['host_name'],
-            'description':  host[3], #host['description'],
-            'username':     host[4], #host['username'],
-            'password':     host[5], #host['password'],
-            'platform':     host[6], #host['platform'],
-            'room_code':    host[7], #host['room_code']
+            'host_id':          host[0], # host['host_address'],
+            'host_mac' :        host[1], #host['host_mac'],
+            'host_name':        host[2], #host['host_name'],
+            'description':      host[3], #host['description'],
+            'username':         host[4], #host['username'],
+            'password':         host[5], #host['password'],
+            'platform':         host[6], #host['platform'],
+            'room_code':        host[7], #host['room_code']
+            'config_default':   host[8],
+            'config_cisco':     host[9],
+            'config_optus':     host[10],
         })
 
     return jsonify({'hosts': host_list}), 200
@@ -763,7 +766,7 @@ def get_rooms():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM rooms')
+    cursor.execute('SELECT room_code, description FROM rooms')
     rooms = cursor.fetchall()
     conn.close()
     
@@ -783,8 +786,8 @@ def get_rooms():
 def get_hosts_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM hosts WHERE room_code = %s", (room_code,))
+    
+    cursor.execute("SELECT host_address, host_mac, host_name, description, username, password, platform, room_code, config_default, config_cisco, config_optus FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     conn.close()
 
@@ -815,7 +818,7 @@ def get_displays():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM displays')
+    cursor.execute("SELECT display_address, display_mac, display_name, display_type, username, password, room_code FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     conn.close()
     
@@ -841,7 +844,7 @@ def get_displays_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM displays WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT display_address, display_mac, display_name, display_type, username, password, room_code FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     conn.close()
 
@@ -868,8 +871,8 @@ def get_pdus():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM pdus')
-    pdus = cursor.fetchall()
+    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus WHERE room_code = %s", (room_code,))
+    pdus = cursor.fetchall()  )
     conn.close()
     
     if len(pdus) < 1:
@@ -892,8 +895,8 @@ def get_pdus_for_room(room_code):
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
-    pdus = cursor.fetchall()
+    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus WHERE room_code = %s", (room_code,))
+    pdus = cursor.fetchall()  
     conn.close()
 
     if len(pdus) < 1:
@@ -923,7 +926,7 @@ def get_room(room_code):
         conn.close()
         return jsonify({'message': f'Room with room_code {room_code} not found.'}), 404
 
-    cursor.execute("SELECT * FROM hosts WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT host_address, host_mac, host_name, description, username, password, platform, room_code, config_default, config_cisco, config_optus FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     
     host_list = []
@@ -942,7 +945,7 @@ def get_room(room_code):
             'config_optus':     host[10], # host['config_optus']
         })
 
-    cursor.execute("SELECT * FROM displays WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT display_address, display_mac, display_name, display_type, username, password, room_code FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     
     display_list = []
@@ -957,17 +960,18 @@ def get_room(room_code):
             'room_code':        display[6], #display['room_code']
         })
 
-    cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
-    pdus = cursor.fetchall()
+    #cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus WHERE room_code = %s", (room_code,))
+    pdus = cursor.fetchall()  
     
     pdu_list = []
     for pdu in pdus:
         pdu_list.append({
-            'pdu_address':  pdu[0], # pdu['pdu_address'],
-            'pdu_mac' :     pdu[1], # pdu['pdu_mac'],
-            'username':     pdu[2], # pdu['username'],
-            'password':     pdu[3], # pdu['password'],
-            'room_code':    pdu[4], # pdu['room_code']
+            'pdu_address':  pdu[0],  # Use index to access the column values
+            'pdu_mac' :     pdu[1],
+            'username':     pdu[2],
+            'password':     pdu[3],
+            'room_code':    pdu[4]
         })
 
     conn.close()
@@ -2417,6 +2421,12 @@ def add_pdu(room_code):
     # Additional code to instantiate DeviceController objects and store them
     new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
     try:
+        logger.info(f"testing --- in add pdu, pdu_address = {pdu_address}")
+        logger.info(f"testing --- in add pdu, username = {username}") 
+        logger.info(f"testing --- in add pdu, password = {password}") 
+        logger.info(f"testing --- in add pdu, driver_path = {chrome_driver_path}") 
+        logger.info(f"testing --- in add pdu, room_code = {room_code}") 
+    
         new_pdu.connect()
 
         # Insert the PDU data into the database after a successful connection

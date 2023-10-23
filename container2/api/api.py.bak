@@ -923,7 +923,7 @@ def get_room(room_code):
         conn.close()
         return jsonify({'message': f'Room with room_code {room_code} not found.'}), 404
 
-    cursor.execute("SELECT * FROM hosts WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT host_address, host_mac, host_name, description, username, password, platform, room_code, config_default, config_cisco, config_optus FROM hosts WHERE room_code = %s", (room_code,))
     hosts = cursor.fetchall()
     
     host_list = []
@@ -942,7 +942,7 @@ def get_room(room_code):
             'config_optus':     host[10], # host['config_optus']
         })
 
-    cursor.execute("SELECT * FROM displays WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT display_address, display_mac, display_name, display_type, username, password, room_code FROM displays WHERE room_code = %s", (room_code,))
     displays = cursor.fetchall()
     
     display_list = []
@@ -957,17 +957,18 @@ def get_room(room_code):
             'room_code':        display[6], #display['room_code']
         })
 
-    cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
-    pdus = cursor.fetchall()
+    #cursor.execute("SELECT * FROM pdus WHERE room_code = %s", (room_code,))
+    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus WHERE room_code = %s", (room_code,))
+    pdus = cursor.fetchall()  
     
     pdu_list = []
     for pdu in pdus:
         pdu_list.append({
-            'pdu_address':  pdu[0], # pdu['pdu_address'],
-            'pdu_mac' :     pdu[1], # pdu['pdu_mac'],
-            'username':     pdu[2], # pdu['username'],
-            'password':     pdu[3], # pdu['password'],
-            'room_code':    pdu[4], # pdu['room_code']
+            'pdu_address':  pdu[0],  # Use index to access the column values
+            'pdu_mac' :     pdu[1],
+            'username':     pdu[2],
+            'password':     pdu[3],
+            'room_code':    pdu[4]
         })
 
     conn.close()
@@ -1432,20 +1433,20 @@ async def get_projector_state(room_code, display_address):
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT host_address, username, password FROM displays WHERE display_address = %s', (display_address,))
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
     display_details = cursor.fetchone()
 
     if not display_details:
         conn.close()
         return jsonify({'error': 'Display details not found'}), 404
 
-    host_address, username, password = display_details
+    username, password = display_details
 
     conn.close()
 
     # Initialize aiohttp client session
     async with aiohttp.ClientSession() as session:
-        host = host_address
+        host = display_address
         websession = session
         projector = Projector(host, websession)
 
@@ -1820,6 +1821,22 @@ def connect_samba_share_route():
         return jsonify({'error': str(e)}), 500
 
 import socket
+from ipaddress import IPv4Network
+
+def is_valid_mac_address(mac_address):
+    # A simple validation function for MAC addresses
+    if not mac_address:
+        return False
+
+    parts = mac_address.split(':')
+    if len(parts) != 6:
+        return False
+
+    for part in parts:
+        if not len(part) == 2 or not all(c in '0123456789ABCDEF' for c in part):
+            return False
+
+    return True
 
 def send_magic_packet(mac_address, broadcast_address):
     # Create a Magic Packet
@@ -1840,14 +1857,6 @@ from ipaddress import IPv4Network
 
 @app.route('/wake-on-lan/<string:room_code>/<string:host_address>', methods=['GET'])
 def wake_on_lan(room_code, host_address):
-    # Calculate the broadcast address based on the host_address
-    try:
-        host_ip = IPv4Network(f'{host_address}/24', strict=False)
-        broadcast_address = str(host_ip.broadcast_address)
-        logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
-    except ValueError:
-        return jsonify({'error': 'Invalid host address'}), 400    
-
     # Check if the room, host, and host_mac exist in a single query
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -1872,6 +1881,18 @@ def wake_on_lan(room_code, host_address):
         return jsonify({'error': f'Mac not found for {host_name} in the room {room_code})'}), 404
 
     #broadcast_address = '192.168.3.255'
+    
+    # Validate the MAC address
+    if not is_valid_mac_address(host_mac):
+        return jsonify({'error': f'Invalid MAC address: {host_mac}'}), 400
+        
+    # Calculate the broadcast address based on the host_address
+    try:
+        host_ip = IPv4Network(f'{host_address}/24', strict=False)
+        broadcast_address = str(host_ip.broadcast_address)
+        logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
+    except ValueError:
+        return jsonify({'error': 'Invalid host address'}), 400
 
     # Send the Magic Packet
     if send_magic_packet(host_mac, broadcast_address):
@@ -2397,6 +2418,12 @@ def add_pdu(room_code):
     # Additional code to instantiate DeviceController objects and store them
     new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
     try:
+        logger.info(f"testing --- in add pdu, pdu_address = {pdu_address}")
+        logger.info(f"testing --- in add pdu, username = {username}") 
+        logger.info(f"testing --- in add pdu, password = {password}") 
+        logger.info(f"testing --- in add pdu, driver_path = {chrome_driver_path}") 
+        logger.info(f"testing --- in add pdu, room_code = {room_code}") 
+    
         new_pdu.connect()
 
         # Insert the PDU data into the database after a successful connection
