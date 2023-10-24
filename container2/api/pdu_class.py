@@ -69,7 +69,7 @@ class DeviceController:
         logger.info(f"device_url: {device_url}")
         parsed_url = urlparse(device_url)
         logger.info(f"parsed_url: {parsed_url}")
-        self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
+        self.base_url = f"{parsed_url.scheme}://{username}:{password}@{parsed_url.netloc}"  # Assign base_url
         logger.info(f"self.base_url: {self.base_url}")
             
         

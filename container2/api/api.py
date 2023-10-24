@@ -1650,15 +1650,20 @@ app.config['pdu_data'] = None
 def get_or_create_devices():
     pdu_data = app.config.get('pdu_data')
 
-    if pdu_data is not None:
+    if pdu_data is not None and len(pdu_data) > 0:
         return pdu_data
 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
     rows = cursor.fetchall()
-    
-    print("here!!!") 
+
+    if not rows:
+        # The database is empty; no need to continue
+        conn.close()
+        return []
+
+    print("here!!!")
     print(rows)
     for row in rows:
         print(len(row))
@@ -1688,8 +1693,8 @@ def get_or_create_devices():
 
     app.config['pdu_data'] = devices
     return devices
+
 	
-app.config['pdu_data'] = None
 
 @app.before_first_request
 def before_first_request():
@@ -2418,6 +2423,20 @@ def add_pdu(room_code):
         conn.close()
         return jsonify({'message': 'PDU with the same address already exists in the room'}), 200
 
+    # Check if the PDU address already exists in app.config['pdu_data']
+    pdu_data = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
+        pdu_data = app.config['pdu_data']
+    else:
+        # app.config['pdu_data'] is None, so it's not populated with data
+        pdu_data = get_or_create_devices()   
+
+    #pdu_data = app.config.get('pdu_data', [])
+    for existing_pdu in pdu_data:
+        if existing_pdu.hostAddress == pdu_address:
+            return jsonify({'message': 'PDU with the same address already exists in app.config'}), 200
+
     # Additional code to instantiate DeviceController objects and store them
     new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
     try:
@@ -2435,10 +2454,8 @@ def add_pdu(room_code):
         conn.commit()
 
         # Add the new PDU object to the app.config list
-        if 'pdu_data' in app.config:
-            app.config['pdu_data'].append(new_pdu)
-        else:
-            app.config['pdu_data'] = [new_pdu]
+        pdu_data.append(new_pdu)
+        app.config['pdu_data'] = pdu_data
 
         return jsonify({'message': 'PDU added successfully'}), 200
     except Exception as e:
@@ -2446,8 +2463,17 @@ def add_pdu(room_code):
     finally:
         conn.close()
 
+
 @app.route('/remove_pdu/<string:room_code>/<string:pdu_address>', methods=['DELETE'])
-def remove_device(room_code, pdu_address):        
+def remove_device(room_code, pdu_address):
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
+        devices = app.config['pdu_data']
+    else:
+        # app.config['pdu_data'] is None, so it's not populated with data
+        devices = get_or_create_devices()    
+
     print("Received DELETE request for room_code:", room_code, "and pdu_address:", pdu_address)
 
     conn = get_db_connection()
@@ -2456,8 +2482,6 @@ def remove_device(room_code, pdu_address):
     # Check if the room with the provided room_code exists
     cursor.execute('SELECT room_code FROM rooms WHERE room_code = %s', (room_code,))
     existing_room = cursor.fetchone()
-    
-    print("Existing room:", dict(existing_room) if existing_room else "None")
 
     if not existing_room:
         conn.close()
@@ -2467,8 +2491,6 @@ def remove_device(room_code, pdu_address):
     # Check if the PDU with the provided pdu_address exists in the specified room
     cursor.execute('SELECT pdu_address FROM pdus WHERE pdu_address = %s AND room_code = %s', (pdu_address, room_code))
     existing_host = cursor.fetchone()
-
-    print("Existing host:", dict(existing_host) if existing_host else "None")
 
     if not existing_host:
         conn.close()
@@ -2481,9 +2503,6 @@ def remove_device(room_code, pdu_address):
     conn.close()
     
     print("Host removed from the database.")
-
-    # Now, remove the device from the app.config
-    devices = app.config.get('pdu_data', [])
 
     for device in devices:
         if device.hostAddress == pdu_address:
@@ -2499,13 +2518,13 @@ def remove_device(room_code, pdu_address):
 def remove_device_by_address(pdu_address):
     logger.info(f"testing.... in remove_device, pdu_address: {pdu_address}")
         
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     device_to_remove = None
 
@@ -2515,7 +2534,7 @@ def remove_device_by_address(pdu_address):
             break
 
     if device_to_remove is None:
-        return jsonify({'error': f'Device with host address {pdu_address} not found.'}), 200
+        return jsonify({'error': f'Device with host address {pdu_address} not found.'}), 404
 
     device_to_remove.disconnect()
     devices.remove(device_to_remove)
@@ -2547,10 +2566,12 @@ def remove_device_by_address(pdu_address):
 
 @app.route('/view_pdu_outlet_settings_all/<string:room_code>', methods=['GET'])
 def view_outlet_settings(room_code):
-    pdus = None
-    if 'pdu_data' in app.config:
+    pdus = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         pdus = app.config['pdu_data']
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         pdus = get_or_create_devices()
 
     conn = get_db_connection()
@@ -2565,36 +2586,44 @@ def view_outlet_settings(room_code):
         return jsonify({'message': f'No room found with room code: {room_code}.'}), 404
 
     # Fetch the devices (PDUs) for the specified room_code from the pdus table
-    cursor.execute('SELECT * FROM pdus WHERE room_code = %s', (room_code,))
-    pdus_indb = cursor.fetchall()
-
-    conn.close()
-
-    if not pdus_indb:
-        return jsonify({'message': f'No PDUs added to the room with room code: {room_code}.'}), 200
-
-    pdu_outlet_settings_all = []
+    #cursor.execute('SELECT * FROM pdus WHERE room_code = %s', (room_code,))
+    #pdus_indb = cursor.fetchall()
     
-    for index, pdu in enumerate(pdus):
-        pdu_address = pdu.hostAddress
-        # Fetch outlet settings or other information about the device if needed
-        # Replace the following line with your actual implementation
-        pdu_outlet_info = pdu.get_outlet_info()
-        pdu_outlet_settings = {
-            'device_number': index + 1,
-            'pdu_address': pdu_address,
-            'outlet_settings': pdu_outlet_info
-        }
-        pdu_outlet_settings_all.append(pdu_outlet_settings)
+    cursor.execute('SELECT pdu_address FROM pdus WHERE room_code = %s', (room_code,))
+    pdus_indb = cursor.fetchall()
+    conn.close()
+    
+    if len(pdus_indb) < 1:
+        return jsonify({'message': 'No PDUs added yet. Please add a PDU first.'}), 200
+    
+    # Create a dictionary to index the PDUs by pdu_address
+    pdus_by_address = {pdu.hostAddress: pdu for pdu in pdus}
 
+    # Cross-reference and fetch outlet info
+    pdu_outlet_settings_all = []
+    for index, pdu_db in enumerate(pdus_indb):
+        pdu_address = pdu_db[0]  # Assume pdu_address is the first element
+        if pdu_address in pdus_by_address:
+            pdu_in_config = pdus_by_address[pdu_address]
+            # Fetch outlet settings or other information about the device if needed
+            pdu_outlet_info = pdu_in_config.get_outlet_info()
+            pdu_outlet_settings = {
+                'device_number': index + 1,
+                'pdu_address': pdu_address,
+                'outlet_settings': pdu_outlet_info
+            }
+            pdu_outlet_settings_all.append(pdu_outlet_settings)
+            
     return jsonify(pdu_outlet_settings_all)
 
 @app.route('/view_pdu_outlet_settings_all/', methods=['GET'])
-def view_outlet_settings_all():
-    pdus = None
-    if 'pdu_data' in app.config:
+def view_outlet_settings_all():        
+    pdus = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         pdus = app.config['pdu_data']
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         pdus = get_or_create_devices()
 
     conn = get_db_connection()
@@ -2638,14 +2667,14 @@ def view_outlet_settings_all():
     return jsonify(pdu_outlet_settings_all)
 
 @app.route('/pdu/view_outlet_settings_all', methods=['GET'])
-def view_outlet_settings_all_old():
-    devices = None
-    if 'pdu_data' in app.config:
+def view_outlet_settings_all_old():        
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
     
     if len(devices) < 1:
         return jsonify({'message': 'No devices added yet. Please add a device first.'}), 200
@@ -2668,10 +2697,12 @@ def view_outlet_settings_all_old():
 
 @app.route('/view_all_pdu_settings/<string:room_code>/<string:pdu_address>', methods=['GET'])
 def view_all_pdu_settings(room_code, pdu_address):
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
 
     selected_device = None
@@ -2693,13 +2724,13 @@ def view_all_pdu_settings(room_code, pdu_address):
 #@app.route('/pdu/devices/<string:host_address>/change_system_settings', methods=['PUT'])
 @app.route('/change_pdu_system_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_system_settings(room_code, pdu_address):
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
         
     selected_device = None
 
@@ -2738,13 +2769,13 @@ def change_user_settings(room_code, pdu_address):
     if not request.is_json or not all(field in request.json for field in required_fields):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -2798,13 +2829,13 @@ def change_user_settings_old(host_address):
     if not request.is_json or not all(field in request.json for field in required_fields):
         return jsonify({'error': 'Missing required field(s)'}), 400
 
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -2853,14 +2884,14 @@ def change_user_settings_old(host_address):
 
 #@app.route('/pdu/devices/<string:host_address>/change_ping_action_settings', methods=['PUT'])
 @app.route('/change_pdu_ping_action_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
-def change_ping_action_settings(room_code, host_address):
-    devices = None
-    if 'pdu_data' in app.config:
+def change_ping_action_settings(room_code, pdu_address):
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -2896,13 +2927,13 @@ def change_ping_action_settings(room_code, host_address):
 #@app.route('/pdu/devices/<string:host_address>/set_outlet_power_state', methods=['PUT'])
 @app.route('/change_pdu_outlet_power_state/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_outlet_settings(room_code, pdu_address):
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -2929,14 +2960,14 @@ def change_outlet_settings(room_code, pdu_address):
 	    
 #@app.route('/pdu/devices/<string:host_address>/change_pdu_settings', methods=['PUT'])
 @app.route('/change_pdu_pdu_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
-def change_pdu_settings(room_code, host_address):
-    devices = None
-    if 'pdu_data' in app.config:
+def change_pdu_settings(room_code, pdu_address):
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -2972,13 +3003,13 @@ def change_pdu_settings(room_code, host_address):
 #@app.route('/pdu/devices/<string:host_address>/change_network_settings', methods=['PUT'])
 @app.route('/change_pdu_network_settings/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def change_network_settings(room_code, pdu_address):
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -3014,13 +3045,13 @@ def change_network_settings(room_code, pdu_address):
 #@app.route('/pdu/devices/<string:host_address>/enable_disable_dhcp', methods=['PUT'])
 @app.route('/change_pdu_dhcp_setting/<string:room_code>/<string:pdu_address>', methods=['PUT'])
 def enable_disable_dhcp(room_code, pdu_address):
-    devices = None
-    if 'pdu_data' in app.config:
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 
@@ -3039,14 +3070,14 @@ def enable_disable_dhcp(room_code, pdu_address):
 
 #@app.route('/pdu/devices/<string:host_address>/change_time_settings', methods=['PUT'])
 @app.route('/change_pdu_time_setting/<string:room_code>/<string:pdu_address>', methods=['PUT'])
-def change_time_settings(host_address):
-    devices = None
-    if 'pdu_data' in app.config:
+def change_time_settings(room_code, pdu_address):
+    devices = None        
+    if app.config['pdu_data'] is not None:
+        # There is data in app.config['pdu_data']
         devices = app.config['pdu_data']
-        logger.info("Testing: got pdus from app.config['pdu_data']")
     else:
+        # app.config['pdu_data'] is None, so it's not populated with data
         devices = get_or_create_devices()
-        logger.info("Testing: got pdus from get_or_create_devices()")
 
     selected_device = None
 

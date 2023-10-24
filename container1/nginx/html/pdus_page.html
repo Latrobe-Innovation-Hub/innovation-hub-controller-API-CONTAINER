@@ -81,6 +81,162 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+			//var base_url = 'http://admin:admin@192.168.20.26/';
+            var base_url = '/';
+
+            // Function to update the host list
+            function updatePDUList(pdus) {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                // Check if roomCode is not null or undefined before updating the title
+                if (roomCode) {
+                    document.title = 'Host Management - Room ' + roomCode;
+                } else {
+                    console.error('Room code not found in the URL.');
+                } 
+
+                // Update the title tag with the roomCode
+                document.title = 'Host Management - Room ' + roomCode;
+
+                var pduListHtml = '<h2>Current PDUs for Room ' + roomCode + ':</h2><ul>';
+                console.log('updating PDU list:', pdus); // Debugging console print
+                if (pdus && pdus.length > 0) {
+                    console.log('updating pdus list greater than 0'); // Debugging console print
+                    $.each(pdus, function (index, pdu) {
+						console.log("pdu: " + pdu)
+                        pduListHtml += '<li>PDU ' + pdu.pdu_address + ': ' + pdu.pdu_address +
+							<!--' <button class="vlcButton" data-host-address="' + host.host_id + '">VLC</button>' +
+                            <!--' <button class="webBrowserButton" data-host-address="' + host.host_id + '">Web Browser</button>' +
+                            <!--' <button class="configButton" data-host-address="' + host.host_id + '">Config</button>' +
+                            <!--' <button class="rebootButton" data-host-address="' + host.host_id + '">Reboot</button>' +
+                            <!--' <button class="WOLButton" data-host-address="' + host.host_id + '">WoL</button>' +
+                            ' <button class="removeButton" data-pdu-address="' + pdu.pdu_address + '">Remove</button>' +
+                            '</li>';
+                    });
+                } else {
+                    pduListHtml += '<li>No PDUs available.</li>';
+                }
+                pduListHtml += '</ul>';
+                $('#pduList').html(pduListHtml);
+				
+				// Bind click event for remove buttons
+                $('.removeButton').click(function () {
+                    var pduAddress = $(this).data('pdu-address');
+                    console.log('Clicked Remove Button for hostAddress:', pduAddress); // Debugging console print
+                    removePdu(pduAddress);
+                });
+            }
+			
+			// Function to remove a host by address
+            function removePdu(pduAddress) {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                console.log('Removing PDU with address:', pduAddress); // Debugging console print
+
+                $.ajax({
+                    url: base_url + '/api/remove_pdu/' + roomCode + '/' + pduAddress,
+                    method: 'DELETE',
+                    success: function (response) {
+                        console.log('Remove PDU response:', response); // Debugging console print
+						var pdu_list = fetchInitialPDUList();
+						console.log("pdu_list = " + pdu_list)
+                        updatePDUList(pdu_list);
+						
+                        //updatePDUList(response.pdus);
+                        $('#response').text('PDU removed successfully.');
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error removing PDU:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        $('#response').text('Error removing PDU: ' + error);
+                    }
+                });
+            }
+		
+			// Function to fetch the initial host list
+            function fetchInitialPDUList() {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                console.log('Fetching initial host list for room:', roomCode); // Debugging console print
+
+                $.ajax({
+                    url: base_url + '/api/get_pdus/' + roomCode,
+                    method: 'GET',
+                    success: function (response) {
+                        console.log('Fetch initial pdu list response:', response); // Debugging console print
+                        updatePDUList(response.pdus);
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error fetching pdu:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        $('#pduList').text('Error fetching hosts: ' + error);
+                    }
+                });
+            }
+		
+			// Bind click event for the "Refresh Host List" button
+            $('#refreshPduListButton').click(function () {
+                fetchInitialPDUList();
+            });
+			
+			$('#addPduForm').submit(function (event) {
+                console.log('Adding host function started:');
+                event.preventDefault();
+
+                var roomCode = getRoomCodeFromURL();
+                console.log('Adding host roomCode is:', roomCode);
+
+                var pdu_address = $('#pdu_address').val();
+                console.log('pdu IP:', pdu_address);
+
+                var username = $('#username').val();
+                console.log('Username:', username);
+
+                var password = $('#password').val();
+                console.log('Password:', password);
+
+                var dataToSend = {
+                    'pdu_address': pdu_address, // Use 'hostAddress'
+                    'username': username,
+                    'password': password,
+                };
+
+                console.log('Adding pdu with data:', dataToSend);
+
+                $.ajax({
+                    url: base_url + '/api/add_pdu/' + roomCode, // Updated endpoint
+                    method: 'POST',
+                    data: JSON.stringify(dataToSend),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('Add pdu response:', response); // Debugging console print
+                        $('#response').text(JSON.stringify(response, null, 2));
+
+                        // Add a delay of 1 second (adjust as needed) before refreshing the host list
+                        setTimeout(function () {
+							var pdu_list = fetchInitialPDUList();
+							console.log("pdu_list = " + pdu_list)
+                            updatePDUList(pdu_list);
+                        }, 2000); // 1000 milliseconds = 1 second
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error adding pdu:', error); // Debugging console print
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            });
+
+            // Fetch initial host list on page load
+            fetchInitialPDUList();
+
+            // Function to get roomCode from URL
+            function getRoomCodeFromURL() {
+                var urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('room_code');
+            }
+
+            // Add click event to show/hide the form
+            $('#showFormButton').click(function () {
+                $('.dropdown').slideToggle(); // Toggle the visibility
+            });
+			
             $('#returnMainButton').click(function () {
                 window.location.href = 'index.html';
             });
@@ -92,21 +248,26 @@
     </script>
 </head>
 <body>
-    <h1>Page Title</h1>
+    <h1>PDU Management</h1>
 
-    <h2>Add Something:</h2>
-    <form id="addSomethingForm">
-        <label for="somethingName">Something Name:</label>
-        <input type="text" id="somethingName" required><br>
-        <!-- Add your additional input fields here as needed -->
-        <button type="submit">Add Something</button>
-    </form>
+    <button id="showFormButton">Show Add PDU Form</button>
 
-    <!-- Refresh Something List Button -->
-    <button id="refreshSomethingListButton">Refresh Something List</button>
+    <div class="dropdown">
+        <h2>Add PDU:</h2>
+        <form id="addPduForm">
+            <label for="pdu_address">PDU IP:</label>
+            <input type="text" id="pdu_address" required><br>
+            <label for="username">Username:</label>
+            <input type="text" id="username" required><br>
+            <label for="password">Password:</label>
+            <input type="password" id="password" required><br>
 
-    <!-- Something List Container -->
-    <div id="somethingList" class="dropdown"></div>
+            <button type="submit">Add PDU</button>
+        </form>
+    </div>
+
+    <button id="refreshPduListButton">Refresh PDU List</button>
+    <div id="pduList"></div>
 
     <h2>API Response:</h2>
     <pre id="response"></pre>
@@ -114,4 +275,6 @@
     <button id="returnPreviousButton">Return to Previous Page</button>
     <button id="returnMainButton">Return to Main Menu</button>
 </body>
+</html>
+
 </html>
