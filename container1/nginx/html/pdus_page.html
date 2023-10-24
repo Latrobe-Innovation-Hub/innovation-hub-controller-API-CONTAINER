@@ -81,7 +81,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
-			//var base_url = 'http://admin:admin@192.168.20.26/';
+			//var base_url = 'http://admin:admin@192.168.20.26';
             var base_url = '/';
 
             // Function to update the host list
@@ -132,7 +132,7 @@
                 console.log('Removing PDU with address:', pduAddress); // Debugging console print
 
                 $.ajax({
-                    url: base_url + '/api/remove_pdu/' + roomCode + '/' + pduAddress,
+                    url: base_url + 'api/remove_pdu/' + roomCode + '/' + pduAddress,
                     method: 'DELETE',
                     success: function (response) {
                         console.log('Remove PDU response:', response); // Debugging console print
@@ -157,7 +157,7 @@
                 console.log('Fetching initial host list for room:', roomCode); // Debugging console print
 
                 $.ajax({
-                    url: base_url + '/api/get_pdus/' + roomCode,
+                    url: base_url + 'api/get_pdus/' + roomCode,
                     method: 'GET',
                     success: function (response) {
                         console.log('Fetch initial pdu list response:', response); // Debugging console print
@@ -201,7 +201,7 @@
                 console.log('Adding pdu with data:', dataToSend);
 
                 $.ajax({
-                    url: base_url + '/api/add_pdu/' + roomCode, // Updated endpoint
+                    url: base_url + 'api/add_pdu/' + roomCode, // Updated endpoint
                     method: 'POST',
                     data: JSON.stringify(dataToSend),
                     contentType: 'application/json',
