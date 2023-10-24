@@ -871,8 +871,8 @@ def get_pdus():
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus WHERE room_code = %s", (room_code,))
-    pdus = cursor.fetchall()  )
+    cursor.execute("SELECT pdu_address, pdu_mac, username, password, room_code FROM pdus")
+    pdus = cursor.fetchall()
     conn.close()
     
     if len(pdus) < 1:
