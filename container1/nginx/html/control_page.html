@@ -104,8 +104,8 @@
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script>
 		$(document).ready(function () {
-			//var base_url = "http://admin:admin@192.168.20.26/";
-			var base_url = "/";
+			var base_url = "http://admin:admin@192.168.20.26/";
+			//var base_url = "/";
 			
 			// Initialize an object to store host information with PIDs
 			const hostData = {};
@@ -141,14 +141,77 @@
 							$('#displayList').append(`
 							<li>
 								${display.display_name} (ID: ${display.display_address})
-								<button class="turnDisplayOn" data-room-code="${roomCode}" data-host-id="${display.display_address}">Turn On</button>
-								<button class="turnDisplayOff" data-room-code="${roomCode}" data-host-id="${display.display_address}">Turn Off</button>
-								<button class="getDisplayStatus" data-room-code="${roomCode}" data-host-id="${display.display_address}">Status</button>
+								<button class="statusDisplay" data-display-address="' + display.display_address + '"><span class="status-indicator">Loading...</span></button>
+								<button class="turnDisplayOn" data-display-address="' + display.display_address + '">Turn On</button>
+								<button class="turnDisplayOff" data-display-address="' + display.display_address + '">Turn Off</button>
+								<button class="button4" data-display-address="' + display.display_address + '">button4</button>
+								<button class="button5" data-display-address="' + display.display_address + '">button5</button>
 								<pre class="response" id="displayResponse_${displayAddressId}"></pre>
 							</li>
 							`);
 						});
 						
+						// Modify your existing status button click handler to call this function
+						$('.status').click(function () {
+							var display_address = $(this).data('display-address');
+							var button = $(this);
+							checkAndUpdateStatusUntilNotInit(display_address, button);
+						});
+						
+						function sleep(ms) {
+						  return new Promise(resolve => setTimeout(resolve, ms));
+						}
+						
+						function checkAndUpdateStatusUntilNotInit(display_address, button) {
+							console.log('checkAndUpdateStatusUntilNotInit called for display_address:', display_address);
+							sleep(5000).then(() => {statusDisplay(display_address, button); });	
+						}
+						
+						function statusDisplay(display_address, button) {
+							var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+							console.log('Getting display status for address:', display_address);
+
+							const POWER_ON = "01"
+							const POWER_INIT = "02"
+							const POWER_OFF = "04"
+							const POWER_ERR = "ERR"
+
+							$.ajax({
+								url: base_url + 'api/get_projector_state/' + roomCode + '/' + display_address,
+								method: 'GET',
+								success: function (response) {
+									console.log('Display status response:', response); // Debugging console print
+									var status = response.projector_state;
+
+									// Update the button text and color based on the status
+									if (status === POWER_ON) {
+										button.find('.status-indicator').text('ON');
+										button.removeClass('status-init'); // Remove the 'status-init' class
+										button.addClass('status-on');
+									} else if (status === POWER_OFF) {
+										button.find('.status-indicator').text('OFF');
+										button.removeClass('status-init'); // Remove the 'status-init' class
+										button.addClass('status-off');
+									} else if (status === POWER_INIT || status === POWER_ERR) {
+										button.find('.status-indicator').text('Initializing');
+										button.addClass('status-init');
+										//checkAndUpdateStatusUntilNotInit(display_address, button);
+										sleep(5000).then(() => { statusDisplay(display_address, button); });
+									} else {
+										button.find('.status-indicator').text('Unknown');
+										button.removeClass('status-init'); // Remove the 'status-init' class
+										button.addClass('status-unknown');
+									}
+								},
+								error: function (xhr, status, error) {
+									console.log('Error getting display status:', error);
+									console.log(xhr.responseText);
+									button.find('.status-indicator').text('Error');
+									button.removeClass('status-init'); // Remove the 'status-init' class in case of an error
+								}
+							});
+						}
+									
 						$('#displayList').on('click', '.turnDisplayOn', function () {
 							const displayAddress = $(this).data('host-id');
 							const roomCode = $(this).data('room-code'); // Assuming you have a data attribute for room code

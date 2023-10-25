@@ -24,7 +24,7 @@ services:
       - APP_PORT=8050                 # port must match in both containers
       - APP_IP=172.75.0.3             # IP must match container2 ipv4_address
       - NET_SUBNET=172.75.0.0/16      # Network subnet for containers - nginx - must match - container_net
-      - NET_LOCAL=192.168.20.0/24     # The local network we want to allow access to the API without basic-auth @IH this will be 192.168.3.0/24
+      - NET_LOCAL=192.168.128.0/24     # The local network we want to allow access to the API without basic-auth @IH this will be 192.168.3.0/24
       - PROXY_LOG_LEVEL=detailed      # options: simple (no nginx access logging), detailed (with nginx access logging)
       - NGINX_ERROR_LOG_LEVEL=warn    # options: info, notice, warn, error, crit, alert, emerg (case sensitive)
     networks:

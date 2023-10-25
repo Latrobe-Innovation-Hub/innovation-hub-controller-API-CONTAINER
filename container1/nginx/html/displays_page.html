@@ -74,13 +74,353 @@
             color: #ffffff;
         }
 
-            #returnButton:hover {
-                background-color: #555555;
-            }
+        #returnButton:hover {
+            background-color: #555555;
+        }
+		
+		/* Style for the "ON" status */
+		button.status-on {
+			background-color: #00cc00; /* Green color for "ON" */
+		}
+
+		/* Style for the "OFF" status */
+		button.status-off {
+			background-color: #ff0000; /* Red color for "OFF" */
+		}
+
+		/* Style for the "INIT" status */
+		button.status-init {
+			background-color: #ffcc00; /* Yellow color for "INIT" */
+		}
+
+		/* Style for the "ERROR" status */
+		button.status-error {
+			background-color: #ff0000; /* Red color for "ERROR" */
+		}
+
+		/* Style for the "UNKNOWN" status */
+		button.status-unknown {
+			background-color: #999999; /* Gray color for "UNKNOWN" */
+		}
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
         $(document).ready(function () {
+			//var base_url = 'http://admin:admin@192.168.128.130/';
+			var base_url = '/';
+
+			function updateDisplayList(displays) {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				// Check if roomCode is not null or undefined before updating the title
+				if (roomCode) {
+					document.title = 'Display Management - Room ' + roomCode;
+				} else {
+					console.error('Room code not found in the URL.');
+				}
+
+				// Update the title tag with the roomCode
+				document.title = 'Display Management - Room ' + roomCode;
+
+				var displayListHtml = '<h2>Current Displays for Room ' + roomCode + ':</h2><ul>';
+				console.log('updating displays list:', displays); // Debugging console print
+				if (displays && displays.length > 0) {
+					console.log('updating device list greater than 0');
+					$.each(displays, function (index, display) {
+						console.log('in loop: ' + display.display_name);
+						var displayListItem = $('<li>Display ' + display.display_address + ': ' + display.display_name +
+							' <button class="status" data-display-address="' + display.display_address + '"><span class="status-indicator">Loading...</span></button>' +
+							' <button class="turnOn" data-display-address="' + display.display_address + '">Turn On</button>' +
+							' <button class="turnOff" data-display-address="' + display.display_address + '">Turn Off</button>' +
+							' <button class="button4" data-display-address="' + display.display_address + '">button4</button>' +
+							' <button class="button5" data-display-address="' + display.display_address + '">button5</button>' +
+							' <button class="removeButton" data-display-address="' + display.display_address + '">Remove</button>' +
+							'</li>');
+
+						displayListHtml += displayListItem.prop('outerHTML');
+
+						// Trigger the statusDisplay function for each display address with the button
+						statusDisplay(display.display_address, displayListItem);
+					});
+				} else {
+					displayListHtml += '<li>No displays available.</li>';
+				}
+				displayListHtml += '</ul>';
+				$('#DisplayList').html(displayListHtml);
+
+				// Bind click event for remove buttons
+				$('.removeButton').click(function () {
+					var display_address = $(this).data('display-address');
+					console.log('Clicked Remove Button for display_address:', display_address); // Debugging console print
+					removeDisplay(display_address);
+				});
+				
+				// Modify your existing status button click handler to call this function
+				$('.status').click(function () {
+					var display_address = $(this).data('display-address');
+					var button = $(this);
+					checkAndUpdateStatusUntilNotInit(display_address, button);
+				});
+				
+
+				// Add click event handlers for the new buttons
+				$('.turnOn').click(function () {
+					var display_address = $(this).data('display-address');
+					console.log('Clicked turnOn Button for display_address:', display_address);
+					turnOnDisplay(display_address);
+				});
+
+				$('.turnOff').click(function () {
+					var display_address = $(this).data('display-address');
+					console.log('Clicked Web Browser Button for display_address:', display_address);
+					turnOffDisplay(display_address);
+				});
+			}
+
+            // Function to open a new page with query parameters
+            function openNewPage(pageName, roomCode, display_address) {
+                var url = pageName + '?room_code=' + roomCode + '&display_address=' + display_address;
+                window.open(url, '_self');
+            }
+			
+			function statusDisplayOld(display_address) {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				console.log('Turning on display with address:', display_address); // Debugging console print
+
+				$.ajax({
+					url: base_url + 'api/get_projector_state/' + roomCode + '/' + display_address,
+					method: 'GET',
+					success: function (response) {
+						console.log('Turn on display response:', response); // Debugging console print
+						updateDisplayList(fetchInitialDisplayList());
+						console.log("this is the status response.text: " +  response.text)
+						$('#response').text('Projector State: ' + response.projector_state);
+					},
+					error: function (xhr, status, error) {
+						console.log('Error turning on display:', error); // Debugging console print
+						console.log(xhr.responseText); // Log the error response for further inspection
+						$('#response').text('Error turning on display: ' + error);
+					}
+				});
+			}
+			
+			function sleep(ms) {
+			  return new Promise(resolve => setTimeout(resolve, ms));
+			}
+			
+			function checkAndUpdateStatusUntilNotInit(display_address, button) {
+				console.log('checkAndUpdateStatusUntilNotInit called for display_address:', display_address);
+
+				
+				sleep(5000).then(() => {statusDisplay(display_address, button); });	
+			}
+			
+			function turnOnDisplay(display_address) {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				console.log('Turning on display with address:', display_address); // Debugging console print
+
+				$.ajax({
+					url: base_url + 'api/turn_on_projector/' + roomCode + '/' + display_address,
+					method: 'POST',
+					success: function (response) {
+						console.log('Turn on display response:', response); // Debugging console print
+						updateDisplayList(fetchInitialDisplayList());
+						$('#response').text('Display turned on successfully.');
+					},
+					error: function (xhr, status, error) {
+						console.log('Error turning on display:', error); // Debugging console print
+						console.log(xhr.responseText); // Log the error response for further inspection
+						$('#response').text('Error turning on display: ' + error);
+					}
+				});
+			}
+			
+			function turnOffDisplay(display_address) {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				console.log('Turning off display with address:', display_address); // Debugging console print
+
+				$.ajax({
+					url: base_url + 'api/turn_off_projector/' + roomCode + '/' + display_address,
+					method: 'POST',
+					success: function (response) {
+						console.log('Turn off display response:', response); // Debugging console print
+						updateDisplayList(fetchInitialDisplayList());
+						$('#response').text('Display turned off successfully.');
+					},
+					error: function (xhr, status, error) {
+						console.log('Error turning on display:', error); // Debugging console print
+						console.log(xhr.responseText); // Log the error response for further inspection
+						$('#response').text('Error turning off display: ' + error);
+					}
+				});
+			}
+
+            // Function to remove a host by address
+            function removeDisplay(display_address) {
+                var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+                console.log('Removing display with address:', display_address); // Debugging console print
+
+                $.ajax({
+                    url: base_url + 'api/remove_display/' + roomCode + '/' + display_address,
+                    method: 'DELETE',
+                    success: function (response) {
+                        console.log('Remove display response:', response); // Debugging console print
+                        updateDisplayList(fetchInitialDisplayList);
+                        $('#response').text('Display removed successfully.');
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error removing display:', error); // Debugging console print
+                        console.log(xhr.responseText); // Log the error response for further inspection
+                        $('#response').text('Error removing display: ' + error);
+                    }
+                });
+            }
+			
+			function statusDisplay(display_address, button) {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				console.log('Getting display status for address:', display_address);
+
+				const POWER_ON = "01"
+				const POWER_INIT = "02"
+				const POWER_OFF = "04"
+				const POWER_ERR = "ERR"
+
+				$.ajax({
+					url: base_url + 'api/get_projector_state/' + roomCode + '/' + display_address,
+					method: 'GET',
+					success: function (response) {
+						console.log('Display status response:', response); // Debugging console print
+						var status = response.projector_state;
+
+						// Update the button text and color based on the status
+						if (status === POWER_ON) {
+							button.find('.status-indicator').text('ON');
+							button.removeClass('status-init'); // Remove the 'status-init' class
+							button.addClass('status-on');
+						} else if (status === POWER_OFF) {
+							button.find('.status-indicator').text('OFF');
+							button.removeClass('status-init'); // Remove the 'status-init' class
+							button.addClass('status-off');
+						} else if (status === POWER_INIT || status === POWER_ERR) {
+							button.find('.status-indicator').text('Initializing');
+							button.addClass('status-init');
+							//checkAndUpdateStatusUntilNotInit(display_address, button);
+							sleep(5000).then(() => { statusDisplay(display_address, button); });
+						} else {
+							button.find('.status-indicator').text('Unknown');
+							button.removeClass('status-init'); // Remove the 'status-init' class
+							button.addClass('status-unknown');
+						}
+					},
+					error: function (xhr, status, error) {
+						console.log('Error getting display status:', error);
+						console.log(xhr.responseText);
+						button.find('.status-indicator').text('Error');
+						button.removeClass('status-init'); // Remove the 'status-init' class in case of an error
+					}
+				});
+			}
+
+
+            // Function to fetch the initial host list and update the display list
+			function fetchInitialDisplayList() {
+				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
+				console.log('Fetching initial displays list for room:', roomCode); // Debugging console print
+
+				$.ajax({
+					url: base_url + 'api/get_displays/' + roomCode,
+					method: 'GET',
+					success: function (response) {
+						console.log('Fetch initial displays list response:', response); // Debugging console print
+						updateDisplayList(response.displays);
+
+						// Now, for each display, call statusDisplay with the button object
+						if (response.displays && response.displays.length > 0) {
+							$.each(response.displays, function (index, display) {
+								// Pass the button object when calling statusDisplay
+								statusDisplay(display.display_address, $('[data-display-address="' + display.display_address + '"].status'));
+							});
+						}
+					},
+					error: function (xhr, status, error) {
+						console.log('Error fetching displays:', error); // Debugging console print
+						console.log(xhr.responseText); // Log the error response for further inspection
+						$('#displayList').text('Error fetching displays: ' + error);
+					}
+				});
+			}
+
+
+            // Bind click event for the "Refresh Host List" button
+            $('#refreshDisplayListButton').click(function () {
+                fetchInitialDisplayList();
+            });
+
+            $('#addDisplayForm').submit(function (event) {
+                console.log('Adding display function started:');
+                event.preventDefault();
+
+                var roomCode = getRoomCodeFromURL();
+                console.log('Adding display roomCode is:', roomCode);
+
+                var display_address = $('#display_address').val(); // Use 'host_address'
+                console.log('display_address:', display_address);
+
+                var display_name = $('#display_name').val(); // Use 'host_name'
+                console.log('display_name:', display_name);
+				
+				var display_type = $('#display_type').val();
+                console.log('display_type:', display_type);
+				
+				var display_mac = $('#display_mac').val();
+                console.log('display_mac:', display_mac);
+
+                var username = $('#username').val();
+                console.log('Username:', username);
+
+                var password = $('#password').val();
+                console.log('Password:', password);
+
+                var dataToSend = {
+                    'display_address': display_address, // Use 'hostAddress'
+                    'display_name': display_name,
+                    'display_type': display_type, // Use 'hostName'
+					'display_mac': display_mac,
+                    'username': username,
+                    'password': password,
+                };
+
+                console.log('Adding display with data:', dataToSend);
+
+                $.ajax({
+                    url: base_url + 'api/add_display/' + roomCode, // Updated endpoint
+                    method: 'POST',
+                    data: JSON.stringify(dataToSend),
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('Add display response:', response); // Debugging console print
+                        $('#response').text(JSON.stringify(response, null, 2));
+
+                        // Add a delay of 1 second (adjust as needed) before refreshing the host list
+                        setTimeout(function () {
+                            fetchInitialDisplayList();
+                        }, 2000); // 1000 milliseconds = 1 second
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Error adding display:', error); // Debugging console print
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            });
+
+            // Fetch initial host list on page load
+            fetchInitialDisplayList();
+
+            // Function to get roomCode from URL
+            function getRoomCodeFromURL() {
+                var urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('room_code');
+            }
+
             $('#returnMainButton').click(function () {
                 window.location.href = 'index.html';
             });
@@ -88,25 +428,48 @@
             $('#returnPreviousButton').click(function () {
                 history.back(); // This will take the user to the previous page in the browsing history.
             });
+
+            // Add click event to show/hide the form
+            $('#showFormButton').click(function () {
+                $('.dropdown').slideToggle(); // Toggle the visibility
+            });
         });
     </script>
 </head>
 <body>
-    <h1>Page Title</h1>
+    <h1>Display Management</h1>
 
-    <h2>Add Something:</h2>
-    <form id="addSomethingForm">
-        <label for="somethingName">Something Name:</label>
-        <input type="text" id="somethingName" required><br>
-        <!-- Add your additional input fields here as needed -->
-        <button type="submit">Add Something</button>
-    </form>
+    <button id="showFormButton">Show Add Display Form</button>
 
-    <!-- Refresh Something List Button -->
-    <button id="refreshSomethingListButton">Refresh Something List</button>
+    <div class="dropdown">
+        <h2>Add Display:</h2>
+        <form id="addDisplayForm">
+		
+            <label for="display_address">Display IP:</label>
+            <input type="text" id="display_address" required><br>
+			
+            <label for="display_name">Display Name:</label>
+            <input type="text" id="display_name" required><br>
 
-    <!-- Something List Container -->
-    <div id="somethingList" class="dropdown"></div>
+            <label for="display_type">Type:</label>
+            <input type="text" id="display_type" required><br>
+			
+			
+			<label for="display_mac">Mac Address:</label>
+            <input type="text" id="display_mac" required><br>
+			
+            <label for="username">Username:</label>
+			<input type="text" id="username" required autocomplete="username"><br>
+
+			<label for="password">Password:</label>
+			<input type="password" id="password" required autocomplete="new-password"><br>
+
+            <button type="submit">Add Display</button>
+        </form>
+    </div>
+
+    <button id="refreshDisplayListButton">Refresh Display List</button>
+    <div id="DisplayList"></div>
 
     <h2>API Response:</h2>
     <pre id="response"></pre>
@@ -115,4 +478,3 @@
     <button id="returnMainButton">Return to Main Menu</button>
 </body>
 </html>
-

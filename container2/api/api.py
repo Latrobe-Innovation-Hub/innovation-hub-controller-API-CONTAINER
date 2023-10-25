@@ -1458,18 +1458,18 @@ async def get_projector_state(room_code, display_address):
             power_state = await projector.get_property("PWR")
 
             # Map the projector's power state to a user-friendly format
-            if power_state == POWER_ON:
-                projector_state = "ON"
-            elif power_state == POWER_INIT:
-                projector_state = "INIT"
-            elif power_state == POWER_OFF:
-                projector_state = "OFF"
-            elif power_state == POWER_ERR:
-                projector_state = "ERROR"
-            else:
-                projector_state = "UNKNOWN"
+            # if power_state == POWER_ON:
+                # projector_state = "ON"
+            # elif power_state == POWER_INIT:
+                # projector_state = "INIT"
+            # elif power_state == POWER_OFF:
+                # projector_state = "OFF"
+            # elif power_state == POWER_ERR:
+                # projector_state = "ERROR"
+            # else:
+                # projector_state = "UNKNOWN"
 
-            return jsonify({'projector_state': projector_state}), 200
+            return jsonify({'projector_state': power_state}), 200
 
         except Exception as e:
             return jsonify({'error': str(e)}), 500
@@ -1482,6 +1482,8 @@ async def turn_on_projector(room_code, display_address):
     POWER_OFF = "04"
     POWER_ERR = "ERR"  
     
+    projector_state = None
+    
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -1491,6 +1493,7 @@ async def turn_on_projector(room_code, display_address):
 
     if not existing_display:
         conn.close()
+        logger.info('Display not found in the specified room')
         return jsonify({'error': 'Display not found in the specified room'}), 404
 
     # Fetch the projector details from the database, including host_address, username, and password
@@ -1499,11 +1502,16 @@ async def turn_on_projector(room_code, display_address):
 
     if not display_details:
         conn.close()
+        logger.info('Display details not found')
         return jsonify({'error': 'Display details not found'}), 404
 
     username, password = display_details
 
     conn.close()
+
+    logger.info('Debugging line...')
+    
+    power_state = POWER_INIT
 
     # Initialize aiohttp client session
     async with aiohttp.ClientSession() as session:
@@ -1517,45 +1525,52 @@ async def turn_on_projector(room_code, display_address):
         
             if power_state == POWER_ERR:
                 # Retry initialization if the response is "ERR"
-                max_retries = 15
+                max_retries = 1
                 for retry in range(1, max_retries + 1):                
                     # Wait before retrying (you can adjust the duration)
-                    await asyncio.sleep(5)
+                    await asyncio.sleep(1)
                 
                     # Retry initialization
                     power_state = await projector.get_property("PWR")
                     if str(power_state) != POWER_ERR:
                         break
                 else:
+                    logger.info('Initialization failed after all retries.')
                     return jsonify({'error': "Initialization failed after all retries."}), 500
+
         
             if power_state == POWER_OFF:
-                print(f"Projector at: {host} is off, so turning on..")
+                logger.info(f"Projector at: {host} is off, so turning on..")
   
                 # The projector is currently off, so we can turn it on
                 await projector.send_command("PWR ON")
                 
                 # Wait for the projector to power on
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
                 
                 # Check the current power state to confirm it's on
-                max_retries = 15
+                max_retries = 1
                 for retry in range(1, max_retries + 1):
                     power_state = await projector.get_property("PWR")
 			
                     if power_state == POWER_ON:
-                        return jsonify({'message': 'Projector turned on successfully'}), 200
+                        logger.info('Projector turned on successfully')
+                        return jsonify({'message': power_state}), 200
 			    
-	            # Wait before retrying (you can adjust the duration)
-                    await asyncio.sleep(5)	
+                    # Wait before retrying (you can adjust the duration)
+                    await asyncio.sleep(1)	
                 else:
-                    return jsonify({'error': 'Failed to turn on the projector'}), 500
+                    logger.info('Failed to turn on the projector')
+                    #return jsonify({'error': 'Failed to turn on the projector'}), 500
+                    return jsonify({'message': power_state}), 200
             else:
-                return jsonify({'message': 'Projector is already on'}), 200
+                logger.info('Projector is already on')
+                return jsonify({'message': power_state}), 200
 
         except Exception as e:
+            logger.exception('An error occurred during projector control')
             return jsonify({'error': str(e)}), 500
-
+            
 @app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
 async def turn_off_projector(room_code, display_address):
     # Define constants for power states
