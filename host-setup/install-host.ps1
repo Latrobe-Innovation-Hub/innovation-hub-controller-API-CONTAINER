@@ -409,7 +409,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Download and Install NirCmd" $step8Success
 	$stepsStatus += [PSCustomObject]@{Step = "Download and Install NirCmd"; Success = $step8Success}
 
- 	# Step 9: Set Windows Power, Sleep, and Taskbar Settings - Need to test!
+ 	# Step 9: Set Windows Power, Sleep, Taskbar, and Desktop Settings - Need to test!
 	$step9Success = $true
 	try {
 	    # Set the screen turn off time to "Never" when plugged in
@@ -422,11 +422,17 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	
 	    # Set the taskbar to auto-hide - need to confirm works>?
 	    Enable-AutoHideTaskBar
+
+     	    # Disable show icons on Desktop - need to confirm works>?
+	    $Path="HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+	    Set-ItemProperty -Path $Path -Name "HideIcons" -Value 1
+	    Get-Process "explorer"| Stop-Process
+     	    Write-Host "Windows desktop: Disabled show icons."
 	} catch {
 	    $step9Success = $false
 	}
 	ConfirmStepSuccess "Set Windows Power, Sleep, and Taskbar Settings" $step9Success
-	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power, Sleep, and Taskbar Settings"; Success = $step9Success}
+	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power, Sleep, Taskbar, and Desktop Settings"; Success = $step9Success}
 	
 	# Step 10: Install Google Chrome
 	$step10Success = $true
