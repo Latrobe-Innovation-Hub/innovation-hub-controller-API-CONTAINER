@@ -1,3 +1,6 @@
+# Save the current working directory
+$originalWorkingDirectory = $args[0]
+
 <#
 Author: Andrew McDonald
 Date: 21.07.2023
@@ -50,9 +53,6 @@ Write-Host $comment
 $response = Read-Host "Do you wish to continue? Type 'yes' to proceed."
 
 if ($response -eq 'YES' -or $response -eq 'yes') {
-	# Save the current working directory
-	$originalWorkingDirectory = Get-Location
-	
 	# Required for displaying message box
 	Add-Type -AssemblyName PresentationFramework
 
@@ -376,21 +376,25 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	ConfirmStepSuccess "Download and Install NirCmd" $step8Success
 	$stepsStatus += [PSCustomObject]@{Step = "Download and Install NirCmd"; Success = $step8Success}
 
-	# Step 9: Set Windows Power and Sleep Settings - Need to test!
+ 	# Step 9: Set Windows Power, Sleep, and Taskbar Settings - Need to test!
 	$step9Success = $true
 	try {
 	    # Set the screen turn off time to "Never" when plugged in
 	    powercfg -x -monitor-timeout-ac 0
-		Write-Host "Windows power and sleep settings updated: Screen turns off after 'Never' when plugged in."
-		
-		# Set the computer to never enter sleep mode when on battery
-		powercfg -x -standby-timeout-ac 0    
+	    Write-Host "Windows power and sleep settings updated: Screen turns off after 'Never' when plugged in."
+	
+	    # Set the computer to never enter sleep mode when on battery
+	    powercfg -x -standby-timeout-ac 0
 	    Write-Host "Windows power and sleep settings updated: Standby set to 'Never' when plugged in."
+	
+	    # Set the taskbar to auto-hide - need to confirm works>?
+	    Set-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' -Name 'TaskbarAutoHide' -Value 1
+	    Write-Host "Taskbar set to auto-hide."
 	} catch {
 	    $step9Success = $false
 	}
-	ConfirmStepSuccess "Set Windows Power and Sleep Settings" $step9Success
-	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power and Sleep Settings"; Success = $step9Success}
+	ConfirmStepSuccess "Set Windows Power, Sleep, and Taskbar Settings" $step9Success
+	$stepsStatus += [PSCustomObject]@{Step = "Set Windows Power, Sleep, and Taskbar Settings"; Success = $step9Success}
 	
 	# Step 10: Install Google Chrome
 	$step10Success = $true
@@ -489,7 +493,7 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 		$Username = $UsernameParts[1]
 
 		# Define the source file path (CWD in this case)
-		$sourceFilePath = Join-Path (Get-Location) "browser-youtube.py"
+		$sourceFilePath = Join-Path ($originalWorkingDirectory) "browser-youtube.py"
 		
 
 		# Define the destination directory path (Documents directory)
