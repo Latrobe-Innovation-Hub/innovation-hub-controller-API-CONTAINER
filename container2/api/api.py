@@ -1423,14 +1423,76 @@ from epson_projector.main_non_async import Projector
 
 from flask import jsonify
 
+import urllib3
+
+# Disable SSL certificate verification warnings
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+### this is the pj solution using digest auth for epson projects!
+### SEE BELOW LIST FOR MORE COMMANDS
+# Select source:
+# PUT https://192.168.128.18/lighting/api/v01/pj/source
+# {
+#   "source": "HDMI", "SD Player","LAN","Spotlight",
+# }
+
+# get current source:
+# GET https://192.168.128.18/lighting/api/v01/pj/source
+# response: {
+#     "source": "HDMI", "SD Player","LAN","Spotlight",
+# }
+
+# Get sources:
+# GET https://192.168.128.18/lighting/api/v01/pj/sources
+# response: {
+#     "sources": [
+#         "SD Player",
+#         "HDMI",
+#         "LAN",
+#         "Spotlight"
+#     ],
+#     "signageSource": "SD Player"
+# }
+
+# # Turn on/off
+# PUT https://192.168.128.18/lighting/api/v01/pj/power
+# {
+#     "power": "ON","OFF"
+# }
+
+# # get current power state
+# GET https://192.168.128.18/lighting/api/v01/pj/power
+# response: {
+#     "power": "OFF"
+# }
+
+
+# ## returns the current state of mute?
+# GET https://192.168.128.18/lighting/api/v01/pj/mute
+# response: {
+#   "mute": "ON","OFF"
+# }
+
+# # select state of mute
+# PUT https://192.168.128.18/lighting/api/v01/pj/mute
+# {
+#   "mute": "ON","OFF"
+# }
+
+# up/down volume
+# PUT https://192.168.128.18/lighting/api/v01/pj/volume
+# {
+#   "volume": "INC","DEC"
+# }
+
+# # get current volume
+# GET https://192.168.128.18/lighting/api/v01/pj/volume
+# response: 
+#     "volume": 15
+# }
 @app.route('/get_projector_state/<string:room_code>/<string:display_address>', methods=['GET'])
 def get_projector_state(room_code, display_address):
-    # Define constants for power states
-    #POWER_ON = "01"
-    #POWER_INIT = "02"
-    #POWER_OFF = "04"
-    #POWER_ERR = "ERR"  
-
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -1451,29 +1513,20 @@ def get_projector_state(room_code, display_address):
         return jsonify({'error': 'Display details not found'}), 404
 
     username, password = display_details
-    conn.close()
+    conn.close() 
 
-    host = display_address
-    projector = Projector(host)
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/power'
 
     try:
-        # Get the current power state
-        power_state = projector.get_property("PWR")
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
 
-        # Map the projector's power state to a user-friendly format
-        # if power_state == POWER_ON:
-        # projector_state = "ON"
-        # elif power_state == POWER_INIT:
-        # projector_state = "INIT"
-        # elif power_state == POWER_OFF:
-        # projector_state = "OFF"
-        # elif power_state == POWER_ERR:
-        # projector_state = "ERROR"
-        # else:
-        # projector_state = "UNKNOWN"
-
-        return jsonify({'projector_state': power_state}), 200
-
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed to turn off the projector'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
