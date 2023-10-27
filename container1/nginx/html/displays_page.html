@@ -128,7 +128,6 @@
 					$.each(displays, function (index, display) {
 						console.log('in loop: ' + display.display_name);
 						var displayListItem = $('<li>Display ' + display.display_address + ': ' + display.display_name +
-							' <button class="status" data-display-address="' + display.display_address + '"><span class="status-indicator">Loading...</span></button>' +
 							' <button class="turnOn" data-display-address="' + display.display_address + '">Turn On</button>' +
 							' <button class="turnOff" data-display-address="' + display.display_address + '">Turn Off</button>' +
 							' <button class="button4" data-display-address="' + display.display_address + '">button4</button>' +
@@ -154,13 +153,6 @@
 					removeDisplay(display_address);
 				});
 				
-				// Modify your existing status button click handler to call this function
-				$('.status').click(function () {
-					var display_address = $(this).data('display-address');
-					var button = $(this);
-					checkAndUpdateStatusUntilNotInit(display_address, button);
-				});
-				
 
 				// Add click event handlers for the new buttons
 				$('.turnOn').click(function () {
@@ -182,36 +174,8 @@
                 window.open(url, '_self');
             }
 			
-			function statusDisplayOld(display_address) {
-				var roomCode = getRoomCodeFromURL(); // Get roomCode from URL
-				console.log('Turning on display with address:', display_address); // Debugging console print
-
-				$.ajax({
-					url: base_url + 'api/get_projector_state/' + roomCode + '/' + display_address,
-					method: 'GET',
-					success: function (response) {
-						console.log('Turn on display response:', response); // Debugging console print
-						updateDisplayList(fetchInitialDisplayList());
-						console.log("this is the status response.text: " +  response.text)
-						$('#response').text('Projector State: ' + response.projector_state);
-					},
-					error: function (xhr, status, error) {
-						console.log('Error turning on display:', error); // Debugging console print
-						console.log(xhr.responseText); // Log the error response for further inspection
-						$('#response').text('Error turning on display: ' + error);
-					}
-				});
-			}
-			
 			function sleep(ms) {
 			  return new Promise(resolve => setTimeout(resolve, ms));
-			}
-			
-			function checkAndUpdateStatusUntilNotInit(display_address, button) {
-				console.log('checkAndUpdateStatusUntilNotInit called for display_address:', display_address);
-
-				
-				sleep(5000).then(() => {statusDisplay(display_address, button); });	
 			}
 			
 			function turnOnDisplay(display_address) {
@@ -334,12 +298,12 @@
 						updateDisplayList(response.displays);
 
 						// Now, for each display, call statusDisplay with the button object
-						if (response.displays && response.displays.length > 0) {
-							$.each(response.displays, function (index, display) {
-								// Pass the button object when calling statusDisplay
-								statusDisplay(display.display_address, $('[data-display-address="' + display.display_address + '"].status'));
-							});
-						}
+						//if (response.displays && response.displays.length > 0) {
+						//	$.each(response.displays, function (index, display) {
+						//		// Pass the button object when calling statusDisplay
+						//		statusDisplay(display.display_address, $('[data-display-address="' + display.display_address + '"].status'));
+						//	});
+						//}
 					},
 					error: function (xhr, status, error) {
 						console.log('Error fetching displays:', error); // Debugging console print

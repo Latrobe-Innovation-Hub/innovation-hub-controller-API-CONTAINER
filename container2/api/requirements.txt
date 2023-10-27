@@ -29,3 +29,5 @@ pyserial_asyncio>=0.4
 async_timeout>=3.0.0
 gunicorn
 mysql-connector-python
+gevent
+geventhttpclient

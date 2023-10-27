@@ -37,7 +37,12 @@
 #       NirCmd can be found here: https://www.nirsoft.net/utils/nircmd.html
 # ======================================================================================================================================================
 
-from calendar import c
+import gevent
+import gevent.monkey
+
+# patch all the standard library modules
+gevent.monkey.patch_all()
+
 from flask import Flask, jsonify, request, render_template
 from flask_cors import CORS, cross_origin
 import paramiko
@@ -1413,17 +1418,19 @@ def remove_display(room_code, display_address):
     return jsonify({'message': 'Display removed successfully'}), 200
 
 import aiohttp
-import asyncio
-from epson_projector.main import Projector 
+#import asyncio
+from epson_projector.main_non_async import Projector 
+
+from flask import jsonify
 
 @app.route('/get_projector_state/<string:room_code>/<string:display_address>', methods=['GET'])
-async def get_projector_state(room_code, display_address):
+def get_projector_state(room_code, display_address):
     # Define constants for power states
-    POWER_ON = "01"
-    POWER_INIT = "02"
-    POWER_OFF = "04"
-    POWER_ERR = "ERR"  
-    
+    #POWER_ON = "01"
+    #POWER_INIT = "02"
+    #POWER_OFF = "04"
+    #POWER_ERR = "ERR"  
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -1444,216 +1451,426 @@ async def get_projector_state(room_code, display_address):
         return jsonify({'error': 'Display details not found'}), 404
 
     username, password = display_details
-
     conn.close()
 
-    # Initialize aiohttp client session
-    async with aiohttp.ClientSession() as session:
-        host = display_address
-        websession = session
-        projector = Projector(host, websession)
+    host = display_address
+    projector = Projector(host)
 
-        try:
-            # Get the current power state
-            power_state = await projector.get_property("PWR")
+    try:
+        # Get the current power state
+        power_state = projector.get_property("PWR")
 
-            # Map the projector's power state to a user-friendly format
-            # if power_state == POWER_ON:
-                # projector_state = "ON"
-            # elif power_state == POWER_INIT:
-                # projector_state = "INIT"
-            # elif power_state == POWER_OFF:
-                # projector_state = "OFF"
-            # elif power_state == POWER_ERR:
-                # projector_state = "ERROR"
-            # else:
-                # projector_state = "UNKNOWN"
+        # Map the projector's power state to a user-friendly format
+        # if power_state == POWER_ON:
+        # projector_state = "ON"
+        # elif power_state == POWER_INIT:
+        # projector_state = "INIT"
+        # elif power_state == POWER_OFF:
+        # projector_state = "OFF"
+        # elif power_state == POWER_ERR:
+        # projector_state = "ERROR"
+        # else:
+        # projector_state = "UNKNOWN"
 
-            return jsonify({'projector_state': power_state}), 200
+        return jsonify({'projector_state': power_state}), 200
 
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-@app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['POST'])
-async def turn_on_projector(room_code, display_address):
-    # Define constants for power states
-    POWER_ON = "01"
-    POWER_INIT = "02"
-    POWER_OFF = "04"
-    POWER_ERR = "ERR"  
+
+# @app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['post'])
+# async def turn_on_projector(room_code, display_address):
+#     # define constants for power states
+#     power_on = "01"
+#     power_init = "02"
+#     power_off = "04"
+#     power_err = "err"  
     
-    projector_state = None
+#     projector_state = none
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
 
-    # Check if the display exists in the specified room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
-    existing_display = cursor.fetchone()
+#     # check if the display exists in the specified room
+#     cursor.execute('select display_address from displays where display_address = %s and room_code = %s', (display_address, room_code))
+#     existing_display = cursor.fetchone()
 
-    if not existing_display:
-        conn.close()
-        logger.info('Display not found in the specified room')
-        return jsonify({'error': 'Display not found in the specified room'}), 404
+#     if not existing_display:
+#         conn.close()
+#         logger.info('display not found in the specified room')
+#         return jsonify({'error': 'display not found in the specified room'}), 404
 
-    # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
-    display_details = cursor.fetchone()
+#     # fetch the projector details from the database, including host_address, username, and password
+#     cursor.execute('select username, password from displays where display_address = %s', (display_address,))
+#     display_details = cursor.fetchone()
 
-    if not display_details:
-        conn.close()
-        logger.info('Display details not found')
-        return jsonify({'error': 'Display details not found'}), 404
+#     if not display_details:
+#         conn.close()
+#         logger.info('display details not found')
+#         return jsonify({'error': 'display details not found'}), 404
 
-    username, password = display_details
+#     username, password = display_details
 
-    conn.close()
+#     conn.close()
 
-    logger.info('Debugging line...')
+#     logger.info('debugging line...')
     
-    power_state = POWER_INIT
+#     power_state = power_init
 
-    # Initialize aiohttp client session
-    async with aiohttp.ClientSession() as session:
-        host = display_address
-        websession = session
-        projector = Projector(host, websession)
+#     # initialize aiohttp client session
+#     async with aiohttp.clientsession() as session:
+#         host = display_address
+#         websession = session
+#         projector = projector(host, websession)
 
-        try:
-            # Get the current power state
-            power_state = await projector.get_property("PWR")
+#         try:
+#             # get the current power state
+#             power_state = await projector.get_property("pwr")
         
-            if power_state == POWER_ERR:
-                # Retry initialization if the response is "ERR"
-                max_retries = 1
-                for retry in range(1, max_retries + 1):                
-                    # Wait before retrying (you can adjust the duration)
-                    await asyncio.sleep(1)
+#             if power_state == power_err:
+#                 # retry initialization if the response is "err"
+#                 max_retries = 1
+#                 for retry in range(1, max_retries + 1):                
+#                     # wait before retrying (you can adjust the duration)
+#                     await asyncio.sleep(1)
                 
-                    # Retry initialization
-                    power_state = await projector.get_property("PWR")
-                    if str(power_state) != POWER_ERR:
-                        break
-                else:
-                    logger.info('Initialization failed after all retries.')
-                    return jsonify({'error': "Initialization failed after all retries."}), 500
+#                     # retry initialization
+#                     power_state = await projector.get_property("pwr")
+#                     if str(power_state) != power_err:
+#                         break
+#                 else:
+#                     logger.info('initialization failed after all retries.')
+#                     return jsonify({'error': "initialization failed after all retries."}), 500
 
         
-            if power_state == POWER_OFF:
-                logger.info(f"Projector at: {host} is off, so turning on..")
+#             if power_state == power_off:
+#                 logger.info(f"projector at: {host} is off, so turning on..")
   
-                # The projector is currently off, so we can turn it on
-                await projector.send_command("PWR ON")
+#                 # the projector is currently off, so we can turn it on
+#                 await projector.send_command("pwr on")
                 
-                # Wait for the projector to power on
-                await asyncio.sleep(1)
+#                 # wait for the projector to power on
+#                 await asyncio.sleep(1)
                 
-                # Check the current power state to confirm it's on
-                max_retries = 1
-                for retry in range(1, max_retries + 1):
-                    power_state = await projector.get_property("PWR")
+#                 # check the current power state to confirm it's on
+#                 max_retries = 1
+#                 for retry in range(1, max_retries + 1):
+#                     power_state = await projector.get_property("pwr")
 			
-                    if power_state == POWER_ON:
-                        logger.info('Projector turned on successfully')
-                        return jsonify({'message': power_state}), 200
+#                     if power_state == power_on:
+#                         logger.info('projector turned on successfully')
+#                         return jsonify({'message': power_state}), 200
 			    
-                    # Wait before retrying (you can adjust the duration)
-                    await asyncio.sleep(1)	
-                else:
-                    logger.info('Failed to turn on the projector')
-                    #return jsonify({'error': 'Failed to turn on the projector'}), 500
-                    return jsonify({'message': power_state}), 200
-            else:
-                logger.info('Projector is already on')
-                return jsonify({'message': power_state}), 200
+#                     # wait before retrying (you can adjust the duration)
+#                     await asyncio.sleep(1)	
+#                 else:
+#                     logger.info('failed to turn on the projector')
+#                     #return jsonify({'error': 'failed to turn on the projector'}), 500
+#                     return jsonify({'message': power_state}), 200
+#             else:
+#                 logger.info('projector is already on')
+#                 return jsonify({'message': power_state}), 200
 
-        except Exception as e:
-            logger.exception('An error occurred during projector control')
-            return jsonify({'error': str(e)}), 500
+#         except exception as e:
+#             logger.exception('an error occurred during projector control')
+#             return jsonify({'error': str(e)}), 500
             
-@app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
-async def turn_off_projector(room_code, display_address):
-    # Define constants for power states
-    POWER_ON = "01"
-    POWER_INIT = "02"
-    POWER_OFF = "04"
-    POWER_ERR = "ERR"    
+# @app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['post'])
+# async def turn_off_projector(room_code, display_address):
+#     # define constants for power states
+#     power_on = "01"
+#     power_init = "02"
+#     power_off = "04"
+#     power_err = "err"    
 
-    conn = get_db_connection()
-    cursor = conn.cursor()
+#     conn = get_db_connection()
+#     cursor = conn.cursor()
 
-    # Check if the display exists in the specified room
-    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
-    existing_display = cursor.fetchone()
+#     # check if the display exists in the specified room
+#     cursor.execute('select display_address from displays where display_address = %s and room_code = %s', (display_address, room_code))
+#     existing_display = cursor.fetchone()
 
-    if not existing_display:
-        conn.close()
-        return jsonify({'error': 'Display not found in the specified room'}), 404
+#     if not existing_display:
+#         conn.close()
+#         return jsonify({'error': 'display not found in the specified room'}), 404
 
-    # Fetch the projector details from the database, including host_address, username, and password
-    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
-    display_details = cursor.fetchone()
+#     # fetch the projector details from the database, including host_address, username, and password
+#     cursor.execute('select username, password from displays where display_address = %s', (display_address,))
+#     display_details = cursor.fetchone()
 
-    if not display_details:
-        conn.close()
-        return jsonify({'error': 'Display details not found'}), 404
+#     if not display_details:
+#         conn.close()
+#         return jsonify({'error': 'display details not found'}), 404
 
-    username, password = display_details
+#     username, password = display_details
 
-    conn.close()
+#     conn.close()
 
-    # Initialize aiohttp client session
-    async with aiohttp.ClientSession() as session:
-        host = display_address
-        websession = session
-        projector = Projector(host, websession)
+#     # initialize aiohttp client session
+#     async with aiohttp.clientsession() as session:
+#         host = display_address
+#         websession = session
+#         projector = projector(host, websession)
 
-        try:
-            # Get the current power state
-            power_state = await projector.get_property("PWR")
+#         try:
+#             # get the current power state
+#             power_state = await projector.get_property("pwr")
         
-            if power_state == POWER_ERR:
-                # Retry initialization if the response is "ERR"
-                max_retries = 15
-                for retry in range(1, max_retries + 1):                
-                    # Wait before retrying (you can adjust the duration)
-                    await asyncio.sleep(5)
+#             if power_state == power_err:
+#                 # retry initialization if the response is "err"
+#                 max_retries = 15
+#                 for retry in range(1, max_retries + 1):                
+#                     # wait before retrying (you can adjust the duration)
+#                     await asyncio.sleep(5)
                 
-                    # Retry initialization
-                    power_state = await projector.get_property("PWR")
-                    if str(power_state) != POWER_ERR:
-                        break
-                else:
-                    return jsonify({'error': "Initialization failed after all retries."}), 500
+#                     # retry initialization
+#                     power_state = await projector.get_property("pwr")
+#                     if str(power_state) != power_err:
+#                         break
+#                 else:
+#                     return jsonify({'error': "initialization failed after all retries."}), 500
      
 
-            while power_state != POWER_OFF:
-                if power_state == POWER_ON:
-                    # The projector is currently on, so we can turn it off
-                    await projector.send_command("PWR OFF")
+#             while power_state != power_off:
+#                 if power_state == power_on:
+#                     # the projector is currently on, so we can turn it off
+#                     await projector.send_command("pwr off")
                 
-                    # Wait for the projector to power off
-                    await asyncio.sleep(5)
+#                     # wait for the projector to power off
+#                     await asyncio.sleep(5)
 
-		    # Check the current power state to confirm it's off
-                    max_retries = 15
-                    for retry in range(1, max_retries + 1):
-                        # Check the current power state to confirm it's off
-                        power_state = await projector.get_property("PWR")
+# 		    # check the current power state to confirm it's off
+#                     max_retries = 15
+#                     for retry in range(1, max_retries + 1):
+#                         # check the current power state to confirm it's off
+#                         power_state = await projector.get_property("pwr")
 
-                        if power_state == POWER_OFF:
-                            return jsonify({'message': 'Projector turned off successfully'}), 200
+#                         if power_state == power_off:
+#                             return jsonify({'message': 'projector turned off successfully'}), 200
 
-		        # Wait before retrying (you can adjust the duration)
-                        await asyncio.sleep(5)
-                    else:
-                        return jsonify({'error': 'Failed to turn off the projector'}), 500
-                elif power_state == POWER_OFF:
-                    return jsonify({'message': 'Projector is already off'}), 200
-        except Exception as e:
+# 		        # wait before retrying (you can adjust the duration)
+#                         await asyncio.sleep(5)
+#                     else:
+#                         return jsonify({'error': 'failed to turn off the projector'}), 500
+#                 elif power_state == power_off:
+#                     return jsonify({'message': 'projector is already off'}), 200
+#         except exception as e:
+#             return jsonify({'error': str(e)}), 500
+
+
+import requests
+from requests.auth import HTTPDigestAuth
+
+@app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
+def turn_off_projector(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()    
+
+    # build request with display credentials
+    url = f'http://{display_address}/api/v01/contentmgr/remote/power/off'
+
+    try:
+        #response = requests.get(url, auth=(username, password))
+        response = requests.get(url, auth=HTTPDigestAuth(username, password))
+
+        if response.status_code == 200:
+            return jsonify({'message': 'Projector turned off successfully'}), 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed to turn off the projector'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['POST'])
+def turn_on_projector(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()    
+
+    # build request with display credentials
+    url = f'http://{display_address}/api/v01/contentmgr/remote/power/on'
+
+    try:
+        #response = requests.get(url, auth=(username, password))
+        response = requests.get(url, auth=HTTPDigestAuth(username, password))
+
+        if response.status_code == 200:
+            return jsonify({'message': 'Projector turned on successfully'}), 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed to turn on the projector'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+## v02 api test function route... for 2x PU1008B and 2x EV-110 projectors in TC level2
+## projectors in library dih are ev105/100, and only api v01
+api_v02 = {
+    "power_control": {
+        "endpoint_url": "/api/v02/contentmgr/remote/power",
+        "request_type": "PUT",
+        "request_body": {
+            "power": None  # To be set by the user
+        },
+        "request_body_options": {"power": ["on", "off"]}
+    },
+    "switch_source": {
+        "endpoint_url": "/api/v02/contentmgr/remote/source",
+        "request_type": "PUT",
+        "request_body": {
+            "source": None  # To be set by the user
+        },
+        "request_body_options": {"source": ["is an int"]}
+    },
+    "mute": {
+        "endpoint_url": "/api/v02/contentmgr/remote/mute",
+        "request_type": "PUT",
+        "request_body": {
+            "mute": None  # To be set by the user
+        },
+        "request_body_options": {"mute": ["on", "off"]}
+    },
+    "content_playback": {
+        "endpoint_url": "/api/v02/contentmgr/playlists/playback",
+        "request_type": "PUT",
+        "request_body": {
+            "playback": None,  # To be set by the user
+            "mode": "normal",
+            "playlist_id": None  # To be set by the user
+        },
+        "request_body_options": {
+            "playback": ["start", "stop"],
+            "mode": ["normal", "timetable"],
+            "playlist_id": ["is an int"]
+        }
+    }
+}
+
+@app.route('/projector_api/<string:room_code>/<string:display_address>', methods=['POST'])
+def projector_api(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()  
+
+    try:
+        data = request.get_json()
+        command = data.get("command")
+
+        details = api_v02.get(command)
+        if not details:
+            raise ValueError(f"Invalid command: {command}")
+
+        request_body = details["request_body"]
+        validation_options = details["request_body_options"]
+
+        # Remove "command" from user_input if it exists
+        user_input = {key: value for key, value in data.items() if key != "command"}
+
+        for param, value in user_input.items():
+            if param in request_body:
+                valid_values = validation_options.get(param)
+                if valid_values is not None and value not in valid_values:
+                    raise ValueError(f"Invalid value for {param}: {value}. Valid values are: {', '.join(valid_values)}")
+            else:
+                raise ValueError(f"Invalid parameter: {param}")
+    except Exception as e:
             return jsonify({'error': str(e)}), 500
+        
+    # Now you can proceed with building and making the API call with the validated data
+    request_type = details.get("request_type")  # Default to GET if request type not specified
+    endpoint_url = details["endpoint_url"]
+        
+    # Build the JSON payload based on command and user input
+    payload = {}
+    payload.update(user_input)  # Merge with user input
+        
+    # build request with display credentials
+    url = f'http://{display_address}{endpoint_url}'
+    
+    try:
+        if request_type == "GET":
+            response = requests.get(url, auth=HTTPDigestAuth(username, password))
+        elif request_type == "POST":
+            # Make a POST request with the payload as data
+            response = requests.post(url, json=payload, auth=HTTPDigestAuth(username, password))
+        elif request_type == "PUT":
+            # Make a PUT request with the payload as data
+            response = requests.put(url, json=payload, auth=HTTPDigestAuth(username, password))
+        elif request_type == "DELETE":
+            # Make a DELETE request
+            response = requests.delete(url, auth=HTTPDigestAuth(username, password))
+        else:
+            return jsonify({'error': 'Invalid request type'}), 400
 
-#init_db()
+        if response.status_code == 200:
+            return jsonify({"message": "API call successful"}), 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'API call failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
 
 current_directory = os.path.dirname(os.path.abspath(__file__))
 chrome_driver_path = os.path.join(current_directory, 'chromedriver')

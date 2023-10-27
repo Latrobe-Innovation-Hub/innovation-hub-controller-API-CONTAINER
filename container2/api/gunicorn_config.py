@@ -23,6 +23,8 @@ worker_tmp_dir = '/dev/shm'
 workers = 1 #environ.get('APP_WORKERS', max_workers())
 threads = 1 #environ.get('APP_THREADS', threads_default)
 
+timeout = 60  # Set the worker timeout to 60 seconds (adjust as needed)
+
 spew = False
 
 pidfile = '/var/run/gunicorn.pid'
@@ -40,6 +42,12 @@ proc_name = 'app'
 
 # Use the 'app' variable as the WSGI application
 application = app
+
+# Set the worker class to gevent for async operations
+worker_class = 'gevent'
+
+# Set the worker connections to 500 for concurrency limit
+worker_connections = 500
 
 def post_fork(server, worker):
     server.log.info("Worker spawned (pid: %s)", worker.pid)
