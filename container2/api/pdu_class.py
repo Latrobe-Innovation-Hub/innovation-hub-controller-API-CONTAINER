@@ -143,13 +143,22 @@ class DeviceController:
             logger.info(f"connecting webdriver...")
             
             try:
-                device_url = f'http://{self.hostAddress}'
-                logger.info(f"device_url: {device_url}")
-                parsed_url = urlparse(device_url)
-                logger.info(f"parsed_url: {parsed_url}")
-                self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
+                #device_url = f'http://{self.hostAddress}'
+                #logger.info(f"device_url: {device_url}")
+                #parsed_url = urlparse(device_url)
+                #logger.info(f"parsed_url: {parsed_url}")
+                #self.base_url = f"{parsed_url.scheme}://{self.username}:{self.password}@{parsed_url.netloc}"  # Assign base_url
                 logger.info(f"self.base_url: {self.base_url}")
                 self.driver.get(self.base_url)
+            except Exception as e:
+                raise e  # Raise the exception instead of returning it
+            
+            try:
+                #self._fetch_system_settings()
+                self._fetch_outlet_states()
+                #self._fetch_network_settings()
+                #self._fetch_ping_action_settings()
+                #self._fetch_pdu_settings()
             except Exception as e:
                 raise e  # Raise the exception instead of returning it
             
@@ -468,8 +477,8 @@ class DeviceController:
             html_string = str(html_doc)
             html_lines = html_string.split("\n")
     
-            outlet_a_status = None
-            outlet_b_status = None
+            #outlet_a_status = None
+            #outlet_b_status = None
     
             # Search for outlet A and B in the HTML lines
             for html_line in html_lines:
@@ -477,13 +486,14 @@ class DeviceController:
                     values = html_line.split(",")
                     outlet_a_status = "ON" if int(values[10]) == 1 else "OFF"
                     outlet_b_status = "ON" if int(values[11]) == 1 else "OFF"
+                    
+                    # Store the outlet states as instance attributes
+                    self.outlet_states = {
+                        "A": outlet_a_status,
+                        "B": outlet_b_status,
+                    }
+
                     break
-    
-            # Store the outlet states as instance attributes
-            self.outlet_states = {
-                "A": outlet_a_status,
-                "B": outlet_b_status,
-            }
             
             # After fetching the outlet states, navigate back to the main device URL
             self.driver.back()

@@ -1,6 +1,1102 @@
 <!DOCTYPE html>
 <html>
-  <head><title>Room Information</title></head>
+<head>
+	<title>Room Information</title>
+	<style>
+		body {
+			background-color: #f2f2f2;
+			font-family: Arial, sans-serif;
+			margin: 0;
+			padding: 20px;
+		}
+
+		h1 {
+			color: #333333;
+		}
+
+		form {
+			margin-top: 20px;
+		}
+
+		label {
+			display: block;
+			margin-bottom: 5px;
+			color: #666666;
+		}
+
+		input {
+			padding: 10px;
+			font-size: 16px;
+			border-radius: 4px;
+			border: 1px solid #cccccc;
+			margin-bottom: 15px;
+		}
+
+		button {
+			background-color: #4CAF50;
+			border: none;
+			border-radius: 4px;
+			color: #ffffff;
+			cursor: pointer;
+			font-size: 18px;
+			margin-top: 10px;
+			padding: 10px 20px;
+			transition: background-color 0.3s;
+		}
+
+			button:hover {
+				background-color: #45a049;
+			}
+
+		h2 {
+			margin-top: 20px;
+			color: #333333;
+		}
+
+		pre {
+			background-color: #ffffff;
+			border-radius: 4px;
+			border: 1px solid #cccccc;
+			padding: 10px;
+			overflow-x: auto;
+			text-align: left;
+			font-size: 14px;
+			line-height: 1.5;
+			width: fit-content;
+		}
+
+		.dropdown {
+			display: none; /* Initially hidden */
+		}
+
+
+		.response {
+			display: inline-block;
+			vertical-align: top;
+			margin-top: 10px; /* Adjust the margin as needed */
+		}
+
+		.pre.response {
+			height: 100px; /* Adjust the height as needed */
+			overflow-y: auto;
+		}
+
+		.status-on {
+			background-color: #3498db;
+			/* Add any additional styles for the ON state here */
+		}
+
+		.status-off {
+			background-color: red; /* Color for OFF status */
+			/* Add any additional styles for the OFF state here */
+		}
+
+		.status-init {
+			background-color: yellow; /* Color for Initializing or unknown status */
+			/* Add any additional styles for the INIT state here */
+		}
+
+		/* Style for the custom dropdown container */
+		.custom-dropdown {
+			position: relative;
+			display: inline-block;
+		}
+
+		/* Style for the custom dropdown button */
+		.custom-dropdown-toggle {
+			background-color: #3498db;
+			color: #fff;
+			padding: 10px;
+			border: none;
+			cursor: pointer;
+		}
+
+		/* Style for the custom dropdown content */
+		.custom-dropdown-menu {
+			display: none;
+			position: absolute;
+			background-color: #f9f9f9;
+			min-width: 160px;
+			box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+			z-index: 1;
+		}
+
+		/* Style for custom dropdown items */
+		.custom-dropdown-item {
+			padding: 12px 16px;
+			text-decoration: none;
+			display: block;
+			color: #333;
+		}
+
+        /* Style for custom dropdown items */
+        .vol-dropdown-item {
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            color: #333;
+        }
+
+			/* Change the background color of custom dropdown items on hover */
+			.custom-dropdown-item:hover {
+				background-color: #ddd;
+			}
+
+		/* Show the custom dropdown content when hovering over the custom dropdown button */
+		.custom-dropdown:hover .custom-dropdown-menu {
+			display: block;
+		}
+
+		/* Adjust the position of the custom dropdown content */
+		.custom-dropdown-menu {
+			right: 0;
+		}
+	</style>
+	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+	<script>
+		$(document).ready(function () {
+			var base_url = "http://192.168.128.130/";
+			//var base_url = "http://";
+
+			// Initialize an object to store host information with PIDs
+			const hostData = {};
+			// Create a dictionary to store outlet states
+			var outletStates = {};
+
+			function populateRoomList(rooms) {
+				const roomList = $('#roomList');
+				roomList.empty();
+				rooms.forEach(room => {
+					roomList.append(`
+							<li>
+								<button class="roomButton" data-room-code="${room.room_code}">${room.room_code}</button>
+							</li>
+						`);
+				});
+			}
+
+			function updateRoomInfo(roomCode) {
+                $('#displayList').empty();
+				$.ajax({
+                    url: `${base_url}api/get_room/${roomCode}`,
+					method: 'GET',
+					success: function (response) {
+						const roomInfo = response.room_info;
+						console.log("roomInfo: " + roomInfo)
+						console.log("roomInfo.displays: " + roomInfo.displays)
+
+						$('#roomCode').text(roomInfo.room_code);
+						$('#roomDescription').text(roomInfo.description);
+
+						roomInfo.displays.forEach(display => {
+							const displayAddressId = display.display_address.replace(/\./g, '_');
+							console.log("display in roomInfo.displays)" + display)
+							console.log("display.display_address:" + display.display_address)
+
+                            $('#displayList').append(`
+							  <li>
+								${display.display_name} (ID: ${display.display_address})
+								<button class="toggleDisplay" id="toggleDisplay_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">Status</button>
+								<button class="statusDisplay" id="statusDisplay_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">Status</button>
+
+								<div class="custom-dropdown">
+								  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="sourceToggle_${display.display_address}">Source</button>
+								  <ul class="custom-dropdown-menu">
+									<li><a href="#" class="custom-dropdown-item" id="sdPlayer_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">SD Player</a></li>
+									<li><a href="#" class="custom-dropdown-item" id="hdmi_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">HDMI</a></li>
+									<li><a href="#" class="custom-dropdown-item" id="lan_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">LAN</a></li>
+									<li><a href="#" class="custom-dropdown-item" id="spotlight_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">Spotlight</a></li>
+									<!-- Add more dropdown options as needed -->
+								  </ul>
+								</div>
+
+								<div class="custom-dropdown">
+								  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="volumeToggle_${display.display_address}">Volume</button>
+								  <ul class="custom-dropdown-menu">
+									<li><a href="#" class="vol-dropdown-item" id="vol25_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">25%</a></li>
+									<li><a href="#" class="vol-dropdown-item" id="vol50_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">50%</a></li>
+									<li><a href="#" class="vol-dropdown-item" id="vol75_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">75%</a></li>
+									<li><a href="#" class="vol-dropdown-item" id="vol100_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">100%</a></li>
+									<!-- Add more dropdown options as needed -->
+								  </ul>
+								</div>
+
+								<button class="mute" id="mute_${display.display_address}" data-room-code="${roomCode}" data-display-address="${display.display_address}">Mute</button>
+								<pre class="response" id="displayResponse_${displayAddressId}"></pre>
+							  </li>
+							`);
+
+
+							// Pass the display address and the sourceToggle button to the sourceDisplay function
+							var sourceToggle = $(`#displayList li:last-child .custom-dropdown-toggle`);
+							sourceDisplay(display.display_address);
+
+							var statusDisplay = $(`#displayList li:last-child .statusDisplay`);
+							checkAndUpdateStatusUntilNotInit(display.display_address, roomCode, statusDisplay);
+						});
+
+                        $('#displayList .mute').click(function () {
+                            console.log('mute pressed')
+                            const displayAddress = $(this).data('display-address');
+                            mute_set(displayAddress)
+						});
+
+                        function mute_set(display_address) {
+                            // Fetch the current source
+							const button = document.getElementById(`mute_${display_address}`);
+
+                            var mute_cmd = button.textContent === 'Turn Mute On' ? 'ON' : 'OFF';
+
+                            console.log('muteButton' + button.textContent)
+                            console.log('mute_cmd' + mute_cmd)
+
+                            // Define the data to send to the API
+                            const dataToSend = { "mute": mute_cmd };
+
+                            console.log('dataToSend' + dataToSend)
+
+                            $.ajax({
+                                url: `${base_url}api/set_projector_mute/${roomCode}/${display_address}`,
+                                method: 'PUT',
+                                data: JSON.stringify(dataToSend),
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    console.log('display mute status response:', response); // Debugging console print
+                                    var parse_response = JSON.parse(response);
+                                    var mute_is = parse_response.mute;
+                                    console.log('display mute is:', mute_is);
+
+                                    // Update the text of the provided button to match the current source
+									if (mute_is === "ON") {
+										button.textContent = "Turn Mute Off";
+									} else if (mute_is === "OFF") {
+										button.textContent = "Turn Mute On";
+									} else {
+										button.textContent = "n/a";
+									}
+                                },
+                                error: function (xhr, source, error) {
+                                    //console.log('Error in mute_set', error);
+                                    button.textContent = "n/a";
+                                }
+                            });
+                        }
+
+                        function mute(display_address) {
+                            // Fetch the current source
+							const button = document.getElementById(`mute_${display_address}`);
+							console.log('in mute function');
+
+							console.log('display_address in mute is:', display_address);
+                            console.log('roomCode in mute is:', roomCode);
+
+                            $.ajax({
+                                url: `${base_url}api/get_projector_mute/${roomCode}/${display_address}`,
+                                method: 'GET',
+                                success: function (response) {
+                                    console.log('display mute status response:', response); // Debugging console print
+                                    var parse_response = JSON.parse(response);
+                                    var mute_is = parse_response.mute;
+                                    console.log('display mute is:', mute_is);
+
+                                    // Update the text of the provided button to match the current source
+									if (mute_is === "ON") {
+                                        console.log('in if mute_is ON in mute');
+										button.textContent = "Turn Mute Off";
+									} else if (mute_is === "OFF") {
+                                        console.log('in if mute_is OFF in mute');
+										button.textContent = "Turn Mute On";
+									} else {
+                                        button.textContent = "n/a";
+									}
+
+                                },
+                                error: function (xhr, source, error) {
+                                    //console.log('Error in mute', error);
+                                    button.textContent = "n/a";
+                                }
+                            });
+                        }
+
+                        function sourceDisplay(display_address) {
+							// Fetch the current source
+                            const button = document.getElementById(`sourceToggle_${display_address}`);
+
+							$.ajax({
+                                url: `${base_url}api/get_projector_source/${roomCode}/${display_address}`,
+								method: 'GET',
+								success: function (response) {
+									console.log('Display status response:', response); // Debugging console print
+									var parse_response = JSON.parse(response);
+									var source = parse_response.source;
+									console.log('Display source is:', source);
+
+									// Update the text of the provided button to match the current source
+									//button.text(source);
+                                    button.textContent = source;
+
+									// Remove 'current-source' class from all dropdown items
+									$('.custom-dropdown-item').removeClass('current-source');
+
+									// Apply 'current-source' class to the appropriate dropdown item
+									$('.' + source).addClass('current-source');
+								},
+								error: function (xhr, source, error) {
+									console.log('Error getting display source:', error);
+								}
+							});
+						}
+
+						// Add a click event handler for the dropdown items
+						$('.custom-dropdown-item').click(function (e) {
+							e.preventDefault();
+							const selectedSource = $(this).text();
+							const roomCode = $(this).data('room-code');
+							const displayAddress = $(this).data('display-address');
+
+							// Handle the click event based on the selected source, room code, and display address
+							console.log(`Selected source: ${selectedSource}`);
+							console.log(`Room code: ${roomCode}`);
+							console.log(`Display address: ${displayAddress}`);
+
+							// Define the data you want to send to the API
+							const dataToSend = {
+								"source": selectedSource
+							};
+
+							$.ajax({
+								url: `${base_url}api/select_projector_source/${roomCode}/${displayAddress}`, // Use template literals
+								method: 'PUT',
+								data: JSON.stringify(dataToSend),
+								contentType: 'application/json',
+								success: function (response) {
+									console.log(response);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text("Success: " + selectedSource + " selected.");
+									sourceDisplay(displayAddress, selectedSource);
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(error, null, 2));
+								}
+							});
+						});
+
+						// Add a click event handler for the status display buttons
+						//$('#displayList .statusDisplay').click(function () {
+						//		const displayAddress = $(this).data('display-address');
+						//		const statusButton = $(this);
+						//		checkAndUpdateStatusUntilNotInit(displayAddress, roomCode, statusButton);
+						//});
+
+						$('#displayList .statusDisplay').click(function () {
+                            console.log('statusDisplay pressed')
+							const displayAddress = $(this).data('display-address');
+							const statusButton = $(this);
+                            statusButton.textContent = 'Sending...';
+                            toggleDisplayPower(roomCode, displayAddress, 'statusDisplay_');
+						});
+
+						// Add a click event handler for the power toggle buttons
+                        $('#displayList .toggleDisplay').click(function (event) {
+                            event.preventDefault();
+						});
+
+						function toggleDisplayPower(roomCode, displayAddress, button_id) {
+                            console.log('in toggleDisplayPower function')
+
+                            console.log('displayAddress' + displayAddress)
+                            console.log('roomCode' + roomCode)
+
+							// Determine the current power status from the button text
+							//const currentPowerStatus = toggleButton.text() === 'Power On' ? 'ON' : 'OFF';
+
+                            const status = document.getElementById(`toggleDisplay_${displayAddress}`);
+
+                            const button = document.getElementById(`${button_id}${displayAddress}`);
+                            var currentPowerStatus = button.textContent === 'Power On' ? 'ON' : 'OFF';
+
+                            console.log('toggleButton' + button.textContent)
+                            console.log('currentPowerStatus' + currentPowerStatus)
+
+							// Define the data to send to the API
+							const dataToSend = { "power": currentPowerStatus };
+
+							console.log('dataToSend' + dataToSend)
+
+							$.ajax({
+								url: `${base_url}api/set_projector_power/${roomCode}/${displayAddress}`,
+								method: 'PUT',
+								data: JSON.stringify(dataToSend),
+								contentType: 'application/json',
+								success: function (response) {
+									const parseResponse = JSON.parse(response);
+									const powerResponse = parseResponse.power;
+
+                                    console.log('set_projector_power success: ' + powerResponse)
+
+									// Update the button text and class based on the response
+									if (powerResponse === 'ON') {
+										//toggleButton.text('Turn Off');
+										console.log('powerResponse' + powerResponse)
+                                        console.log('changing toggleButton to Turn Off')
+                                        button.textContent = 'Power Off';
+
+                                        button.style.backgroundColor = '#4CAF50';
+                                        button.style.color = 'white'; // Change the text color to white
+
+                                        status.textContent = 'ON';
+                                        status.style.backgroundColor = '#4CAF50';
+                                        status.style.color = 'white';
+
+									} else if (powerResponse === 'OFF') {
+										//toggleButton.text('Turn On');
+                                        console.log('powerResponse' + powerResponse)
+                                        console.log('changing toggleButton to Turn On')
+                                        button.textContent = 'Power On';
+
+                                        button.style.backgroundColor = '#4CAF50';
+                                        button.style.color = 'white'; // Change the text color to white
+
+                                        status.textContent = 'OFF';
+                                        status.style.backgroundColor = 'red';
+                                        status.style.color = 'white';
+									}
+
+									// Trigger a click event on the status button to update its status
+									//var statusDisplay = $(`#displayList li:last-child .statusDisplay`);
+
+                                    //const Button = document.getElementById(`${button_id}${displayAddress}`);
+                                    sourceDisplay(displayAddress);
+								},
+								error: function (xhr, status, error) {
+                                    //console.error('Error: ' + error);
+
+                                    var button = document.getElementById(`statusDisplay_${displayAddress}`);
+                                    var status = document.getElementById(`toggleDisplay_${displayAddress}`);
+
+                                    button.textContent = '  -  ';
+                                    button.style.backgroundColor = 'orange';
+                                    button.style.color = 'black';
+
+                                    status.textContent = 'n/a';
+                                    status.style.backgroundColor = 'orange';
+                                    status.style.color = 'black';
+								}
+							});
+						}
+
+						function checkAndUpdateStatusUntilNotInit(displayAddress, roomCode, statusButton) {
+							sleep(5000).then(() => {
+								statusDisplay(displayAddress, roomCode, statusButton);
+                                mute(displayAddress)
+							});
+						}
+
+						function statusDisplay(displayAddress, roomCode, statusButton) {
+							console.log('displayAddress' + displayAddress)
+                            console.log('roomCode' + roomCode)
+							$.ajax({
+								url: `${base_url}api/get_projector_power/${roomCode}/${displayAddress}`,
+								method: 'GET',
+								success: function (response) {
+									const parseResponse = JSON.parse(response);
+									const power = parseResponse.power;
+
+									// Update the button text and class based on the power status
+									if (power === 'ON') {
+										console.log('power' + power)
+										console.log('statusButton change text ' + 'Power Off')
+
+										var button = document.getElementById(`statusDisplay_${displayAddress}`);
+                                        var status = document.getElementById(`toggleDisplay_${displayAddress}`);
+
+                                        button.textContent = 'Power Off';
+                                        button.style.backgroundColor = '#4CAF50';
+                                        button.style.color = 'white'; // Change the text color to white
+
+                                        status.textContent = 'ON';
+                                        status.style.backgroundColor = '#4CAF50';
+                                        status.style.color = 'white';
+									} else if (power === 'OFF') {
+                                        console.log('power' + power)
+										console.log('statusButton change text ' + 'Power On')
+
+                                        var button = document.getElementById(`statusDisplay_${displayAddress}`);
+                                        var status = document.getElementById(`toggleDisplay_${displayAddress}`);
+
+                                        button.textContent = 'Power On';
+                                        button.style.backgroundColor = '#4CAF50';
+                                        button.style.color = 'white'; // Change the text color to white
+
+                                        status.textContent = 'OFF';
+                                        status.style.backgroundColor = 'red';
+                                        status.style.color = 'white';
+									} else {
+										status.textContent = 'n/a';
+                                        button.textContent = '  -  ';
+										checkAndUpdateStatusUntilNotInit(displayAddress, roomCode, statusButton);
+									}
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+
+                                    var button = document.getElementById(`statusDisplay_${displayAddress}`);
+                                    var status = document.getElementById(`toggleDisplay_${displayAddress}`);
+
+                                    button.textContent = ' - ';
+                                    button.style.backgroundColor = 'orange';
+                                    button.style.color = 'black';
+
+									status.textContent = 'n/a';
+                                    status.style.backgroundColor = 'orange';
+                                    status.style.color = 'black';
+								}
+							});
+						}
+
+						function sleep(ms) {
+							return new Promise(resolve => setTimeout(resolve, ms));
+						}
+
+                        // Add a click event handler for the dropdown items
+                        $('.vol-dropdown-item').click(function (e) {
+                            e.preventDefault();
+                            const selectedSource = $(this).text();
+                            const roomCode = $(this).data('room-code');
+                            const displayAddress = $(this).data('display-address');
+
+                            // Handle the click event based on the selected source, room code, and display address
+                            console.log(`Selected volume: ${selectedSource}`);
+                            console.log(`Room code: ${roomCode}`);
+							console.log(`Display address: ${displayAddress}`);
+
+							let volume_level;
+							if (selectedSource === "25%") {
+                                volume_level = 5
+							} else if (selectedSource === "50%") {
+                                volume_level = 10
+							} else if (selectedSource === "75%") {
+                                volume_level = 15
+							} else if (selectedSource === "100%") {
+                                volume_level = 20
+							}
+
+                            console.log(`volume_level to send: ${volume_level}`);
+
+                            // Define the data you want to send to the API
+                            const dataToSend = {
+                                "volume_level": volume_level
+                            };
+
+                            $.ajax({
+                                url: `${base_url}api/set_projector_volume/${roomCode}/${displayAddress}`, // Use template literals
+                                method: 'PUT',
+                                data: JSON.stringify(dataToSend),
+                                contentType: 'application/json',
+                                success: function (response) {
+									console.log(response);
+
+                                    var volume_response_msg = response.message;
+                                    const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+                                    responseElement.text("Success: " + volume_response_msg + ".");
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                }
+                            });
+                        });
+
+
+
+						$('#hostList').empty();
+						// Initialize an object to store host information with PIDs
+						roomInfo.hosts.forEach(host => {
+							const hostId = host.host_id.replace(/\./g, '_');
+							$('#hostList').append(`
+									<li>${host.host_name} (ID: ${host.host_id})
+									<button class="Default" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-config-default="${host.config_default}">Default</button>
+									<button class="Cisco" data-room-code="${roomCode}" data-host-id="${host.host_id}">Cisco</button>
+									<button class="Optus" data-room-code="${roomCode}" data-host-id="${host.host_id}">Optus</button>
+									<button class="Other" data-room-code="${roomCode}" data-host-id="${host.host_id}">Other</button>
+									<button class="closeProcessButton" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-host-pid="${hostData[host.host_id]}">Stop</button>
+									<pre class="response" id="hostResponse_${hostId}"></pre>
+									</li>
+								`);
+						});
+
+						$('#hostList').on('click', '.Default', function () {
+							const hostAddress = $(this).data('host-id');
+							//const content = $(this).data('config-default');
+							const roomCode = $(this).data('room-code');
+							var msg = "do default"
+
+							console.log("1 " + msg)
+							console.log("2 " + roomCode)
+							console.log("3 " + hostAddress)
+							console.log("4 " + content)
+
+							var content = "https://www.youtube.com/watch?v=9_S_8MspxKw";
+
+							if (content) {
+								// Define the data you want to send to the API
+								//const dataToSend = {
+								//	"application": "vlc",
+								//	"video_path": content,
+								//	"loop": "true"
+								//};
+
+								const dataToSend = {
+									"url": content,
+								};
+
+								$.ajax({
+									url: `${base_url}api/open_browser/${roomCode}/${hostAddress}`,
+									method: 'POST',
+									data: JSON.stringify(dataToSend),
+									contentType: 'application/json',
+									success: function (response) {
+										console.log(response);
+
+										const pid = response.response;
+										hostData[hostAddress] = pid;
+										console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(pid, null, 2));
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(error, null, 2));
+									}
+								});
+							} else {
+								console.log("Host missing config");
+							}
+						});
+
+						// Example function for "Turn Display On" button click
+						$('#hostList').on('click', '.Cisco', function () {
+							const hostAddress = $(this).data('host-id');
+
+							console.log(hostAddress);
+							const response = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+
+							var msg = "cisco"
+
+							// Update the response text box for this specific display
+							response.text(JSON.stringify(msg, null, 2));
+						});
+
+						$('#hostList').on('click', '.Cisco', function () {
+							const hostAddress = $(this).data('host-id');
+							const content = $(this).data('config-cisco');
+							const roomCode = $(this).data('room-code');
+							var msg = "do default"
+
+							console.log("1 " + msg)
+							console.log("2 " + roomCode)
+							console.log("3 " + hostAddress)
+							console.log("4 " + content)
+
+							if (content) {
+								// Define the data you want to send to the API
+								const dataToSend = {
+									"application": "vlc",
+									"video_path": content,
+									"loop": "true"
+								};
+
+								$.ajax({
+									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
+									method: 'POST',
+									data: JSON.stringify(dataToSend),
+									contentType: 'application/json',
+									success: function (response) {
+										console.log(response);
+
+										const pid = response.response;
+										hostData[hostAddress] = pid;
+										console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(pid, null, 2));
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(error, null, 2));
+									}
+								});
+							} else {
+								console.log("Host missing config");
+							}
+						});
+
+						$('#hostList').on('click', '.Optus', function () {
+							const hostAddress = $(this).data('host-id');
+							const content = $(this).data('config-optus');
+							const roomCode = $(this).data('room-code');
+							var msg = "do default"
+
+							console.log("1 " + msg)
+							console.log("2 " + roomCode)
+							console.log("3 " + hostAddress)
+							console.log("4 " + content)
+
+							if (content) {
+								// Define the data you want to send to the API
+								const dataToSend = {
+									"application": "vlc",
+									"video_path": content,
+									"loop": "true"
+								};
+
+								$.ajax({
+									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
+									method: 'POST',
+									data: JSON.stringify(dataToSend),
+									contentType: 'application/json',
+									success: function (response) {
+										console.log(response);
+
+										const pid = response.response;
+										hostData[hostAddress] = pid;
+										console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(pid, null, 2));
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(error, null, 2));
+									}
+								});
+							} else {
+								console.log("Host missing config");
+							}
+						});
+
+						$('#hostList').on('click', '.Other', function () {
+							const hostAddress = $(this).data('host-id');
+							const content = $(this).data('config-other');
+							const roomCode = $(this).data('room-code');
+							var msg = "do default"
+
+							console.log("1 " + msg)
+							console.log("2 " + roomCode)
+							console.log("3 " + hostAddress)
+							console.log("4 " + content)
+
+							if (content) {
+								// Define the data you want to send to the API
+								const dataToSend = {
+									"application": "vlc",
+									"video_path": content,
+									"loop": "true"
+								};
+
+								$.ajax({
+									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
+									method: 'POST',
+									data: JSON.stringify(dataToSend),
+									contentType: 'application/json',
+									success: function (response) {
+										console.log(response);
+
+										const pid = response.response;
+										hostData[hostAddress] = pid;
+										console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(pid, null, 2));
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(error, null, 2));
+									}
+								});
+							} else {
+								console.log("Host missing config");
+							}
+						});
+
+						$('#hostList').on('click', '.closeProcessButton', function () {
+							const hostAddress = $(this).data('host-id');
+							const roomCode = $(this).data('room-code');
+
+							// Retrieve the PID from hostData
+							const pid = hostData[hostAddress];
+
+							console.log("in closeProcessButton, pid is: " + pid)
+
+							if (pid) {
+								const dataToSend = {
+									"pid": pid
+								};
+
+								$.ajax({
+									url: `${base_url}api/close_process/${roomCode}/${hostAddress}`,
+									method: 'POST',
+									data: JSON.stringify(dataToSend),
+									contentType: 'application/json',
+									success: function (response) {
+										console.log(response);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(response, null, 2));
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(JSON.stringify(error, null, 2));
+									}
+								});
+							} else {
+								console.log("No PID found for this host. Cannot stop the process.");
+							}
+						});
+
+						$('#pduList').on('click', '.turnPduOnButton', function () {
+							const pduAddress = $(this).data('pdu-address');
+							const roomCode = $(this).data('room-code');
+
+							console.log(roomCode)
+							console.log(hostAddress)
+
+							var msg = "turn pdu outlet on"
+							console.log(msg)
+
+							// Define the data you want to send to the API
+							const dataToSend = {
+								room_code: roomCode,
+								display_address: displayAddress
+							};
+
+							$.ajax({
+								url: `${base_url}api/turn_on_projector/${roomCode}/${pduAddress}`,
+								method: 'POST',
+								data: JSON.stringify(dataToSend),
+								contentType: 'application/json',
+								success: function (response) {
+									console.log(response);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(response, null, 2));
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(error, null, 2));
+								}
+							});
+						});
+
+						$('#pduList').on('click', '.turnPduOnButton', function () {
+							const hostAddress = $(this).data('pdu-address');
+							const roomCode = $(this).data('room-code');
+
+							var msg = "pdu turn on"
+
+							console.log(msg)
+
+							console.log(roomCode)
+							console.log(hostAddress)
+
+							// Define the data you want to send to the API
+							const dataToSend = {
+								room_code: roomCode,
+								display_address: displayAddress
+							};
+
+							$.ajax({
+								url: `${base_url}api/turn_on_projector/${roomCode}/${hostAddress}`,
+								method: 'POST',
+								data: JSON.stringify(dataToSend),
+								contentType: 'application/json',
+								success: function (response) {
+									console.log(response);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(response, null, 2));
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(error, null, 2));
+								}
+							});
+						});
+
+						$('#pduList').on('click', '.turnPduOffButton', function () {
+							const hostAddress = $(this).data('pdu-address');
+							const roomCode = $(this).data('room-code');
+
+							console.log(hostAddress);
+							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
+
+							var msg = "turn pdu off"
+
+							// Update the response text box for this specific display
+							response.text(JSON.stringify(msg, null, 2));
+						});
+
+						$('#pduList').on('click', '.powerCyclePduButton', function () {
+							const hostAddress = $(this).data('pdu-address');
+							const roomCode = $(this).data('room-code');
+
+							console.log(hostAddress);
+							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
+
+							var msg = "power cycle pdu"
+
+							// Update the response text box for this specific display
+							response.text(JSON.stringify(msg, null, 2));
+						});
+
+
+					},
+					error: function (xhr, status, error) {
+						console.log('Error fetching room info:', error);
+					}
+				});
+			}
+
+			function fetchOutletSettings(roomCode) {
+				console.log('Fetching device outlet states...');
+				$.ajax({
+					url: `${base_url}api/view_pdu_outlet_settings_all/${roomCode}`,
+					method: 'GET',
+					success: function (response) {
+						if (response && response.length > 0) {
+							console.log('Fetch outlet response:', response);
+							var outletSettingsHtml = '';
+
+							$.each(response, function (index, device) {
+								outletSettingsHtml += '<li>Device ' + device.device_number + ': ' + device.pdu_address + '<div id="successMessage" style="display: none;"></div>';
+								outletSettingsHtml += '<ul>';
+
+								$.each(device.outlet_settings, function (outletName, outletStatus) {
+									var buttonClass = 'toggleButton';
+									var buttonText = 'Toggle';
+
+									var toggleButtonHtml = '';
+									if (outletStatus === 'ON') {
+										toggleButtonHtml = '<button class="toggleButton toggleOFFONButton" data-device-number="' + device.device_number + '" data-outlet-name="' + outletName + '" data-device-address="' + device.pdu_address + '" data-room-code="' + roomCode + '">Toggle OFF/ON</button>';
+									}
+
+									console.log("device.pdu_address" + device.pdu_address);
+
+									outletSettingsHtml += '<li>Outlet ' + outletName + ': Status - ' + outletStatus + ' ' +
+										'<button class="' + buttonClass + '" data-device-number="' + device.device_number + '" data-outlet-name="' + outletName + '" data-device-address="' + device.pdu_address + '" data-room-code="' + roomCode + '"> ' + buttonText + ' </button> ' +
+										toggleButtonHtml;
+
+
+									outletSettingsHtml += '</li>';
+
+
+									// Store the current outlet state
+									outletStates[device.device_number + '-' + outletName] = outletStatus;
+								});
+
+								outletSettingsHtml += '</ul>' + '</li>';
+							});
+
+							outletSettingsHtml += '</ul>';
+
+							// Display the outlet settings with the "Toggle" buttons
+							$('#outletSettings').html(outletSettingsHtml);
+						} else {
+							$('#outletSettings').text('No outlet settings available.');
+						}
+					},
+					error: function (xhr, status, error) {
+						$('#outletSettings').text('Error fetching outlet settings: ' + error);
+					}
+				});
+			}
+
+
+			// Toggle outlet state on button click
+			$(document).on('click', '.toggleButton, .toggleOFFONButton', function () {
+				var deviceNumber = $(this).data('device-number');
+				var outletName = $(this).data('outlet-name');
+				var deviceAddress = $(this).data('device-address');
+				const roomCode = $(this).data('room-code');
+				console.log('deviceAddress:' + deviceAddress);
+
+				console.log('$(this).data:' + $(this).data);
+
+				var currentState = outletStates[deviceNumber + '-' + outletName] || 'OFF';
+				var actionToSend;
+
+				console.log('Toggling outlet:', outletName, 'on device:', deviceNumber, 'currentState:', currentState);
+
+				if ($(this).hasClass('toggleOFFONButton')) {
+					// If the clicked button is a toggle OFF/ON button
+					actionToSend = currentState === 'ON' ? 'OFF/ON' : 'ON';
+				} else {
+					// If the clicked button is an ON/OFF button
+					actionToSend = currentState === 'ON' ? 'OFF' : 'ON';
+				}
+
+				// Update the button state
+				$(this).toggleClass('on', actionToSend === 'ON');
+				outletStates[deviceNumber + '-' + outletName] = actionToSend;
+
+				console.log('Toggling outlet:', outletName, 'on device:', deviceNumber, 'currentState:', currentState, 'actionToSend:', actionToSend);
+
+				$.ajax({
+					url: `${base_url}api/change_pdu_outlet_power_state/${roomCode}/${deviceAddress}`,
+					method: 'PUT',
+					data: JSON.stringify({ outlet_name: outletName, action: actionToSend }),
+					contentType: 'application/json',
+					success: function (response) {
+						console.log('API Response:', response);
+						// Update the response display
+						$('#response').text(JSON.stringify(response, null, 2));
+
+						// Display a success message
+						$('#successMessage').text('Action was successful!').show();
+						setTimeout(function () {
+							$('#successMessage').hide();
+						}, 2000); // Hide the message after 2 seconds
+
+						// Add a pause (e.g., 2 seconds) before fetching outlet settings
+						setTimeout(function () {
+							$('#successMessage').hide();
+							fetchOutletSettings(roomCode);
+						}, 2000); // Delay for 2 seconds (2000 milliseconds)
+					},
+					error: function (xhr, status, error) {
+						$('#response').text('Error updating outlet settings: ' + error);
+					}
+				});
+			});
+
+			$.ajax({
+				url: `${base_url}api/get_rooms`,
+				method: 'GET',
+				success: function (response) {
+					const rooms = response.rooms;
+					populateRoomList(rooms);
+
+					$('.roomButton').on('click', function () {
+						const selectedRoomCode = $(this).data('room-code');
+						updateRoomInfo(selectedRoomCode);
+						fetchOutletSettings(selectedRoomCode);
+					});
+				},
+				error: function (xhr, status, error) {
+					console.log('Error fetching room list:', error);
+				}
+			});
+		});
+	</script>
+</head>
   <body>
 		<h1>Room Information</h1>
 
@@ -22,694 +1118,4 @@
 		<ul id="pduList"></ul>
 		<div id="outletSettings"></div>
   </body>
-  <style>
-        body {
-            background-color: #f2f2f2;
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #333333;
-        }
-
-        form {
-            margin-top: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 5px;
-            color: #666666;
-        }
-
-        input {
-            padding: 10px;
-            font-size: 16px;
-            border-radius: 4px;
-            border: 1px solid #cccccc;
-            margin-bottom: 15px;
-        }
-
-        button {
-            background-color: #4CAF50;
-            border: none;
-            border-radius: 4px;
-            color: #ffffff;
-            cursor: pointer;
-            font-size: 18px;
-            margin-top: 10px;
-            padding: 10px 20px;
-            transition: background-color 0.3s;
-        }
-
-            button:hover {
-                background-color: #45a049;
-            }
-
-        h2 {
-            margin-top: 20px;
-            color: #333333;
-        }
-
-        pre {
-            background-color: #ffffff;
-            border-radius: 4px;
-            border: 1px solid #cccccc;
-            padding: 10px;
-            overflow-x: auto;
-            text-align: left;
-            font-size: 14px;
-            line-height: 1.5;
-            width: fit-content;
-        }
-
-        .dropdown {
-            display: none; /* Initially hidden */
-        }
-
-		
-		.response {
-			display: inline-block;
-			vertical-align: top;
-			margin-top: 10px; /* Adjust the margin as needed */
-		}
-		
-		.pre.response {
-			height: 100px; /* Adjust the height as needed */
-			overflow-y: auto;
-		}
-  </style>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script>
-		$(document).ready(function () {
-			//var base_url = "http://admin:admin@192.168.20.26/";
-			var base_url = "/";
-			
-			// Initialize an object to store host information with PIDs
-			const hostData = {};
-			// Create a dictionary to store outlet states
-			var outletStates = {};
-
-			function populateRoomList(rooms) {
-				const roomList = $('#roomList');
-				roomList.empty();
-				rooms.forEach(room => {
-					roomList.append(`
-						<li>
-							<button class="roomButton" data-room-code="${room.room_code}">${room.room_code}</button>
-						</li>
-					`);
-				});
-			}
-
-			function updateRoomInfo(roomCode) {
-				$.ajax({
-					url: base_url + `api/get_room/${roomCode}`,
-					method: 'GET',
-					success: function (response) {
-						const roomInfo = response.room_info;
-						console.log("roomInfo: " + roomInfo)
-                        console.log("roomInfo.displays: " + roomInfo.displays)
-
-						$('#roomCode').text(roomInfo.room_code);
-						$('#roomDescription').text(roomInfo.description);
-
-						$('#displayList').empty();
-						roomInfo.displays.forEach(display => {
-							const displayAddressId = display.display_address.replace(/\./g, '_');
-							console.log("display in roomInfo.displays)" + display)
-                            console.log("display.display_address: )" + display.display_address)
-
-							$('#displayList').append(`
-							<li>
-								${display.display_name} (ID: ${display.display_address})
-								<button class="turnDisplayOn" data-room-code="${roomCode}" data-display-address="${display.display_address}">Turn On</button>
-								<button class="turnDisplayOff" data-room-code="${roomCode}" data-display-address="${display.display_address}">Turn Off</button>
-								<button class="button4" data-room-code="${roomCode}" data-display-address="${display.display_address}">button4</button>
-								<button class="button5" data-room-code="${roomCode}" data-display-address="${display.display_address}">button5</button>
-								<pre class="response" id="displayResponse_${displayAddressId}"></pre>
-							</li>
-							`);
-						});
-						
-						function sleep(ms) {
-						  return new Promise(resolve => setTimeout(resolve, ms));
-						}
-						
-						$('#displayList').on('click', '.turnDisplayOn', function () {
-							const displayAddress = $(this).data('display-address');
-							const roomCode = $(this).data('room-code'); // Assuming you have a data attribute for room code
-							var msg = "turn on"
-							
-							console.log(msg)
-							
-							console.log(roomCode)
-							console.log(displayAddress)
-
-							// Define the data you want to send to the API
-							const dataToSend = {
-								room_code: roomCode,
-								display_address: displayAddress
-							};
-
-							$.ajax({
-								url: `${base_url}api/turn_on_projector/${roomCode}/${displayAddress}`, // Use template literals
-								method: 'POST',
-								data: JSON.stringify(dataToSend),
-								contentType: 'application/json',
-								success: function (response) {
-									console.log(response);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(response, null, 2));
-								},
-								error: function (xhr, status, error) {
-									console.error('Error: ' + error);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(error, null, 2));
-								}
-							});
-						});
-						
-                        $('#displayList').on('click', '.turnDisplayOff', function () {
-                            const displayAddress = $(this).data('display-address');
-							const roomCode = $(this).data('room-code');
-                            var msg = "turn off"
-
-                            console.log(msg);
-                            console.log(roomCode);
-                            console.log(displayAddress);
-
-                            // Define the data you want to send to the API
-                            const dataToSend = {
-                                room_code: roomCode, // Make sure 'room-code' attribute is set in your HTML
-                                display_address: displayAddress
-                            };
-
-                            $.ajax({
-                                url: `${base_url}api/turn_off_projector/${roomCode}/${displayAddress}`, // Use template literals
-                                method: 'POST',
-                                data: JSON.stringify(dataToSend),
-                                contentType: 'application/json',
-                                success: function (response) {
-                                    console.log(response);
-                                    const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-                                    responseElement.text(JSON.stringify(response, null, 2));
-                                },
-                                error: function (xhr, status, error) {
-                                    console.error('Error: ' + error);
-                                    const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-                                    responseElement.text(JSON.stringify(error, null, 2));
-                                }
-                            });
-                        });
-						
-
-						$('#hostList').empty();
-						// Initialize an object to store host information with PIDs
-						roomInfo.hosts.forEach(host => {
-							const hostId = host.host_id.replace(/\./g, '_');
-							$('#hostList').append(`
-								<li>${host.host_name} (ID: ${host.host_id})
-								<button class="Default" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-config-default="${host.config_default}">Default</button>
-								<button class="Cisco" data-room-code="${roomCode}" data-host-id="${host.host_id}">Cisco</button>
-								<button class="Optus" data-room-code="${roomCode}" data-host-id="${host.host_id}">Optus</button>
-								<button class="Other" data-room-code="${roomCode}" data-host-id="${host.host_id}">Other</button>
-								<button class="closeProcessButton" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-host-pid="${hostData[host.host_id]}">Stop</button>
-								<pre class="response" id="hostResponse_${hostId}"></pre>
-								</li>
-							`);
-						});		
-						
-						$('#hostList').on('click', '.Default', function () {
-							const hostAddress = $(this).data('host-id');
-							//const content = $(this).data('config-default');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-							
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-							
-							var content = "https://www.youtube.com/watch?v=9_S_8MspxKw";
-
-							if (content) {
-								// Define the data you want to send to the API
-								//const dataToSend = {
-								//	"application": "vlc",
-								//	"video_path": content,
-								//	"loop": "true"
-								//};
-								
-								const dataToSend = {
-									"url": content,
-								};
-
-								$.ajax({
-									url: base_url + `api/open_browser/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-										 
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-										
-										
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-						
-						// Example function for "Turn Display On" button click
-						$('#hostList').on('click', '.Cisco', function () {
-							const hostAddress = $(this).data('host-id');
-							
-							console.log(hostAddress);
-							const response = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-							
-							var msg = "cisco"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-						
-						$('#hostList').on('click', '.Cisco', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-cisco');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-							
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: base_url + `api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-										 
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-										
-										
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-						
-						$('#hostList').on('click', '.Optus', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-optus');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-							
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: base_url + `api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-										 
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-										
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-						
-						$('#hostList').on('click', '.Other', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-other');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-							
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: base_url + `api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-										 
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-																	
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-						
-						$('#hostList').on('click', '.closeProcessButton', function () {
-							const hostAddress = $(this).data('host-id');
-							const roomCode = $(this).data('room-code');
-
-							// Retrieve the PID from hostData
-							const pid = hostData[hostAddress];
-							
-							console.log("in closeProcessButton, pid is: " + pid)
-
-							if (pid) {
-								const dataToSend = {
-									"pid": pid
-								};
-
-								$.ajax({
-									url: base_url + `api/close_process/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(response, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("No PID found for this host. Cannot stop the process.");
-							}
-						});
-						
-						$('#pduList').on('click', '.turnPduOnButton', function () {
-							const pduAddress = $(this).data('pdu-address');
-                            const roomCode = $(this).data('room-code');
-							
-							console.log(roomCode)
-							console.log(hostAddress)
-							
-							var msg = "turn pdu outlet on"
-							console.log(msg)
-
-							// Define the data you want to send to the API
-							const dataToSend = {
-								room_code: roomCode,
-								display_address: displayAddress
-							};
-
-							$.ajax({
-								url: base_url + `api/turn_on_projector/${roomCode}/${pduAddress}`,
-								method: 'POST',
-								data: JSON.stringify(dataToSend),
-								contentType: 'application/json',
-								success: function (response) {
-									console.log(response);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(response, null, 2));
-								},
-								error: function (xhr, status, error) {
-									console.error('Error: ' + error);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(error, null, 2));
-								}
-							});
-						});
-						
-						$('#pduList').on('click', '.turnPduOnButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-                            const roomCode = $(this).data('room-code');
-							
-							var msg = "pdu turn on"
-							
-							console.log(msg)
-							
-							console.log(roomCode)
-							console.log(hostAddress)
-
-							// Define the data you want to send to the API
-							const dataToSend = {
-								room_code: roomCode,
-								display_address: displayAddress
-							};
-
-							$.ajax({
-								url: base_url + `api/turn_on_projector/${roomCode}/${displayAddress}`,
-								method: 'POST',
-								data: JSON.stringify(dataToSend),
-								contentType: 'application/json',
-								success: function (response) {
-									console.log(response);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(response, null, 2));
-								},
-								error: function (xhr, status, error) {
-									console.error('Error: ' + error);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(error, null, 2));
-								}
-							});
-						});
-
-						$('#pduList').on('click', '.turnPduOffButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-                            const roomCode = $(this).data('room-code');
-							
-							console.log(hostAddress);
-							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
-							
-							var msg = "turn pdu off"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-						
-						$('#pduList').on('click', '.powerCyclePduButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-                            const roomCode = $(this).data('room-code');
-							
-							console.log(hostAddress);
-							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
-							
-							var msg = "power cycle pdu"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-						
-						
-					},
-					error: function (xhr, status, error) {
-						console.log('Error fetching room info:', error);
-					}
-				});
-			}
-		
-		function fetchOutletSettings(roomCode) {
-			console.log('Fetching device outlet states...');
-			$.ajax({
-				url: base_url + 'api/view_pdu_outlet_settings_all/' + roomCode,
-				method: 'GET',
-				success: function(response) {
-					if (response && response.length > 0) {
-						console.log('Fetch outlet response:', response);
-						var outletSettingsHtml = '';
-
-						$.each(response, function(index, device) {
-							outletSettingsHtml += '<li>Device ' + device.device_number + ': ' + device.pdu_address + '<div id="successMessage" style="display: none;"></div>';
-							outletSettingsHtml += '<ul>';
-
-							$.each(device.outlet_settings, function(outletName, outletStatus) {
-								var buttonClass = 'toggleButton';
-								var buttonText = 'Toggle';
-
-								var toggleButtonHtml = '';
-								if (outletStatus === 'ON') {
-									toggleButtonHtml = '<button class="toggleButton toggleOFFONButton" data-device-number="' + device.device_number + '" data-outlet-name="' + outletName + '" data-device-address="' + device.pdu_address + '" data-room-code="' + roomCode + '">Toggle OFF/ON</button>';
-								}
-
-								console.log("device.pdu_address" + device.pdu_address);
-
-								outletSettingsHtml += '<li>Outlet ' + outletName + ': Status - ' + outletStatus + ' ' +
-									'<button class="' + buttonClass + '" data-device-number="' + device.device_number + '" data-outlet-name="' + outletName + '" data-device-address="' + device.pdu_address + '" data-room-code="' + roomCode + '"> ' + buttonText + ' </button> ' +
-									toggleButtonHtml;
-
-
-								outletSettingsHtml += '</li>';
-								
-
-								// Store the current outlet state
-								outletStates[device.device_number + '-' + outletName] = outletStatus;
-							});
-
-							outletSettingsHtml += '</ul>' + '</li>';
-						});
-
-						outletSettingsHtml += '</ul>';
-
-						// Display the outlet settings with the "Toggle" buttons
-						$('#outletSettings').html(outletSettingsHtml);
-					} else {
-						$('#outletSettings').text('No outlet settings available.');
-					}
-				},
-				error: function(xhr, status, error) {
-					$('#outletSettings').text('Error fetching outlet settings: ' + error);
-				}
-			});
-		}
-
-		  
-		// Toggle outlet state on button click
-		$(document).on('click', '.toggleButton, .toggleOFFONButton', function() {
-			var deviceNumber = $(this).data('device-number');
-			var outletName = $(this).data('outlet-name');
-			var deviceAddress = $(this).data('device-address');
-            const roomCode = $(this).data('room-code');
-			console.log('deviceAddress:' + deviceAddress);
-			
-			console.log('$(this).data:' + $(this).data);
-			
-			var currentState = outletStates[deviceNumber + '-' + outletName] || 'OFF';
-			var actionToSend;
-
-			console.log('Toggling outlet:', outletName, 'on device:', deviceNumber, 'currentState:', currentState);
-
-			if ($(this).hasClass('toggleOFFONButton')) {
-			// If the clicked button is a toggle OFF/ON button
-				actionToSend = currentState === 'ON' ? 'OFF/ON' : 'ON';
-			} else {
-				// If the clicked button is an ON/OFF button
-				actionToSend = currentState === 'ON' ? 'OFF' : 'ON';
-			}
-
-			// Update the button state
-			$(this).toggleClass('on', actionToSend === 'ON');
-			outletStates[deviceNumber + '-' + outletName] = actionToSend;
-
-			console.log('Toggling outlet:', outletName, 'on device:', deviceNumber, 'currentState:', currentState, 'actionToSend:', actionToSend);
-
-			$.ajax({
-				url: base_url + 'api/change_pdu_outlet_power_state/' + roomCode + '/' + deviceAddress,
-				method: 'PUT',
-				data: JSON.stringify({ outlet_name: outletName, action: actionToSend }),
-				contentType: 'application/json',
-				success: function(response) {
-					console.log('API Response:', response);
-					// Update the response display
-					$('#response').text(JSON.stringify(response, null, 2));
-
-					// Display a success message
-					$('#successMessage').text('Action was successful!').show();
-					setTimeout(function() {
-						$('#successMessage').hide();
-					}, 2000); // Hide the message after 2 seconds
-
-					// Add a pause (e.g., 2 seconds) before fetching outlet settings
-					setTimeout(function() {
-						$('#successMessage').hide();
-						fetchOutletSettings(roomCode);
-					}, 2000); // Delay for 2 seconds (2000 milliseconds)
-				},
-				error: function(xhr, status, error) {
-					$('#response').text('Error updating outlet settings: ' + error);
-				}
-			});
-		});
-
-        $.ajax({
-            url: base_url + 'api/get_rooms',
-            method: 'GET',
-            success: function (response) {
-                const rooms = response.rooms;
-                populateRoomList(rooms);
-
-                $('.roomButton').on('click', function () {
-                    const selectedRoomCode = $(this).data('room-code');
-                    updateRoomInfo(selectedRoomCode);
-					fetchOutletSettings(selectedRoomCode);
-                });
-            },
-            error: function (xhr, status, error) {
-                console.log('Error fetching room list:', error);
-            }
-        });
-    });
-  </script>
 </html>

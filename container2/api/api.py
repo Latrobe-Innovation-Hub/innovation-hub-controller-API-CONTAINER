@@ -51,6 +51,7 @@ import json
 import re
 import os
 from pathlib import Path
+import time
 
 import api_config as conf
 
@@ -1436,12 +1437,99 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # {
 #   "source": "HDMI", "SD Player","LAN","Spotlight",
 # }
+@app.route('/select_projector_source/<string:room_code>/<string:display_address>', methods=['PUT'])
+def select_projector_source(room_code, display_address):   
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()
+    
+    data = request.get_json()
+    source = data.get("source")
+    
+    ## maybe check if source is in display sources?
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/source'
+    
+    # Build the payload as a dictionary
+    payload = {
+        "source": source
+    }
+
+    try:
+        # Send a GET request with the payload
+        response = requests.put(url, data=json.dumps(payload), auth=HTTPDigestAuth(username, password), verify=False, headers={'Content-Type': 'application/json'})
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # get current source:
 # GET https://192.168.128.18/lighting/api/v01/pj/source
 # response: {
 #     "source": "HDMI", "SD Player","LAN","Spotlight",
 # }
+@app.route('/get_projector_source/<string:room_code>/<string:display_address>', methods=['GET'])
+def get_projector_source(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close() 
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/source'
+
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # Get sources:
 # GET https://192.168.128.18/lighting/api/v01/pj/sources
@@ -1454,42 +1542,466 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 #     ],
 #     "signageSource": "SD Player"
 # }
+@app.route('/get_projector_sources/<string:room_code>/<string:display_address>', methods=['GET'])
+def get_projector_sources(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close() 
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/sources'
+
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # # Turn on/off
 # PUT https://192.168.128.18/lighting/api/v01/pj/power
 # {
 #     "power": "ON","OFF"
 # }
+@app.route('/set_projector_power/<string:room_code>/<string:display_address>', methods=['PUT'])
+def set_projector_power(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()
+    
+    data = request.get_json()
+    power = data.get("power")
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/power'
+
+    # Build the payload as a dictionary
+    payload = {
+        "power": power
+    }
+
+    try:
+        # Send a GET request with the payload
+        response = requests.put(url, data=json.dumps(payload), auth=HTTPDigestAuth(username, password), verify=False, headers={'Content-Type': 'application/json'})
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # # get current power state
 # GET https://192.168.128.18/lighting/api/v01/pj/power
 # response: {
 #     "power": "OFF"
 # }
+@app.route('/get_projector_power/<string:room_code>/<string:display_address>', methods=['GET'])
+def get_projector_power(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close() 
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/power'
+
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ## returns the current state of mute?
 # GET https://192.168.128.18/lighting/api/v01/pj/mute
 # response: {
 #   "mute": "ON","OFF"
 # }
+@app.route('/get_projector_mute/<string:room_code>/<string:display_address>', methods=['GET'])
+def get_projector_mute(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close() 
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/mute'
+
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # # select state of mute
 # PUT https://192.168.128.18/lighting/api/v01/pj/mute
 # {
 #   "mute": "ON","OFF"
 # }
+@app.route('/set_projector_mute/<string:room_code>/<string:display_address>', methods=['PUT'])
+def set_projector_mute(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()
+    
+    data = request.get_json()
+    mute = data.get("mute")
+    
+    logger.info(f'set_projector_mute, mute: {mute}')
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/mute'
+    logger.info(f'set_projector_mute, url: {url}')
+
+    # Build the payload as a dictionary
+    payload = {
+        "mute": mute
+    }
+
+    try:
+        # Send a GET request with the payload
+        response = requests.put(url, data=json.dumps(payload), auth=HTTPDigestAuth(username, password), verify=False, headers={'Content-Type': 'application/json'})
+        logger.info(f'set_projector_mute, response: {response}')
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': f'Failed {response.text}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # up/down volume
 # PUT https://192.168.128.18/lighting/api/v01/pj/volume
 # {
 #   "volume": "INC","DEC"
 # }
+@app.route('/change_projector_volume/<string:room_code>/<string:display_address>', methods=['PUT'])
+def change_projector_volume(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()
+    
+    data = request.get_json()
+    volume = data.get("volume")
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/volume'
+
+    # Build the payload as a dictionary
+    payload = {
+        "volume": volume
+    }
+
+    try:
+        # Send a GET request with the payload
+        response = requests.put(url, data=json.dumps(payload), auth=HTTPDigestAuth(username, password), verify=False, headers={'Content-Type': 'application/json'})
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/set_projector_volume/<string:room_code>/<string:display_address>', methods=['PUT'])
+def set_projector_volume(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close()
+    
+    data = request.get_json()
+    desired_volume_level = data.get("volume_level")
+    if desired_volume_level > 20:
+        desired_volume_level = 20
+    elif desired_volume_level < 0:
+        desired_volume_level = 20
+    
+    # get current volume
+    current_volume = None
+    url = f'http://{display_address}/lighting/api/v01/pj/volume'
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+        if response.status_code == 200:
+            # Parse the JSON response
+            response_data = json.loads(response.text)
+
+            # Extract the value of the "volume" field
+            current_volume = response_data.get("volume")
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+        
+    # Step 1: Calculate the difference between `desired_volume_level` and `current_volume`
+    volume_difference = desired_volume_level - current_volume
+    logger.info(f'set_projector_volume, volume_difference = {volume_difference}')
+    
+    if volume_difference == 0:
+        return jsonify({'message': 'Volume already at that equivalent level'}), 200
+
+    # Define a function to send volume control commands
+    def send_volume_command(command, volume_difference, max_consecutive_uppers=20):
+        # Build URL
+        url = f'http://{display_address}/lighting/api/v01/pj/volume'
+
+        # Build the payload as a dictionary
+        payload = {
+            "volume": command
+        }
+
+        # Send a PUT request with the payload
+        for _ in range(volume_difference):
+            #time.sleep(sleep_duration)
+            try:
+                response = requests.put(url, data=json.dumps(payload), auth=HTTPDigestAuth(username, password), verify=False, headers={'Content-Type': 'application/json'})
+            except Exception as e:
+                logger.info(f'send_volume_command, Exception: {e}')
+                return False
+
+            logger.info(f'send_volume_command, response: {response.text}')
+            
+            # If the response is 200 but contains {"limit":"upper"}, adjust sleep duration
+            if '{"limit":"upper"}' in response.text:
+                return True
+
+        return True
+
+    # Apply the volume control commands
+    if volume_difference > 0:
+        logger.info(f'set_projector_volume, volume_difference > 0 = {volume_difference > 0}')
+        # Increase volume
+        if not send_volume_command("INC", volume_difference):
+            return jsonify({'error': 'Failed to increase volume'}), 500
+    elif volume_difference < 0:
+        logger.info(f'set_projector_volume, volume_difference < 0 = {volume_difference < 0}')
+        # Decrease volume
+        if not send_volume_command("DEC", -volume_difference):
+            return jsonify({'error': 'Failed to decrease volume'}), 500
+
+    # Step 3: Confirm `current_volume` is equal to `desired_volume_level`
+    # Get the updated current volume
+    url = f'http://{display_address}/lighting/api/v01/pj/volume'
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+        if response.status_code == 200:
+            response_data = json.loads(response.text)
+            current_volume = response_data.get("volume")
+            logger.info(f'set_projector_volume, after loop current_volume = {current_volume}')
+        else:
+            return jsonify({'error': 'Failed to confirm volume change'}), 500
+    except Exception as e:
+        return jsonify({'error': 'Failed to confirm volume change'}), 500
+
+    # Check if the current volume matches the desired volume
+    logger.info(f'set_projector_volume, current_volume = {current_volume}')
+    logger.info(f'set_projector_volume, desired_volume_level = {desired_volume_level}')
+    if current_volume == desired_volume_level:
+        return jsonify({'message': 'Volume changed successfully'}), 200
+    else:
+        return jsonify({'error': 'Volume change confirmation failed'}), 500
+
 
 # # get current volume
 # GET https://192.168.128.18/lighting/api/v01/pj/volume
 # response: 
 #     "volume": 15
+# }
+@app.route('/get_projector_volume/<string:room_code>/<string:display_address>', methods=['GET'])
+def get_projector_volume(room_code, display_address):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Check if the display exists in the specified room
+    cursor.execute('SELECT display_address FROM displays WHERE display_address = %s AND room_code = %s', (display_address, room_code))
+    existing_display = cursor.fetchone()
+
+    if not existing_display:
+        conn.close()
+        return jsonify({'error': 'Display not found in the specified room'}), 404
+
+    # Fetch the projector details from the database, including host_address, username, and password
+    cursor.execute('SELECT username, password FROM displays WHERE display_address = %s', (display_address,))
+    display_details = cursor.fetchone()
+
+    if not display_details:
+        conn.close()
+        return jsonify({'error': 'Display details not found'}), 404
+
+    username, password = display_details
+    conn.close() 
+
+    # build url
+    url = f'http://{display_address}/lighting/api/v01/pj/volume'
+
+    try:
+        response = requests.get(url, auth=HTTPDigestAuth(username, password), verify=False)
+
+        if response.status_code == 200:
+            return response.text, 200
+        elif response.status_code == 401:
+            return jsonify({'error': 'Authentication failed'}), 401
+        else:
+            return jsonify({'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# # get current power state
+# GET https://192.168.128.18/lighting/api/v01/pj/power
+# response: {
+#     "power": "OFF"
 # }
 @app.route('/get_projector_state/<string:room_code>/<string:display_address>', methods=['GET'])
 def get_projector_state(room_code, display_address):
@@ -1526,10 +2038,9 @@ def get_projector_state(room_code, display_address):
         elif response.status_code == 401:
             return jsonify({'error': 'Authentication failed'}), 401
         else:
-            return jsonify({'error': 'Failed to turn off the projector'}), 500
+            return jsonify({'error': 'Failed'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 # @app.route('/turn_on_projector/<string:room_code>/<string:display_address>', methods=['post'])
 # async def turn_on_projector(room_code, display_address):
@@ -1716,6 +2227,8 @@ from requests.auth import HTTPDigestAuth
 
 @app.route('/turn_off_projector/<string:room_code>/<string:display_address>', methods=['POST'])
 def turn_off_projector(room_code, display_address):
+    logger.info(f"turn_off_projector, room_code, display_address: {room_code} {display_address}" )
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -1736,10 +2249,14 @@ def turn_off_projector(room_code, display_address):
         return jsonify({'error': 'Display details not found'}), 404
 
     username, password = display_details
-    conn.close()    
+    conn.close()
+    
+    logger.info(f"turn_off_projector, username, password: {username} {password}")
 
     # build request with display credentials
     url = f'http://{display_address}/api/v01/contentmgr/remote/power/off'
+    
+    logger.info(f"turn_off_projector, url: {url} ")
 
     try:
         #response = requests.get(url, auth=(username, password))
@@ -1940,31 +2457,47 @@ def get_or_create_devices():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
-    rows = cursor.fetchall()
+    
+    cursor.execute('SELECT pdu_address, username, password, room_code FROM pdus')
+    pdus = cursor.fetchall()  
+    
+    pdu_list = []
+    for pdu in pdus:
+        pdu_list.append({
+            'pdu_address':  pdu[0],  # Use index to access the column values
+            'username':     pdu[1],
+            'password':     pdu[2],
+            'room_code':    pdu[3]
+        })
 
-    if not rows:
+    conn.close()
+
+    if not pdus:
         # The database is empty; no need to continue
         conn.close()
         return []
 
     print("here!!!")
-    print(rows)
-    for row in rows:
+    print(pdus)
+    for row in pdus:
         print(len(row))
         for r in row:
             print(r)
     print("and here!!!")
 
     devices = []
-    for row in rows:
+    for row in pdus:
         print(len(row))
+        logger.info(f"getting/adding pdu pdu_address row[0]: {row[0]}") 
+        logger.info(f"getting/adding pdu username row[1]: {row[1]}")
+        logger.info(f"getting/adding pdu password row[2]: {row[2]}")  
+        logger.info(f"getting/adding pdu room_code row[3]: {row[3]}")
+
         pdu_address = row[0]
         username = row[1]
         password = row[2]
-        driver_path = row[3]
-        room_code = row[4]
-        print(pdu_address, username, password, driver_path, room_code)
+        room_code = row[3]
+        print(pdu_address, username, password, room_code)
 
         new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
 
