@@ -2731,31 +2731,45 @@ from ipaddress import IPv4Network
 def is_valid_mac_address(mac_address):
     # A simple validation function for MAC addresses
     if not mac_address:
+        logger.info(f"testing.... in is_valid_mac_address, mac_address is {mac_address}")
         return False
 
-    parts = mac_address.split(':')
-    if len(parts) != 6:
+    mac_address = mac_address.replace('-', '').replace(':', '')
+    
+    if len(mac_address) != 12:
+        logger.info(f"testing.... in is_valid_mac_address, length of mac_address is not 12")
         return False
 
-    for part in parts:
-        if not len(part) == 2 or not all(c in '0123456789ABCDEF' for c in part):
-            return False
+    if not all(c in '0123456789ABCDEF' for c in mac_address):
+        logger.info(f"testing.... in is_valid_mac_address, something wrong with mac_address....")
+        return False
 
+    logger.info(f"testing.... in is_valid_mac_address, mac_address OK.")
     return True
 
 def send_magic_packet(mac_address, broadcast_address):
-    # Create a Magic Packet
-    mac_bytes = bytes.fromhex(mac_address.replace(':', ''))
-    magic_packet = b'\xFF' * 6 + mac_bytes * 16
+    logger.info(f"testing.... in send_magic_packet, mac_address: {mac_address}")
+    logger.info(f"testing.... in send_magic_packet, broadcast_address: {broadcast_address}")
 
+    # Create a Magic Packet
+    mac_bytes = bytes.fromhex(mac_address.replace(':', '').replace('-', ''))
+    magic_packet = b'\xFF' * 6 + mac_bytes * 16
+    
+    logger.info(f"testing.... in send_magic_packet, mac_bytes: {mac_bytes}")
+    logger.info(f"testing.... in send_magic_packet, magic_packet: {magic_packet}")
+    
     # Send the Magic Packet to the broadcast address
     try:
+        logger.info(f"testing.... in send_magic_packet, sending1...")
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            logger.info(f"testing.... in send_magic_packet, sending2...")
             s.sendto(magic_packet, (broadcast_address, 9))  # Replace with the actual broadcast address
+            logger.info(f"testing.... in send_magic_packet, sending3...")
         return True
     except Exception as e:
-        print(f"Error sending Magic Packet: {str(e)}")
+        #print(f"Error sending Magic Packet: {str(e)}")
+        logger.info(f"Error sending Magic Packet: {str(e)}")
         return False
 
 from ipaddress import IPv4Network
@@ -2773,28 +2787,39 @@ def wake_on_lan(room_code, host_address):
     ''', (host_address, room_code))
     result = cursor.fetchone()
     conn.close()
+    
+    logger.info(f"wake-on-lan")
 
     if result is None:
+        logger.info(f"wake-on-lan result is {result}")
         return jsonify({'error': 'Room not found or host not found in the specified room'}), 404
 
     room_code_result, host_mac, host_name = result
 
     if room_code_result is None:
+        logger.info(f"wake-on-lan room_code_result is {room_code_result}")
         return jsonify({'error': 'Room not found'}), 404
 
     if host_mac is None:
+        logger.info(f"wake-on-lan host_mac is {host_mac}")
         return jsonify({'error': f'Mac not found for {host_name} in the room {room_code})'}), 404
+        
+    logger.info(f"wake-on-lan host_mac is {host_mac}")
 
     #broadcast_address = '192.168.3.255'
     
     # Validate the MAC address
     if not is_valid_mac_address(host_mac):
+        logger.info(f"wake-on-lan is_valid_mac_address is {is_valid_mac_address}")
         return jsonify({'error': f'Invalid MAC address: {host_mac}'}), 400
         
     # Calculate the broadcast address based on the host_address
     try:
+        logger.info(f"wake-on-lan trying to send {host_address} a wake up packet")
         host_ip = IPv4Network(f'{host_address}/24', strict=False)
+        logger.info(f"wake-on-lan host_ip {host_ip}")
         broadcast_address = str(host_ip.broadcast_address)
+        logger.info(f"wake-on-lan broadcast_address {broadcast_address}")
         logger.info(f"testing.... in wake_on_lan, broadcast_address: {broadcast_address}")
     except ValueError:
         return jsonify({'error': 'Invalid host address'}), 400
@@ -2828,7 +2853,7 @@ def reboot_device(room_code, host_address):
         return jsonify({'response': result}), 200
         
 @app.route('/shutdown/<string:room_code>/<string:host_address>', methods=['GET'])
-def reboot_device(room_code, host_address):
+def shutdown_device(room_code, host_address):
     # Query the database to retrieve the username and password based on the host_address and room_code
     conn = get_db_connection()
     cursor = conn.cursor()
