@@ -105,7 +105,8 @@
                         hostListHtml += '<li>Host ' + host.host_id + ': ' + host.host_name +
                             ' <button class="vlcButton" data-host-address="' + host.host_id + '">VLC</button>' +
                             ' <button class="webBrowserButton" data-host-address="' + host.host_id + '">Web Browser</button>' +
-                            ' <button class="configButton" data-host-address="' + host.host_id + '">Config</button>' +
+                            ' <button class="configButton" data-host-address="' + host.host_id + '">Show Defaults</button>' +
+                            ' <button class="configButton2" data-host-address="' + host.host_id + '">Edit Defaults</button>' +
                             ' <button class="rebootButton" data-host-address="' + host.host_id + '">Reboot</button>' +
                             ' <button class="WOLButton" data-host-address="' + host.host_id + '">WoL</button>' +
                             ' <button class="removeButton" data-host-address="' + host.host_id + '">Remove</button>' +
@@ -173,6 +174,12 @@
                             $('#response').text('Error: ' + error);
                         }
                     });
+                });
+
+                $('.configButton2').click(function () {
+                    var hostAddress = $(this).data('host-address');
+                    console.log('Clicked edit config Button for hostAddress:', hostAddress);
+                    openNewPage('host_edit_configs.html', roomCode, hostAddress);
                 });
             }
 

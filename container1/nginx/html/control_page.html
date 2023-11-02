@@ -137,15 +137,43 @@
             color: #333;
         }
 
-			/* Change the background color of custom dropdown items on hover */
-			.custom-dropdown-item:hover {
-				background-color: #ddd;
-			}
+        /* Style for custom dropdown items */
+        .power-dropdown-item {
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            color: #333;
+        }
+
+		/* Change the background color of custom dropdown items on hover */
+		.custom-dropdown-item:hover {
+			background-color: #ddd;
+		}
+
+        /* Change the background color of custom dropdown items on hover */
+        .vol-dropdown-item:hover {
+            background-color: #ddd;
+        }
+
+        /* Change the background color of custom dropdown items on hover */
+        .power-dropdown-item:hover {
+            background-color: #ddd;
+        }
 
 		/* Show the custom dropdown content when hovering over the custom dropdown button */
 		.custom-dropdown:hover .custom-dropdown-menu {
 			display: block;
 		}
+
+        /* Show the custom dropdown content when hovering over the custom dropdown button */
+        .vol-dropdown:hover .custom-dropdown-menu {
+            display: block;
+        }
+
+        /* Show the custom dropdown content when hovering over the custom dropdown button */
+        .power-dropdown:hover .custom-dropdown-menu {
+            display: block;
+        }
 
 		/* Adjust the position of the custom dropdown content */
 		.custom-dropdown-menu {
@@ -619,213 +647,457 @@
 									<button class="Default" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-config-default="${host.config_default}">Default</button>
 									<button class="Cisco" data-room-code="${roomCode}" data-host-id="${host.host_id}">Cisco</button>
 									<button class="Optus" data-room-code="${roomCode}" data-host-id="${host.host_id}">Optus</button>
-									<button class="Other" data-room-code="${roomCode}" data-host-id="${host.host_id}">Other</button>
+									<button class="Youtube-test" data-room-code="${roomCode}" data-host-id="${host.host_id}">Youtube-test</button>
+									<button class="HideTaskbar" data-room-code="${roomCode}" data-host-id="${host.host_id}">Hide Taskbar</button>
+
+									<div class="custom-dropdown">
+									  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="powerToggle_${host.host_id}">Power</button>
+									  <ul class="custom-dropdown-menu">
+										<li><a href="#" class="power-dropdown-item" id="reboot_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Shutdown</a></li>
+										<li><a href="#" class="power-dropdown-item" id="shutdown_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Reboot</a></li>
+										<li><a href="#" class="power-dropdown-item" id="wake-on-lan_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">WakeOnLAN</a></li>
+									  </ul>
+									</div>
+
 									<button class="closeProcessButton" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-host-pid="${hostData[host.host_id]}">Stop</button>
 									<pre class="response" id="hostResponse_${hostId}"></pre>
 									</li>
 								`);
 						});
 
-						$('#hostList').on('click', '.Default', function () {
-							const hostAddress = $(this).data('host-id');
-							//const content = $(this).data('config-default');
+                        // Add a click event handler for the dropdown items
+                        $('.power-dropdown-item').click(function (e) {
+							e.preventDefault();
+							const action = $(this).text();
 							const roomCode = $(this).data('room-code');
-							var msg = "do default"
+							const hostAddress = $(this).data('host-id');
+
+                            console.log(`Selected action: ${action}`);
+                            console.log(`Room Code: ${roomCode}`);
+                            console.log(`Host ID: ${hostAddress}`);
+
+							let url
+							if (action === "Reboot") {
+								url = `${base_url}api/reboot/${roomCode}/${hostAddress}`
+							} else if (action === "Shutdown") {
+                                url = `${base_url}api/shutdown/${roomCode}/${hostAddress}`
+							} else if (action === "WakeOnLAN") {
+                                url = `${base_url}api/wake-on-lan/${roomCode}/${hostAddress}`
+							}
+
+                            $.ajax({
+                                url: url,
+                                method: 'GET',
+                                success: function (response) {
+                                    console.log(response);
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} successfully sent`);
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} failed...`);
+                                }
+                            });
+                        });
+
+                        $('#hostList').on('click', '.Default', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+                            var msg = "do default"
+
+                            console.log("1 " + msg);
+                            console.log("2 " + roomCode);
+							console.log("3 " + hostAddress);
+
+                            // Check if a PID is already stored for this host
+							const existingPid = hostData[hostAddress];
+
+                            if (existingPid) {
+                                // If a PID is already stored, close it first
+                                closeProcess(roomCode, hostAddress, existingPid, function () {
+                                    const dataToSend = {
+                                        "pid": existingPid // Use existingPid instead of undefined pid
+                                    };
+
+                                    // Continue with your existing code to close the process
+                                    $.ajax({
+                                        url: `${base_url}api/close_process/${roomCode}/${hostAddress}`,
+                                        method: 'POST',
+                                        data: JSON.stringify(dataToSend),
+                                        contentType: 'application/json',
+                                        success: function (response) {
+                                            console.log(response);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(response, null, 2));
+                                        },
+                                        error: function (xhr, status, error) {
+                                            console.error('Error: ' + error);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(error, null, 2));
+                                        }
+                                    });
+                                });
+                            }
+
+                            // Send an AJAX request to get the "config_default" content
+                            $.ajax({
+                                url: `${base_url}api/get_host_config/${roomCode}/${hostAddress}/config_default`,
+                                method: 'GET',
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    console.log("Config content:", response);
+
+                                    // Assuming the response contains the content you want
+                                    const content = response.host_config.config_default;
+
+                                    if (content) {
+                                        // Define the data you want to send to the API
+                                        const dataToSend = {
+                                            "url": content,
+                                        };
+
+                                        // Continue with your existing code to open the browser with the content
+                                        $.ajax({
+                                            url: `${base_url}api/open_browser/${roomCode}/${hostAddress}`,
+                                            method: 'POST',
+                                            data: JSON.stringify(dataToSend),
+                                            contentType: 'application/json',
+                                            success: function (response) {
+                                                console.log(response);
+
+                                                const pid = response.response;
+                                                hostData[hostAddress] = pid;
+                                                console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(pid, null, 2));
+                                            },
+                                            error: function (xhr, status, error) {
+                                                console.error('Error: ' + error);
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(error, null, 2));
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Host missing config");
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(JSON.stringify(error, null, 2));
+                                }
+                            });
+						});
+
+                        $('#hostList').on('click', '.Cisco', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+                            var msg = "do default"
+
+                            console.log("1 " + msg);
+                            console.log("2 " + roomCode);
+							console.log("3 " + hostAddress);
+
+                            // Check if a PID is already stored for this host
+                            const existingPid = hostData[hostAddress];
+
+                            if (existingPid) {
+                                // If a PID is already stored, close it first
+                                closeProcess(roomCode, hostAddress, existingPid, function () {
+                                    const dataToSend = {
+                                        "pid": existingPid // Use existingPid instead of undefined pid
+                                    };
+
+                                    // Continue with your existing code to close the process
+                                    $.ajax({
+                                        url: `${base_url}api/close_process/${roomCode}/${hostAddress}`,
+                                        method: 'POST',
+                                        data: JSON.stringify(dataToSend),
+                                        contentType: 'application/json',
+                                        success: function (response) {
+                                            console.log(response);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(response, null, 2));
+                                        },
+                                        error: function (xhr, status, error) {
+                                            console.error('Error: ' + error);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(error, null, 2));
+                                        }
+                                    });
+                                });
+                            }
+
+                            // Send an AJAX request to get the "config_default" content
+                            $.ajax({
+                                url: `${base_url}api/get_host_config/${roomCode}/${hostAddress}/config_cisco`,
+                                method: 'GET',
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    console.log("Config content:", response);
+
+                                    // Assuming the response contains the content you want
+                                    const content = response.host_config.config_cisco;
+
+                                    if (content) {
+                                        // Define the data you want to send to the API
+                                        const dataToSend = {
+                                            "url": content,
+                                        };
+
+                                        // Continue with your existing code to open the browser with the content
+                                        $.ajax({
+                                            url: `${base_url}api/open_browser/${roomCode}/${hostAddress}`,
+                                            method: 'POST',
+                                            data: JSON.stringify(dataToSend),
+                                            contentType: 'application/json',
+                                            success: function (response) {
+                                                console.log(response);
+
+                                                const pid = response.response;
+                                                hostData[hostAddress] = pid;
+                                                console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(pid, null, 2));
+                                            },
+                                            error: function (xhr, status, error) {
+                                                console.error('Error: ' + error);
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(error, null, 2));
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Host missing config");
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(JSON.stringify(error, null, 2));
+                                }
+                            });
+						});
+
+                        $('#hostList').on('click', '.Optus', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+                            var msg = "do default"
+
+                            console.log("1 " + msg);
+                            console.log("2 " + roomCode);
+							console.log("3 " + hostAddress);
+
+                            // Check if a PID is already stored for this host
+                            const existingPid = hostData[hostAddress];
+
+                            if (existingPid) {
+                                // If a PID is already stored, close it first
+                                closeProcess(roomCode, hostAddress, existingPid, function () {
+                                    const dataToSend = {
+                                        "pid": existingPid // Use existingPid instead of undefined pid
+                                    };
+
+                                    // Continue with your existing code to close the process
+                                    $.ajax({
+                                        url: `${base_url}api/close_process/${roomCode}/${hostAddress}`,
+                                        method: 'POST',
+                                        data: JSON.stringify(dataToSend),
+                                        contentType: 'application/json',
+                                        success: function (response) {
+                                            console.log(response);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(response, null, 2));
+                                        },
+                                        error: function (xhr, status, error) {
+                                            console.error('Error: ' + error);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(error, null, 2));
+                                        }
+                                    });
+                                });
+                            }
+
+                            // Send an AJAX request to get the "config_default" content
+                            $.ajax({
+                                url: `${base_url}api/get_host_config/${roomCode}/${hostAddress}/config_optus`,
+                                method: 'GET',
+                                contentType: 'application/json',
+                                success: function (response) {
+                                    console.log("Config content:", response);
+
+                                    // Assuming the response contains the content you want
+                                    const content = response.host_config.config_optus;
+
+                                    if (content) {
+                                        // Define the data you want to send to the API
+                                        const dataToSend = {
+                                            "url": content,
+                                        };
+
+                                        // Continue with your existing code to open the browser with the content
+                                        $.ajax({
+                                            url: `${base_url}api/open_browser/${roomCode}/${hostAddress}`,
+                                            method: 'POST',
+                                            data: JSON.stringify(dataToSend),
+                                            contentType: 'application/json',
+                                            success: function (response) {
+                                                console.log(response);
+
+                                                const pid = response.response;
+                                                hostData[hostAddress] = pid;
+                                                console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(pid, null, 2));
+                                            },
+                                            error: function (xhr, status, error) {
+                                                console.error('Error: ' + error);
+                                                const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                                responseElement.text(JSON.stringify(error, null, 2));
+                                            }
+                                        });
+                                    } else {
+                                        console.log("Host missing config");
+                                    }
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(JSON.stringify(error, null, 2));
+                                }
+                            });
+						});
+
+                        $('#hostList').on('click', '.Youtube-test', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+                            var msg = "do default"
+
+                            console.log("1 " + msg);
+                            console.log("2 " + roomCode);
+                            console.log("3 " + hostAddress);
+
+                            // Check if a PID is already stored for this host
+                            const existingPid = hostData[hostAddress];
+
+                            if (existingPid) {
+                                // If a PID is already stored, close it first
+                                closeProcess(roomCode, hostAddress, existingPid, function () {
+                                    const dataToSend = {
+                                        "pid": existingPid // Use existingPid instead of undefined pid
+                                    };
+
+                                    // Continue with your existing code to close the process
+                                    $.ajax({
+                                        url: `${base_url}api/close_process/${roomCode}/${hostAddress}`,
+                                        method: 'POST',
+                                        data: JSON.stringify(dataToSend),
+                                        contentType: 'application/json',
+                                        success: function (response) {
+                                            console.log(response);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(response, null, 2));
+                                        },
+                                        error: function (xhr, status, error) {
+                                            console.error('Error: ' + error);
+                                            const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                            responseElement.text(JSON.stringify(error, null, 2));
+                                        }
+                                    });
+                                });
+							}
+
+                            const dataToSend = {
+                                "url": "https://www.youtube.com/watch?v=9_S_8MspxKw",
+								"loop": "true",
+								"captions": "false"
+                            };
+
+							// Continue with your existing code to open the browser with the content
+							$.ajax({
+								url: `${base_url}api/open_youtube/${roomCode}/${hostAddress}`,
+								method: 'POST',
+								data: JSON.stringify(dataToSend),
+								contentType: 'application/json',
+								success: function (response) {
+									console.log(response);
+
+									const pid = response.response;
+									hostData[hostAddress] = pid;
+									console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(pid, null, 2));
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+									responseElement.text(JSON.stringify(error, null, 2));
+								}
+							});
+                        });
+
+                        $('#hostList').on('click', '.HideTaskbar', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+							var msg = "sim mouse click"
 
 							console.log("1 " + msg)
 							console.log("2 " + roomCode)
 							console.log("3 " + hostAddress)
-							console.log("4 " + content)
 
-							var content = "https://www.youtube.com/watch?v=9_S_8MspxKw";
+							$.ajax({
+								url: `${base_url}api/sim_mouse_click/${roomCode}/${hostAddress}`,
+								method: 'GET',
+								success: function (response) {
+                                    const responseText = response.response;
 
-							if (content) {
-								// Define the data you want to send to the API
-								//const dataToSend = {
-								//	"application": "vlc",
-								//	"video_path": content,
-								//	"loop": "true"
-								//};
-
-								const dataToSend = {
-									"url": content,
-								};
-
-								$.ajax({
-									url: `${base_url}api/open_browser/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-
-
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
+                                    if (responseText.includes("C:\\NirCmd\\nircmd.exe started on")) {
+                                        const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                        responseElement.text("Hide taskbar successfully.");
+                                    } else {
+                                        const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                        responseElement.text("Error simulating mouse click to hide the taskbar.");
+                                    }
+								},
+								error: function (xhr, status, error) {
+									console.error('Error: ' + error);
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text("hide taskbar failed");
+								}
+							});
 						});
 
-						// Example function for "Turn Display On" button click
-						$('#hostList').on('click', '.Cisco', function () {
-							const hostAddress = $(this).data('host-id');
+                        $('#hostList').on('click', '.Reboot', function () {
+                            const hostAddress = $(this).data('host-id');
+                            const roomCode = $(this).data('room-code');
+                            var msg = "reboot click"
 
-							console.log(hostAddress);
-							const response = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                            console.log("1 " + msg)
+                            console.log("2 " + roomCode)
+                            console.log("3 " + hostAddress)
 
-							var msg = "cisco"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-
-						$('#hostList').on('click', '.Cisco', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-cisco');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-
-
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-
-						$('#hostList').on('click', '.Optus', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-optus');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
-
-						$('#hostList').on('click', '.Other', function () {
-							const hostAddress = $(this).data('host-id');
-							const content = $(this).data('config-other');
-							const roomCode = $(this).data('room-code');
-							var msg = "do default"
-
-							console.log("1 " + msg)
-							console.log("2 " + roomCode)
-							console.log("3 " + hostAddress)
-							console.log("4 " + content)
-
-							if (content) {
-								// Define the data you want to send to the API
-								const dataToSend = {
-									"application": "vlc",
-									"video_path": content,
-									"loop": "true"
-								};
-
-								$.ajax({
-									url: `${base_url}api/open_vlc_video/${roomCode}/${hostAddress}`,
-									method: 'POST',
-									data: JSON.stringify(dataToSend),
-									contentType: 'application/json',
-									success: function (response) {
-										console.log(response);
-
-										const pid = response.response;
-										hostData[hostAddress] = pid;
-										console.log("the hostData stored pid is: " + hostData[hostAddress]);
-
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(pid, null, 2));
-									},
-									error: function (xhr, status, error) {
-										console.error('Error: ' + error);
-										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
-										responseElement.text(JSON.stringify(error, null, 2));
-									}
-								});
-							} else {
-								console.log("Host missing config");
-							}
-						});
+                            $.ajax({
+                                url: `${base_url}api/reboot/${roomCode}/${hostAddress}`,
+                                method: 'GET',
+                                success: function (response) {
+                                    console.log(response);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text("reboot successful");
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text("reboot failed");
+                                }
+                            });
+                        });
 
 						$('#hostList').on('click', '.closeProcessButton', function () {
 							const hostAddress = $(this).data('host-id');
@@ -861,103 +1133,6 @@
 								console.log("No PID found for this host. Cannot stop the process.");
 							}
 						});
-
-						$('#pduList').on('click', '.turnPduOnButton', function () {
-							const pduAddress = $(this).data('pdu-address');
-							const roomCode = $(this).data('room-code');
-
-							console.log(roomCode)
-							console.log(hostAddress)
-
-							var msg = "turn pdu outlet on"
-							console.log(msg)
-
-							// Define the data you want to send to the API
-							const dataToSend = {
-								room_code: roomCode,
-								display_address: displayAddress
-							};
-
-							$.ajax({
-								url: `${base_url}api/turn_on_projector/${roomCode}/${pduAddress}`,
-								method: 'POST',
-								data: JSON.stringify(dataToSend),
-								contentType: 'application/json',
-								success: function (response) {
-									console.log(response);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(response, null, 2));
-								},
-								error: function (xhr, status, error) {
-									console.error('Error: ' + error);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(error, null, 2));
-								}
-							});
-						});
-
-						$('#pduList').on('click', '.turnPduOnButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-							const roomCode = $(this).data('room-code');
-
-							var msg = "pdu turn on"
-
-							console.log(msg)
-
-							console.log(roomCode)
-							console.log(hostAddress)
-
-							// Define the data you want to send to the API
-							const dataToSend = {
-								room_code: roomCode,
-								display_address: displayAddress
-							};
-
-							$.ajax({
-								url: `${base_url}api/turn_on_projector/${roomCode}/${hostAddress}`,
-								method: 'POST',
-								data: JSON.stringify(dataToSend),
-								contentType: 'application/json',
-								success: function (response) {
-									console.log(response);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(response, null, 2));
-								},
-								error: function (xhr, status, error) {
-									console.error('Error: ' + error);
-									const responseElement = $(`#displayResponse_${displayAddress.replace(/\./g, '_')}`);
-									responseElement.text(JSON.stringify(error, null, 2));
-								}
-							});
-						});
-
-						$('#pduList').on('click', '.turnPduOffButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-							const roomCode = $(this).data('room-code');
-
-							console.log(hostAddress);
-							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
-
-							var msg = "turn pdu off"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-
-						$('#pduList').on('click', '.powerCyclePduButton', function () {
-							const hostAddress = $(this).data('pdu-address');
-							const roomCode = $(this).data('room-code');
-
-							console.log(hostAddress);
-							const response = $(`#pduResponse_${hostAddress.replace(/\./g, '_')}`);
-
-							var msg = "power cycle pdu"
-
-							// Update the response text box for this specific display
-							response.text(JSON.stringify(msg, null, 2));
-						});
-
-
 					},
 					error: function (xhr, status, error) {
 						console.log('Error fetching room info:', error);
@@ -1094,6 +1269,14 @@
 					console.log('Error fetching room list:', error);
 				}
 			});
+
+            $('#returnMainButton').click(function () {
+                window.location.href = 'index.html'; // Return to the main menu
+            });
+
+            $('#returnPreviousButton').click(function () {
+                window.history.back();
+            });
 		});
 	</script>
 </head>
@@ -1117,5 +1300,8 @@
 		<h2>PDUs:</h2>
 		<ul id="pduList"></ul>
 		<div id="outletSettings"></div>
+
+		<button id="returnPreviousButton">Return to Previous Page</button>
+		<button id="returnMainButton">Return to Main Menu</button>
   </body>
 </html>

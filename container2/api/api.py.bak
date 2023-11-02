@@ -236,7 +236,39 @@ def run_reboot_device(hostname, username, password, platformInput="windows"):
         except Exception as e:
             return {'error': str(e)}
 
-import paramiko
+
+def run_shutdown_device(hostname, username, password, platformInput="windows"):
+    # Create a new SSH client object
+    client = paramiko.SSHClient()
+
+    # Automatically add the remote host key (not recommended for production use)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+            
+            # Determine the operating system of the remote computer
+            if platformInput.lower().strip() == 'windows' or platformInput.lower().strip() == 'win':
+                command = 'shutdown /s /f /t 0'
+            elif platformInput.lower().strip() == 'mac' or platformInput.lower().strip() == 'unix':
+                command = 'sudo shutdown now'
+                
+            # Send the shutdown command
+            _, stdout, stderr = client.exec_command(command)
+
+            # capture exit status
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 0: # THINK THIS WILL WORK???
+                return "Shutdown command successful."
+            else:
+                return f"Shutdown command failed with exit status: {exit_status}"
+
+        except Exception as e:
+            return {'error': str(e)}
+
 import re
 
 def run_youtube_script(hostname, username, password, youtube_url, loop=None, captions=None):
@@ -265,6 +297,8 @@ def run_youtube_script(hostname, username, password, youtube_url, loop=None, cap
                 if captions:
                     command_full += " --captions"
                     logger.info(f"testing =  run_youtube_script, command: {command_full}")
+                    
+                command_full += fr" > C:\Users\{username}\Documents\youtube-pid.txt"
 
                 _, stdout, stderr = client.exec_command(command_full)
 
@@ -274,18 +308,20 @@ def run_youtube_script(hostname, username, password, youtube_url, loop=None, cap
 
                 # Extract the PID from the error output
                 pid_match = re.search(r"process ID (\d+)", error)
+                
+                # Read the contents of the output file
+                with client.open_sftp().file(fr"C:\Users\{username}\Documents\youtube-pid.txt") as output_file:
+                    output = output_file.read().decode('utf-8')
+                    logger.info("open youtube text file and get pid: ", output)
 
-                if pid_match:
-                    pid = pid_match.group(1)
-                    return pid
+                if output:
+                    return output
                 else:
                     return f"{output}, {error}"
             else:
                 return f"No active session found for {username}."
         except Exception as e:
             return {'error': str(e), 'pid': None}
-
-
 
 @app.route('/open_youtube/<string:room_code>/<string:host_address>', methods=['POST'])
 def open_youtube(room_code, host_address):
@@ -414,6 +450,50 @@ def kill_process(hostname, username, password, pid):
 
         except Exception as e:
             return {'error': str(e)}
+
+# simulate mouse press  (hide taskbar)
+# psexec -accepteula -u admin -p admin -d -i 1 "C:\NirCmd\nircmd.exe" "sendmouse click X Y"
+import paramiko
+import re
+import logging
+
+# Create a logger instance
+logger = logging.getLogger(__name__)
+
+def sim_mouse_press(hostname, username, password):
+    # Create an SSH client
+    client = paramiko.SSHClient()
+
+    # Automatically add the remote host key (not recommended for production use)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+            
+            # Execute the qwinsta command to retrieve session information for the target user
+            session_id = get_session_id(client, username)
+
+            # Set the path to NirCmd on the remote machine
+            nircmd_path = r'C:\NirCmd\nircmd.exe'
+
+            # Build the PsExec command to simulate a mouse click (hide taskbar)
+            command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{nircmd_path}" "sendmouse click X Y"'
+
+            logger.info(f"Sending mouse press command: {command}")
+
+            _, stdout, stderr = client.exec_command(command)
+
+            # Retrieve the output of the command
+            #output = stdout.read().decode('utf-8')
+            output = stderr.read().decode('utf-8')
+            
+            return output
+        except Exception as e:
+            return {'error': str(e)}
+
 
 def run_application(hostname, username, password, application=None, arguments=None):
      # Create an SSH client
@@ -1280,12 +1360,6 @@ def set_host_config_attribute(room_code, host_address, attribute_name):
     if not existing_host:
         conn.close()
         return jsonify({'error': 'Host not found in the specified room'}), 404
-
-    # Update the specific attribute in the database
-    #cursor.execute(
-    #    f'UPDATE hosts SET {attribute_name}=? WHERE host_address=? AND room_code=?',
-    #    (attribute_value, host_address, room_code)
-    #)
     
     # Assuming attribute_name, attribute_value, host_address, and room_code are properly defined
     # Construct the SQL query as a string with placeholders
@@ -1293,12 +1367,17 @@ def set_host_config_attribute(room_code, host_address, attribute_name):
 
     # Pass the values separately as a tuple
     values = (attribute_value, host_address, room_code)
-
-    # Execute the query
-    cursor.execute(query, values)
-
-    conn.commit()
-    conn.close()
+    
+    try:
+        # Execute the query and commit the changes to the database
+        cursor.execute(query, values)
+        conn.commit()
+    except Exception as e:
+        # Handle any database-related errors here
+        conn.rollback()
+        return jsonify({'error': f'Database error: {str(e)}'}), 500
+    finally:
+        conn.close()
 
     return jsonify({'message': f'{attribute_name} attribute updated successfully'}), 200
     
@@ -1611,14 +1690,14 @@ def set_projector_power(room_code, display_address):
     conn.close()
     
     data = request.get_json()
-    source = data.get("power")
+    power = data.get("power")
 
     # build url
     url = f'http://{display_address}/lighting/api/v01/pj/power'
 
     # Build the payload as a dictionary
     payload = {
-        "power": source
+        "power": power
     }
 
     try:
@@ -2457,31 +2536,47 @@ def get_or_create_devices():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM pdus')  # Update the table name to 'pdus'
-    rows = cursor.fetchall()
+    
+    cursor.execute('SELECT pdu_address, username, password, room_code FROM pdus')
+    pdus = cursor.fetchall()  
+    
+    pdu_list = []
+    for pdu in pdus:
+        pdu_list.append({
+            'pdu_address':  pdu[0],  # Use index to access the column values
+            'username':     pdu[1],
+            'password':     pdu[2],
+            'room_code':    pdu[3]
+        })
 
-    if not rows:
+    conn.close()
+
+    if not pdus:
         # The database is empty; no need to continue
         conn.close()
         return []
 
     print("here!!!")
-    print(rows)
-    for row in rows:
+    print(pdus)
+    for row in pdus:
         print(len(row))
         for r in row:
             print(r)
     print("and here!!!")
 
     devices = []
-    for row in rows:
+    for row in pdus:
         print(len(row))
+        logger.info(f"getting/adding pdu pdu_address row[0]: {row[0]}") 
+        logger.info(f"getting/adding pdu username row[1]: {row[1]}")
+        logger.info(f"getting/adding pdu password row[2]: {row[2]}")  
+        logger.info(f"getting/adding pdu room_code row[3]: {row[3]}")
+
         pdu_address = row[0]
         username = row[1]
         password = row[2]
-        driver_path = row[3]
-        room_code = row[4]
-        print(pdu_address, username, password, driver_path, room_code)
+        room_code = row[3]
+        print(pdu_address, username, password, room_code)
 
         new_pdu = DeviceController(pdu_address, username, password, chrome_driver_path, room_code)
 
@@ -2731,6 +2826,28 @@ def reboot_device(room_code, host_address):
         return jsonify({'error': 'Backend function failed'}), 500
     else:
         return jsonify({'response': result}), 200
+        
+@app.route('/shutdown/<string:room_code>/<string:host_address>', methods=['GET'])
+def reboot_device(room_code, host_address):
+    # Query the database to retrieve the username and password based on the host_address and room_code
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password, platform FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
+
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password, platform = host_data
+
+    # Reboot the remote device based on the retrieved information
+    result = run_shutdown_device(host_address, username, password, platform)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
 
 @app.route('/open_browser/<string:room_code>/<string:host_address>', methods=['POST'])
 def open_browser(room_code, host_address):
@@ -2756,6 +2873,29 @@ def open_browser(room_code, host_address):
 
     # Open PowerPoint on the remote device using the retrieved credentials and URL
     result = run_browser(host_address, username, password, url)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+        
+@app.route('/sim_mouse_click/<string:room_code>/<string:host_address>', methods=['GET'])
+def sim_mouse_click(room_code, host_address):
+    # Query the database to retrieve the username and password based on the host_address and room_code
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
+
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    # Extract the username and password from the retrieved data
+    username, password = host_data
+
+    # simulate mouse click
+    result = sim_mouse_press(host_address, username, password)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500

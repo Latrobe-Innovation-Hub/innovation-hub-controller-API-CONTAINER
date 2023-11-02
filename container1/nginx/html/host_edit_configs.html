@@ -1,0 +1,196 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Host Default Configurations</title>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333333;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #666666;
+        }
+
+        input {
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            border: none;
+            border-radius: 4px;
+            color: #ffffff;
+            cursor: pointer;
+            font-size: 18px;
+            margin-top: 10px;
+            padding: 10px 20px;
+            transition: background-color 0.3s;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        h2 {
+            margin-top: 20px;
+            color: #333333;
+        }
+
+        pre {
+            background-color: #ffffff;
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            padding: 10px;
+            overflow-x: auto;
+            text-align: left;
+            font-size: 14px;
+            line-height: 1.5;
+            width: fit-content;
+        }
+
+        #returnButton {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+            #returnButton:hover {
+                background-color: #555555;
+            }
+
+        select {
+            padding: 10px; /* Adjust the padding */
+            font-size: 16px; /* Adjust the font size */
+            border-radius: 4px;
+            border: 1px solid #cccccc;
+            margin-bottom: 15px;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const base_url = '/';
+
+        // Function to get query parameters from the URL
+        function getQueryParameter(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // Function to fetch and display the configuration
+        function fetchAndDisplayConfiguration() {
+            const roomCode = getQueryParameter('room_code');
+            const hostAddress = getQueryParameter('host_id');
+
+            if (roomCode && hostAddress) {
+                console.log('Fetching configuration for room code:', roomCode, 'and host address:', hostAddress);
+
+                $.ajax({
+                    url: `${base_url}api/get_host_config/${roomCode}/${hostAddress}`,
+                    method: 'GET',
+                    contentType: 'application/json',
+                    success: function (response) {
+                        console.log('API request successful. Response:', response);
+
+                        // Display the information received from the API
+                        $('#response').text(JSON.stringify(response, null, 2));
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('API request error:', error);
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            } else {
+                // Handle the case when roomCode and hostAddress are not provided
+                $('#response').text('Missing room code and/or host address');
+            }
+        }
+
+        $(document).ready(function () {
+            fetchAndDisplayConfiguration(); // Initialize the current configuration on page load
+
+            // Handle form submission when the "Update Configuration" button is clicked
+            $('#configForm').submit(function (event) {
+                event.preventDefault(); // Prevent the default form submission
+
+                const roomCode = getQueryParameter('room_code');
+                const hostAddress = getQueryParameter('host_id');
+                const attribute_name = $('#configSelector').val();
+                const attribute_value = $('#configValue').val();
+
+                // Create a JSON object with the attribute to update
+                const data = {};
+                data[attribute_name] = attribute_value;
+
+                // Send an AJAX request to update the configuration
+                $.ajax({
+                    url: `${base_url}api/set_host_config/${roomCode}/${hostAddress}/${attribute_name}`,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify(data),
+                    success: function (response) {
+                        console.log('Configuration update successful. Response:', response);
+
+                        // Update the displayed configuration with the new value
+                        fetchAndDisplayConfiguration();
+                    },
+                    error: function (xhr, status, error) {
+                        console.log('Configuration update error:', error);
+                        $('#response').text('Error: ' + error);
+                    }
+                });
+            });
+        });
+
+        // Call the fetchAndDisplayConfiguration function when the page loads
+        $(document).ready(function () {
+            fetchAndDisplayConfiguration();
+
+            $('#returnPreviousButton').click(function () {
+                history.back(); // This will take the user to the previous page in the browsing history.
+            });
+
+            $('#returnMainButton').click(function () {
+                window.location.href = 'index.html';
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Configuration Editor</h1>
+    <form id="configForm">
+        <label for="configSelector">Select Configuration:</label>
+        <select id="configSelector" name="configSelector">
+            <option value="config_cisco">Cisco Configuration</option>
+            <option value="config_default">Default Configuration</option>
+            <option value="config_optus">Optus Configuration</option>
+        </select><br>
+
+        <label for="configValue">Enter Configuration Value:</label>
+        <input type="text" id="configValue" name="configValue" required><br>
+
+        <button type="submit">Update Configuration</button>
+
+        <h1>Current Configuration</h1>
+        <pre id="response"></pre>
+    </form>
+
+    <button id="returnPreviousButton">Return to Previous Page</button>
+    <button id="returnMainButton">Return to Main Menu</button>
+</body>
+</html>
