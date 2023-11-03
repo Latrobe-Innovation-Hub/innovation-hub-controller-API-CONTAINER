@@ -479,8 +479,12 @@ def sim_mouse_press(hostname, username, password):
             # Set the path to NirCmd on the remote machine
             nircmd_path = r'C:\NirCmd\nircmd.exe'
 
+            # screen location of click
+            X = 50
+            Y = 50
+
             # Build the PsExec command to simulate a mouse click (hide taskbar)
-            command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{nircmd_path}" "sendmouse click X Y"'
+            command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{nircmd_path}" sendmouse click {X} {Y}'
 
             logger.info(f"Sending mouse press command: {command}")
 
@@ -620,27 +624,25 @@ def run_nircmd(hostname, username, password, cmd):
             # Connect to the remote host
             client.connect(hostname, username=username, password=password)
 
-            # Specify the path to NirCmd and its executable file names
-            nircmd_path = 'C:/NirCmd/'
-            nircmd_executable = 'nircmd.exe'
-            nircmdc_executable = 'nircmdc.exe'
+            # Execute the qwinsta command to retrieve session information for the target user
+            session_id = get_session_id(client, username)
 
-            # Build the full nircmd command with the specified path
-            command = f'{nircmd_path}{nircmd_executable} {cmd}'
+            # Set the path to NirCmd on the remote machine
+            nircmd_path = r'C:\NirCmd\nircmd.exe'
 
-            # Send the nircmd command
+            # Build the PsExec command to simulate a mouse click (hide taskbar)
+            command = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} "{nircmd_path}" {cmd}'
+
+            logger.info(f"Sending mouse press command: {command}")
+
             _, stdout, stderr = client.exec_command(command)
 
-            # Capture exit status
-            exit_status = stdout.channel.recv_exit_status()
-            if exit_status == 0:
-                return f"NirCmd command successful."
-            else:
-                return f"NirCmd command failed with exit status {exit_status}."
-
-        except Exception as e:
-            return {'error': str(e)}
+            output = stderr.read().decode('utf-8')
             
+            return output
+        except Exception as e:
+            return {'error': str(e)}  
+
 # single database init - need to test and integrate
 # def init_db():
     # print("initialising the database...")
@@ -2771,6 +2773,7 @@ def send_magic_packet(mac_address, broadcast_address):
         #print(f"Error sending Magic Packet: {str(e)}")
         logger.info(f"Error sending Magic Packet: {str(e)}")
         return False
+    
 
 from ipaddress import IPv4Network
 
@@ -2795,6 +2798,12 @@ def wake_on_lan(room_code, host_address):
         return jsonify({'error': 'Room not found or host not found in the specified room'}), 404
 
     room_code_result, host_mac, host_name = result
+
+    # replace hyphens
+    host_mac = host_mac.replace('-', ':')
+
+    # Convert to lowercase
+    host_mac = host_mac.lower()
 
     if room_code_result is None:
         logger.info(f"wake-on-lan room_code_result is {room_code_result}")
@@ -3286,6 +3295,109 @@ def send_nircmd(room_code, host_address):
     else:
         return jsonify({'response': result}), 200
 
+@app.route('/monitor_off/<string:room_code>/<string:host_address>', methods=['GET'])
+def monitor_off(room_code, host_address):
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_info = cursor.fetchone()
+    conn.close()
+
+    if host_info is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password = host_info
+
+    command = "monitor off"
+
+    # Run nircmd on the remote host using the retrieved credentials
+    result = run_nircmd(host_address, username, password, command)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+    
+
+@app.route('/monitor_on/<string:room_code>/<string:host_address>', methods=['GET'])
+def monitor_on(room_code, host_address):
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_info = cursor.fetchone()
+    conn.close()
+
+    if host_info is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password = host_info
+
+    command = "monitor on"
+
+    # Run nircmd on the remote host using the retrieved credentials
+    result = run_nircmd(host_address, username, password, command)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+
+    # Simulate mouse clicks to keep the monitor on
+    time.sleep(3)
+    result = sim_mouse_press(host_address, username, password)
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+
+    return jsonify({'response': "Monitor should be back on"}), 200
+
+@app.route('/hide_taskbar/<string:room_code>/<string:host_address>', methods=['GET'])
+def hide_taskbar(room_code, host_address):
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_info = cursor.fetchone()
+    conn.close()
+
+    if host_info is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password = host_info
+
+    command = "win hide class Shell_TrayWnd"
+
+    # Run nircmd on the remote host using the retrieved credentials
+    result = run_nircmd(host_address, username, password, command)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+
+
+@app.route('/show_taskbar/<string:room_code>/<string:host_address>', methods=['GET'])
+def show_taskbar(room_code, host_address):
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_info = cursor.fetchone()
+    conn.close()
+
+    if host_info is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    username, password = host_info
+
+    command = "win show class Shell_TrayWnd"
+
+    # Run nircmd on the remote host using the retrieved credentials
+    result = run_nircmd(host_address, username, password, command)
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
 # =========================================================================
 #  PDU SECTION
 # =========================================================================

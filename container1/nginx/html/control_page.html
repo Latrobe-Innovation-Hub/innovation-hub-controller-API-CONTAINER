@@ -145,6 +145,22 @@
             color: #333;
         }
 
+		/* Style for custom dropdown items */
+        .taskbar-dropdown-item {
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            color: #333;
+        }
+
+		/* Style for custom dropdown items */
+        .monitor-dropdown-item {
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            color: #333;
+        }
+
 		/* Change the background color of custom dropdown items on hover */
 		.custom-dropdown-item:hover {
 			background-color: #ddd;
@@ -160,6 +176,17 @@
             background-color: #ddd;
         }
 
+		/* Change the background color of custom dropdown items on hover */
+        .taskbar-dropdown-item:hover {
+            background-color: #ddd;
+        }
+
+		/* Change the background color of custom dropdown items on hover */
+        .monitor-dropdown-item:hover {
+            background-color: #ddd;
+        }
+
+
 		/* Show the custom dropdown content when hovering over the custom dropdown button */
 		.custom-dropdown:hover .custom-dropdown-menu {
 			display: block;
@@ -172,6 +199,16 @@
 
         /* Show the custom dropdown content when hovering over the custom dropdown button */
         .power-dropdown:hover .custom-dropdown-menu {
+            display: block;
+        }
+
+		/* Show the custom dropdown content when hovering over the custom dropdown button */
+        .taskbar-dropdown:hover .custom-dropdown-menu {
+            display: block;
+        }
+
+		/* Show the custom dropdown content when hovering over the custom dropdown button */
+        .monitor-dropdown:hover .custom-dropdown-menu {
             display: block;
         }
 
@@ -648,7 +685,23 @@
 									<button class="Cisco" data-room-code="${roomCode}" data-host-id="${host.host_id}">Cisco</button>
 									<button class="Optus" data-room-code="${roomCode}" data-host-id="${host.host_id}">Optus</button>
 									<button class="Youtube-test" data-room-code="${roomCode}" data-host-id="${host.host_id}">Youtube-test</button>
-									<button class="HideTaskbar" data-room-code="${roomCode}" data-host-id="${host.host_id}">Hide Taskbar</button>
+									<!-- <button class="Taskbar" data-room-code="${roomCode}" data-host-id="${host.host_id}">Taskbar</button> -->
+
+									<div class="custom-dropdown">
+									  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="taskbarToggle_${host.host_id}">Taskbar</button>
+									  <ul class="custom-dropdown-menu">
+										<li><a href="#" class="taskbar-dropdown-item" id="showTaskbar_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Show</a></li>
+										<li><a href="#" class="taskbar-dropdown-item" id="hideTaskbar_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Hide</a></li>
+									  </ul>
+									</div>
+
+									<div class="custom-dropdown">
+									  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="monitorToggle_${host.host_id}">Monitor</button>
+									  <ul class="custom-dropdown-menu">
+										<li><a href="#" class="monitor-dropdown-item" id="monitorOn_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">On</a></li>
+										<li><a href="#" class="monitor-dropdown-item" id="monitorOff_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Off</a></li>
+									  </ul>
+									</div>
 
 									<div class="custom-dropdown">
 									  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="powerToggle_${host.host_id}">Power</button>
@@ -683,6 +736,78 @@
                                 url = `${base_url}api/shutdown/${roomCode}/${hostAddress}`
 							} else if (action === "WakeOnLAN") {
                                 url = `${base_url}api/wake-on-lan/${roomCode}/${hostAddress}`
+							}
+
+                            $.ajax({
+                                url: url,
+                                method: 'GET',
+                                success: function (response) {
+                                    console.log(response);
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} successfully sent`);
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} failed...`);
+                                }
+                            });
+                        });
+
+						// Add a click event handler for the dropdown items
+                        $('.monitor-dropdown-item').click(function (e) {
+							e.preventDefault();
+							const action = $(this).text();
+							const roomCode = $(this).data('room-code');
+							const hostAddress = $(this).data('host-id');
+
+                            console.log(`Selected action: ${action}`);
+                            console.log(`Room Code: ${roomCode}`);
+                            console.log(`Host ID: ${hostAddress}`);
+
+							let url
+							if (action === "On") {
+								url = `${base_url}api/monitor_on/${roomCode}/${hostAddress}`
+							} else if (action === "Off") {
+                                url = `${base_url}api/monitor_off/${roomCode}/${hostAddress}`
+							} else {
+                                console.log("something went wrong " + action)
+							}
+
+                            $.ajax({
+                                url: url,
+                                method: 'GET',
+                                success: function (response) {
+                                    console.log(response);
+									const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} successfully sent`);
+                                },
+                                error: function (xhr, status, error) {
+                                    console.error('Error: ' + error);
+                                    const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+                                    responseElement.text(`${action} failed...`);
+                                }
+                            });
+                        });
+
+						// Add a click event handler for the dropdown items
+                        $('.taskbar-dropdown-item').click(function (e) {
+							e.preventDefault();
+							const action = $(this).text();
+							const roomCode = $(this).data('room-code');
+							const hostAddress = $(this).data('host-id');
+
+                            console.log(`Selected action: ${action}`);
+                            console.log(`Room Code: ${roomCode}`);
+                            console.log(`Host ID: ${hostAddress}`);
+
+							let url
+							if (action === "Show") {
+								url = `${base_url}api/show_taskbar/${roomCode}/${hostAddress}`
+							} else if (action === "Hide") {
+                                url = `${base_url}api/hide_taskbar/${roomCode}/${hostAddress}`
+							} else {
+                                console.log("something went wrong " + action)
 							}
 
                             $.ajax({
