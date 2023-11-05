@@ -37,7 +37,7 @@ if "%choice%"=="1" (
     echo.
     echo Installing Windows Host Configurations and API Controller settings...
     echo.
-    PowerShell.exe -Command "& '%~dp0install-host.ps1'" "%cd%"
+    PowerShell.exe -Command "& '%~dp0install-host.ps1'" "%~dp0."
     pause > nul
     goto MainMenu
 )
