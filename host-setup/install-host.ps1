@@ -82,6 +82,8 @@ Function Enable-AutoHideTaskBar {
 # Display the instruction comment
 Write-Host $comment
 
+Write-Host $originalWorkingDirectory
+
 # Prompt the user if they wish to continue
 $response = Read-Host "Do you wish to continue? Type 'yes' to proceed."
 
