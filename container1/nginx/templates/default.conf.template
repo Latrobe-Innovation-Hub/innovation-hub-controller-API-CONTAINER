@@ -18,7 +18,12 @@ server {
     # allow container network access; otherwise require creds
     satisfy   any;
     allow     $NET_SUBNET;
-    allow     $NET_LOCAL;
+    #allow     $NET_LOCAL;
+
+    # Check if $NET_LOCAL exists and is not an empty string
+    if ($NET_LOCAL) {
+        allow	$NET_LOCAL;
+    }
     #deny      all;
 
     ## set restricted access status
