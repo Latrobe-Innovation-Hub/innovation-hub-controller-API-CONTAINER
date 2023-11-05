@@ -317,7 +317,72 @@ def run_youtube_script(hostname, username, password, youtube_url, loop=None, cap
                 if output:
                     return output
                 else:
-                    return f"{output}, {error}"
+                    return f"youtube script failure: pid was not found..."
+            else:
+                return f"No active session found for {username}."
+        except Exception as e:
+            return {'error': str(e), 'pid': None}
+
+def run_youtube_script2(hostname, username, password, youtube_url, loop=None, captions=None):
+    # Create an SSH client
+    client = paramiko.SSHClient()
+
+    # Automatically add the remote host key (not recommended for production use)
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+            session_id = get_session_id(client, username)
+
+            if session_id:
+                command_arg = fr"cmd /c python C:\Users\{username}\Documents\browser-youtube.py"
+                command_full = f'psexec -accepteula -u {username} -p {password} -d -i {session_id} {command_arg} "{youtube_url}"'
+                logger.info(f"testing =  run_youtube_script, command: {command_full}")
+
+                if loop:
+                    command_full += " --loop"
+                    logger.info(f"testing =  run_youtube_script, command: {command_full}")
+                    
+                if captions:
+                    command_full += " --captions"
+                    logger.info(f"testing =  run_youtube_script, command: {command_full}")
+                    
+                command_full += fr" > C:\Users\{username}\Documents\youtube-pid.txt"
+
+                _, stdout, stderr = client.exec_command(command_full)
+
+                # Retrieve the output and error of the command
+                output = stdout.read().decode('utf-8')
+                error = stderr.read().decode('utf-8')
+
+                # Extract the PID from the error output
+                pid_match = re.search(r"process ID (\d+)", error)
+                
+                # Attempt to read the contents of the output file, retrying if necessary
+                pid = None
+
+		max_retries=3
+		retry_delay=5
+
+		for retry in range(max_retries):
+		    time.sleep(retry_delay)
+		    try:
+		        with client.open_sftp().file(fr"C:\Users\{username}\Documents\youtube-pid.txt") as output_file:
+		            pid = output_file.read().decode('utf-8').strip()
+		            logger.info("Opened youtube text file and got pid: ", pid)
+		            if pid and pid.isdigit() and int(pid) > 0:
+		                return pid
+		    except FileNotFoundError:
+		        # The file doesn't exist yet
+		        pass
+                
+                if pid:
+                    return pid
+                else:
+                    return f"youtube script failure: pid was not found..."
             else:
                 return f"No active session found for {username}."
         except Exception as e:
@@ -341,33 +406,20 @@ def open_youtube(room_code, host_address):
 
     # Extract the username and password from the retrieved data
     username, password = host_data
-    #username = host_data['username']
-    #password = host_data['password']
+
     url = data.get('url')
     loop = data.get('loop')
     captions = data.get('captions')
-    
-    # Initialize the arguments list with the mandatory ones
-    args = [host_address, username, password, url]
 
-    # Conditionally add loop and captions to the arguments list
-    if loop.lower() == "true":
-        args.append(loop)
-    if captions.lower() == "true":
-        args.append(captions)
-
-    # Call the function with the arguments
-    result = run_youtube_script(*args)
-    
-    # if loop.lower() == "true" and captions.lower() == "true":
-        # # Open PowerPoint on the remote device using the retrieved credentials and URL
-        # result = run_youtube_script(host_address, username, password, url, loop, captions)
-    # elif loop.lower() == "true" and not captions.lower() == "true":
-        # result = run_youtube_script(host_address, username, password, url, loop)
-    # elif notloop.lower() == "true" and captions.lower() == "true":
-        # result = run_youtube_script(host_address, username, password, url, captions)
-    # else:
-        # result = run_youtube_script(host_address, username, password, url)
+    # Call the function with explicit parameters
+    result = run_youtube_script2(
+    	hostname=host_address,
+    	username=username,
+    	password=password,
+    	youtube_url=url,
+    	loop=True if loop and loop.lower() == "true" else None,
+    	captions=True if captions and captions.lower() == "true" else None
+    )
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
