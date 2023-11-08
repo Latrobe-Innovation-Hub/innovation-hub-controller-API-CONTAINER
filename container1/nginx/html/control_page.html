@@ -161,6 +161,14 @@
             color: #333;
         }
 
+		/* Style for custom dropdown items */
+        .youtube-dropdown-item {
+            padding: 12px 16px;
+            text-decoration: none;
+            display: block;
+            color: #333;
+        }
+
 		/* Change the background color of custom dropdown items on hover */
 		.custom-dropdown-item:hover {
 			background-color: #ddd;
@@ -183,6 +191,11 @@
 
 		/* Change the background color of custom dropdown items on hover */
         .monitor-dropdown-item:hover {
+            background-color: #ddd;
+        }
+
+		/* Change the background color of custom dropdown items on hover */
+        .youtube-dropdown-item:hover {
             background-color: #ddd;
         }
 
@@ -212,6 +225,11 @@
             display: block;
         }
 
+		/* Show the custom dropdown content when hovering over the custom dropdown button */
+        .youtube-dropdown:hover .custom-dropdown-menu {
+            display: block;
+        }
+
 		/* Adjust the position of the custom dropdown content */
 		.custom-dropdown-menu {
 			right: 0;
@@ -220,8 +238,9 @@
 	<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 	<script>
 		$(document).ready(function () {
-			var base_url = "http://192.168.128.130/";
+			//var base_url = "http://192.168.128.130/";
 			//var base_url = "http://";
+			var base_url = '/';
 
 			// Initialize an object to store host information with PIDs
 			const hostData = {};
@@ -681,10 +700,20 @@
 							const hostId = host.host_id.replace(/\./g, '_');
 							$('#hostList').append(`
 									<li>${host.host_name} (ID: ${host.host_id})
-									<button class="Default" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-config-default="${host.config_default}">Default</button>
+									<!-- <button class="Default" data-room-code="${roomCode}" data-host-id="${host.host_id}" data-config-default="${host.config_default}">Default</button> -->
 									<button class="Cisco" data-room-code="${roomCode}" data-host-id="${host.host_id}">Cisco</button>
 									<button class="Optus" data-room-code="${roomCode}" data-host-id="${host.host_id}">Optus</button>
-									<button class="Youtube-test" data-room-code="${roomCode}" data-host-id="${host.host_id}">Youtube-test</button>
+									
+									<!-- <button class="Youtube-test" data-room-code="${roomCode}" data-host-id="${host.host_id}">Youtube-test</button><div class="custom-dropdown"> -->
+									<div class="custom-dropdown">
+									  <button class="custom-dropdown-toggle" data-toggle="custom-dropdown" id="youtubeToggle_${host.host_id}">YouTube</button>
+									  <ul class="custom-dropdown-menu">
+										<li><a href="#" class="youtube-dropdown-item" id="play_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Play</a></li>
+										<li><a href="#" class="youtube-dropdown-item" id="stop_${host.host_id}" data-room-code="${roomCode}" data-host-id="${host.host_id}">Stop</a></li>
+									  </ul>
+									</div>
+
+
 									<!-- <button class="Taskbar" data-room-code="${roomCode}" data-host-id="${host.host_id}">Taskbar</button> -->
 
 									<div class="custom-dropdown">
@@ -752,6 +781,87 @@
                                     responseElement.text(`${action} failed...`);
                                 }
                             });
+                        });
+
+						// Add a click event handler for the dropdown items
+                        $('.youtube-dropdown-item').click(function (e) {
+							e.preventDefault();
+							const action = $(this).text();
+							const roomCode = $(this).data('room-code');
+							const hostAddress = $(this).data('host-id');
+
+                            console.log(`Selected action: ${action}`);
+                            console.log(`Room Code: ${roomCode}`);
+                            console.log(`Host ID: ${hostAddress}`);
+
+							
+
+							let url
+							if (action === "Play") {
+								// Send an AJAX request to get the "config_default" content
+								$.ajax({
+									url: `${base_url}api/get_host_config/${roomCode}/${hostAddress}/config_default`,
+									method: 'GET',
+									contentType: 'application/json',
+									success: function (response) {
+										console.log("Config content:", response);
+
+										// Assuming the response contains the content you want
+										const content = response.host_config.config_default;
+
+										if (content) {
+											const dataToSend = {
+												"url": content,
+												"loop": "true",
+												"captions": "false"
+											};
+
+											url = `${base_url}api/open_youtube/${roomCode}/${hostAddress}`;
+											$.ajax({
+												url: url,
+												method: 'POST',
+												data: JSON.stringify(dataToSend),
+												contentType: 'application/json',
+												success: function (response) {
+													console.log(response);
+
+													const pid = response.response;
+													hostData[hostAddress] = pid;
+													console.log("the hostData stored pid is: " + hostData[hostAddress]);
+
+													const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+													responseElement.text(JSON.stringify(pid, null, 2));
+												},
+												error: function (xhr, status, error) {
+													console.error('Error: ' + error);
+													const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+													responseElement.text(JSON.stringify(error, null, 2));
+												}
+											});
+										} else {
+											console.log("Host missing config");
+										}
+									}
+								});
+							} else if (action === "Stop") {
+                                url = `${base_url}api/chrome_off/${roomCode}/${hostAddress}`
+								$.ajax({
+									url: url,
+									method: 'GET',
+									success: function (response) {
+										console.log(response);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(`${action} successfully sent`);
+									},
+									error: function (xhr, status, error) {
+										console.error('Error: ' + error);
+										const responseElement = $(`#hostResponse_${hostAddress.replace(/\./g, '_')}`);
+										responseElement.text(`${action} failed...`);
+									}
+								});
+							} else {
+                                console.log("something went wrong " + action)
+							}
                         });
 
 						// Add a click event handler for the dropdown items

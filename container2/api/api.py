@@ -358,31 +358,45 @@ def run_youtube_script2(hostname, username, password, youtube_url, loop=None, ca
                 output = stdout.read().decode('utf-8')
                 error = stderr.read().decode('utf-8')
 
-                # Extract the PID from the error output
-                pid_match = re.search(r"process ID (\d+)", error)
+                ## Extract the PID from the error output
+                #pid_match = re.search(r"process ID (\d+)", error)
                 
                 # Attempt to read the contents of the output file, retrying if necessary
-                pid = None
+                #pid = None
 
-		max_retries=3
-		retry_delay=5
+                #max_retries=3
+                #retry_delay=10
 
-		for retry in range(max_retries):
-		    time.sleep(retry_delay)
-		    try:
-		        with client.open_sftp().file(fr"C:\Users\{username}\Documents\youtube-pid.txt") as output_file:
-		            pid = output_file.read().decode('utf-8').strip()
-		            logger.info("Opened youtube text file and got pid: ", pid)
-		            if pid and pid.isdigit() and int(pid) > 0:
-		                return pid
-		    except FileNotFoundError:
-		        # The file doesn't exist yet
-		        pass
-                
-                if pid:
-                    return pid
-                else:
-                    return f"youtube script failure: pid was not found..."
+                # Initialize the variable to store the number
+                #pid = None
+
+                #for retry in range(max_retries):
+                #    time.sleep(retry_delay)
+                #    try:
+                #        stdin, stdout, stderr = client.exec_command(fr'type C:\Users\{username}\Documents\youtube-pid.txt')
+
+                #        for line in iter(stdout.readline, ""):
+                #            line = line.strip()
+                #            if pid is None:
+                #                pid = line
+                #                break
+
+                #        if pid:
+                #            logger.info("The final 'pid' is:", pid)
+                #            return pid
+                #        else:
+                #            logger.info("No number found in any line.")
+                #            return f"youtube script failure: pid was not found..."
+                        
+                #    except:
+                #        pass
+
+                #    finally:
+                        # Close the SFTP session and the SSH connection
+                client.close()
+                return "youtube script started"
+
+                #return "Maximum retries exceeded: youtube script failure"
             else:
                 return f"No active session found for {username}."
         except Exception as e:
@@ -420,6 +434,31 @@ def open_youtube(room_code, host_address):
     	loop=True if loop and loop.lower() == "true" else None,
     	captions=True if captions and captions.lower() == "true" else None
     )
+
+    if result is None:
+        return jsonify({'error': 'Backend function failed'}), 500
+    else:
+        return jsonify({'response': result}), 200
+
+@app.route('/chrome_off/<string:room_code>/<string:host_address>', methods=['GET'])
+def chrome_off(room_code, host_address):
+    # Query the database to retrieve the username and password based on the 'host_address' and 'room_code'
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT username, password FROM hosts WHERE host_address = %s AND room_code = %s', (host_address, room_code))
+    host_data = cursor.fetchone()
+    conn.close()
+
+    if host_data is None:
+        return jsonify({'error': 'Host not found'}), 404
+
+    # Extract the username and password from the retrieved data
+    #username = host_data['username']
+    #password = host_data['password']
+    username, password = host_data
+
+    # Kill the process on the remote host using the retrieved credentials and the 'pid' from the URL
+    result = kill_chrome(host_address, username, password)
 
     if result is None:
         return jsonify({'error': 'Backend function failed'}), 500
@@ -492,6 +531,31 @@ def kill_process(hostname, username, password, pid):
 
             # Find the window ID of the "powerpoint-slide" window
             _, stdout, stderr = client.exec_command(f'taskkill /PID {pid} /F')
+
+            # capture exit status
+            exit_status = stdout.channel.recv_exit_status()
+            if exit_status == 0: # THINK THIS WILL WORK???
+                return f"process ended successfully."
+            else:
+                return f"process ending failed with exit status {exit_status}."
+
+        except Exception as e:
+            return {'error': str(e)}
+
+# close process running on remote windows pc
+def kill_chrome(hostname, username, password):
+    # Create an SSH client
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+
+    # Use a context manager to ensure the client is closed when the function finishes
+    with client:
+        try:
+            # Connect to the remote host
+            client.connect(hostname, username=username, password=password)
+
+            # Find the window ID of the "powerpoint-slide" windows
+            _, stdout, stderr = client.exec_command(f'taskkill /IM chrome.exe /F')
 
             # capture exit status
             exit_status = stdout.channel.recv_exit_status()

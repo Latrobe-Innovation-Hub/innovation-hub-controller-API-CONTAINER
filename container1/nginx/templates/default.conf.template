@@ -20,10 +20,6 @@ server {
     allow     $NET_SUBNET;
     #allow     $NET_LOCAL;
 
-    # Check if $NET_LOCAL exists and is not an empty string
-    if ($NET_LOCAL) {
-        allow	$NET_LOCAL;
-    }
     #deny      all;
 
     ## set restricted access status

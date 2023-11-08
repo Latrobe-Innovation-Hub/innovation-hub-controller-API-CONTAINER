@@ -460,6 +460,33 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
     ConfirmStepSuccess "Allow RDP through Windows Firewall" $step9_6Success
     $stepsStatus += [PSCustomObject]@{Step = "Allow RDP through Windows Firewall"; Success = $step9_6Success}
 
+    # Enable "Do not show the lock screen" Group Policy setting
+    $step9_7Success = $true
+
+    try {
+        # Define the Group Policy registry path
+        $gpPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+
+        # Check if the registry key exists, and create it if it doesn't
+        if (-not (Test-Path -Path $gpPath)) {
+            New-Item -Path $gpPath -Force
+        }
+
+        # Set the "NoLockScreen" registry value to 1 to enable the setting
+        Set-ItemProperty -Path $gpPath -Name "NoLockScreen" -Value 1
+
+        Write-Host "Enabled 'Do not show the lock screen' setting."
+
+    } catch {
+        $step9_7Success = $false
+    }
+
+    # Confirm whether the step was successful
+    ConfirmStepSuccess "Enable 'Do not show the lock screen' setting" $step9_7Success
+
+    # Add the step's status to the stepsStatus array
+    $step9_7Success += [PSCustomObject]@{Step = "Enable 'Do not show the lock screen' setting"; Success = $step9_7Success}
+
     # Step 10: Install Google Chrome
     $step10Success = $true
     try {
@@ -532,13 +559,26 @@ if ($response -eq 'YES' -or $response -eq 'yes') {
 	    $packageName = "selenium"
 
 	    # Run pip to install the package using the full Python path
-	    $pipProcess = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru	
-	    if ($pipProcess.ExitCode -eq 0) {
+	    $pipProcessSelenium = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru	
+	    if ($pipProcessSelenium.ExitCode -eq 0) {
 	        Write-Host "Selenium successfully installed."
 	        $stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $true}
 	    } else {
 	        Write-Host "Selenium installation failed with exit code $($pipProcess.ExitCode)."
 	        $stepsStatus += [PSCustomObject]@{Step = "Selenium installation"; Success = $false}
+	    }
+
+            # Define the package you want to install (e.g., Selenium)
+	    $packageName = "psutil"
+     
+	    # Run pip to install the package using the full Python path
+	    $pipProcessPsutil = Start-Process -Wait -FilePath $pythonPath -ArgumentList "-m", "pip", "install", $packageName -PassThru	
+	    if ($pipProcessPsutil.ExitCode -eq 0) {
+	        Write-Host "psutil successfully installed."
+	        $stepsStatus += [PSCustomObject]@{Step = "psutil installation"; Success = $true}
+	    } else {
+	        Write-Host "psutil installation failed with exit code $($pipProcess.ExitCode)."
+	        $stepsStatus += [PSCustomObject]@{Step = "psutil installation"; Success = $false}
 	    }
 	}
     }
