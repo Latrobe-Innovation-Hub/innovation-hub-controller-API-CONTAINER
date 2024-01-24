@@ -1514,29 +1514,46 @@
             });
 		});
 	</script>
+	  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+	  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </head>
   <body>
-		<h1>Room Information</h1>
-
-		<h2>Rooms:</h2>
-		<ul id="roomList"></ul>
-
-		<div id="roomInfo">
-			<h2>Room Details:</h2>
-			<p><strong>Description:</strong> <span id="roomDescription"></span></p>
+	<div class="container">
+		<div class="text-center">
+			<h1>Room Information</h1>
+		</div>
+		<div class="border p-4">
+			<div class="row d-flex">
+				<h2>Rooms:</h2>
+				<ul id="roomList"></ul>
+			</div>
+	
+			<div id="roomInfo" class="row d-flex"> 
+				<h2>Room Details:</h2>
+				<p><strong>Description:</strong> <span id="roomDescription"></span></p>
+			</div>
+	
+			<div class="row d-flex">
+				<h2>Displays:</h2>
+				<ul id="displayList"></ul>
+			</div>
+	
+			<div class="row d-flex">
+				<h2>Hosts:</h2>
+				<ul id="hostList"></ul>
+			</div>
+	
+			<div class="row d-flex">
+				<h2>PDUs:</h2>
+				<ul id="pduList"></ul>
+			</div>
+			<div id="outletSettings"></div>
+		</div>
+		<div class="py-4 d-flex gap-3">
+			<button id="returnPreviousButton" class="rounded btn btn-warning p-3">Return to Previous Page</button>
+			<button id="returnMainButton" class="rounded btn btn-danger p-3">Return to Main Menu</button>
 		</div>
 
-		<h2>Displays:</h2>
-		<ul id="displayList"></ul>
-
-		<h2>Hosts:</h2>
-		<ul id="hostList"></ul>
-
-		<h2>PDUs:</h2>
-		<ul id="pduList"></ul>
-		<div id="outletSettings"></div>
-
-		<button id="returnPreviousButton">Return to Previous Page</button>
-		<button id="returnMainButton">Return to Main Menu</button>
+	</div>
   </body>
 </html>
