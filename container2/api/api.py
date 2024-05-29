@@ -35,6 +35,8 @@
 #   NirCmd tool is used for Windows system level control of audio devices, screensavers, displays, etc...
 #       Download NirCmd at the bottom of that page, and place nircmd.exe and nircmdc.exe in C:\Windows\System32 directory
 #       NirCmd can be found here: https://www.nirsoft.net/utils/nircmd.html
+#
+#   Added '@app.route('/cycle_poe_port', methods=['POST'])' request for power cycling meraki switch ports.  Only basic testing completed.
 # ======================================================================================================================================================
 
 import gevent
@@ -2418,6 +2420,41 @@ def get_projector_state(room_code, display_address):
 #         except exception as e:
 #             return jsonify({'error': str(e)}), 500
 
+
+# ================================= TESTING ==========================================
+
+# Function to send request
+def send_request(auth_token, switch_serial, port_number):
+    url = f"https://api.meraki.com/api/v1/devices/{switch_serial}/switch/ports/cycle"
+    body = {
+        "ports": [
+            port_number
+        ]
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {auth_token}"
+    }
+    response = requests.post(url, json=body, headers=headers)
+    return response
+
+@app.route('/cycle_poe_port', methods=['POST'])
+def cycle_port():
+    data = request.json
+    auth_token = data.get('auth_token')
+    switch_serial = data.get('switch_serial')
+    port_number = data.get('port_number')
+
+    if not all([auth_token, switch_serial, port_number]):
+        return jsonify({"message": "Missing one or more required parameters: auth_token, switch_serial, port_number"}), 400
+
+    response = send_request(auth_token, switch_serial, port_number)
+    if response.status_code == 200:
+        return jsonify({"message": "Request successful!"}), 200
+    else:
+        return jsonify({"message": "Request failed", "status_code": response.status_code}), response.status_code
+
+# ================================= TESTING ==========================================
 
 import requests
 from requests.auth import HTTPDigestAuth
