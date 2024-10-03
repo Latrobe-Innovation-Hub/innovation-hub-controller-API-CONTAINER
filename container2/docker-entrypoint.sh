@@ -56,6 +56,49 @@ echo $(date +"%Y-%m-%d %H:%M:%S") "[CONTAINER2] setting application logging leve
 
 install_chromedriver() {
     local chromedriver_url="https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.92/linux64/chromedriver-linux64.zip"
+    local chromedriver_dir=$(pwd) # You can change this to any desired directory
+
+    # Download the Chromedriver ZIP file with proper flags and error handling
+    curl -LO --fail "$chromedriver_url"
+
+    # Check if the file was downloaded correctly
+    if [[ ! -f "chromedriver-linux64.zip" ]]; then
+        echo "Download failed or file not found!"
+        exit 1
+    fi
+
+    # Check if the ZIP file is empty
+    if [[ ! -s "chromedriver-linux64.zip" ]]; then
+        echo "Downloaded file is empty!"
+        rm -f "chromedriver-linux64.zip" # Cleanup
+        exit 1
+    fi
+
+    # Unzip the Chromedriver directly to the specified directory
+    unzip -o chromedriver-linux64.zip -d "$chromedriver_dir"
+
+    # Check if unzip was successful
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to unzip the file!"
+        exit 1
+    fi
+
+    # Rename the Chromedriver file if needed
+    #mv "$chromedriver_dir/chromedriver-linux64/chromedriver" "$chromedriver_dir/chromedriver"
+
+    # Make the Chromedriver executable
+    chmod +x "$chromedriver_dir/chromedriver-linux64/chromedriver"
+
+    # Clean up the ZIP file and subdirectory (if created)
+    rm -f chromedriver-linux64.zip
+    rm -rf "$chromedriver_dir/chromedriver-linux64"
+
+    # Display a success message
+    echo "Chromedriver has been downloaded and installed to $chromedriver_dir"
+}
+
+install_chromedriver_old() {
+    local chromedriver_url="https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/117.0.5938.92/linux64/chromedriver-linux64.zip"
     local chromedriver_dir="/home/innovation-hub-api/api/"
 
     # Create the directory if it doesn't exist
@@ -80,7 +123,6 @@ install_chromedriver() {
     # Display a success message
     echo "Chromedriver has been downloaded and installed to $chromedriver_dir"
 }
-
 
  # Create and activate a virtual environment
  python3 -m venv venv
